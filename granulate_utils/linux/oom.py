@@ -5,21 +5,20 @@
 
 import re
 from collections import namedtuple
-
 from typing import Optional
 
-
-# see function in oom_kill.c:__oom_kill_process
-# example line: "Out of memory: Killed process 765074 (chrome) total-vm:38565352kB, anon-rss:209356kB, file-rss:1624kB, shmem-rss:0kB"
-# recent kernels added more fields (e.g UID, pgtables) but we don't care about them, for now; and this regex still works.
+# see function in oom_kill.c:__oom_kill_process. example string:
+# "Out of memory: Killed process 765074 (chrome) total-vm:38565352kB, anon-rss:209356kB, file-rss:1624kB, shmem-rss:0kB"
+# recent kernels added more fields (e.g UID, pgtables) but we don't care about them, for now; and this regex still
+# works.
 KILLED_PROCESS = re.compile(
-    r"(?:<\d>)?(?:\[(?P<timestamp>\d+\.\d+)\] )?(?:(?P<message>.*): )?Killed process (?P<pid>\d+) \((?P<comm>\w+)\) total-vm:(?P<total_vm>\d+)kB, anon-rss:(?P<anon_rss>\d+)kB, file-rss:(?P<file_rss>\d+)kB, shmem-rss:(?P<shmem_rss>\d+)kB"
+    r"(?:<\d>)?(?:\[(?P<timestamp>\d+\.\d+)\] )?(?:(?P<message>.*): )?Killed process (?P<pid>\d+) "
+    r"\((?P<comm>\w+)\) total-vm:(?P<total_vm>\d+)kB, anon-rss:(?P<anon_rss>\d+)kB, "
+    r"file-rss:(?P<file_rss>\d+)kB, shmem-rss:(?P<shmem_rss>\d+)kB"
 )
 KB = 1024
 
-OomEntry = namedtuple(
-    "OomEntry", "timestamp message pid comm total_vm anon_rss file_rss shmem_rss"
-)
+OomEntry = namedtuple("OomEntry", "timestamp message pid comm total_vm anon_rss file_rss shmem_rss")
 
 
 def get_oom_entry(dmesg_line: str) -> Optional[OomEntry]:
