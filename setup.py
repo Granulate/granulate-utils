@@ -28,7 +28,7 @@ setuptools.setup(
     description="Granulate Python utilities",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/Granulate/granulate_utils",
+    url="https://github.com/Granulate/granulate-utils",
     classifiers=[
         "Programming Language :: Python :: 3",
     ],
