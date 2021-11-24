@@ -14,21 +14,21 @@ def read_requirements(path: str) -> List[str]:
         return [line for line in f.readlines() if not line.startswith("#")]
 
 
-version = re.search(r'__version__\s*=\s*"(.*?)"', Path("utils/__init__.py").read_text())
+version = re.search(r'__version__\s*=\s*"(.*?)"', Path("granulate_utils/__init__.py").read_text())
 assert version is not None, "could not parse version!"
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="utils",
+    name="granulate_utils",
     version=version.group(1),
     author="Granulate",
     author_email="",  # TODO
     description="Granulate Python utilities",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/Granulate/utils",
+    url="https://github.com/Granulate/granulate_utils",
     classifiers=[
         "Programming Language :: Python :: 3",
     ],
