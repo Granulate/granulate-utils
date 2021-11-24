@@ -113,18 +113,7 @@ class _ProcEventsListener(threading.Thread):
 
         socket.send(nl_msg)
 
-    def _proc_events_listener(self):
-        """Runs forever and calls registered callbacks on process events"""
-        try:
-            self._socket.bind((os.getpid(), self._CN_IDX_PROC))
-        except PermissionError as e:
-            raise PermissionError(
-                "This process doesn't have permissions to bind to the process events connector"
-            ) from e
-
-        self._register_for_connector_events(self._socket)
-        self._selector.register(self._socket, selectors.EVENT_READ)
-
+    def _listener_loop(self):
         while not self._should_stop:
             events = self._selector.select()
             if self._should_stop:
@@ -168,12 +157,27 @@ class _ProcEventsListener(threading.Thread):
                     for callback in self._exit_callbacks:
                         callback(event_data["pid"], event_data["tgid"], event_data["exit_code"])
 
-        # Cleanup
-        self._selector.unregister(self._socket)
-        self._selector.unregister(self._select_breaker_reader)
-        self._socket.close()
-        os.close(self._select_breaker)
-        os.close(self._select_breaker_reader)
+    def _proc_events_listener(self):
+        """Runs forever and calls registered callbacks on process events"""
+        try:
+            self._socket.bind((os.getpid(), self._CN_IDX_PROC))
+        except PermissionError as e:
+            raise PermissionError(
+                "This process doesn't have permissions to bind to the process events connector"
+            ) from e
+
+        self._register_for_connector_events(self._socket)
+        self._selector.register(self._socket, selectors.EVENT_READ)
+
+        try:
+            self._listener_loop()
+        finally:
+            # Cleanup
+            self._selector.unregister(self._socket)
+            self._selector.unregister(self._select_breaker_reader)
+            self._socket.close()
+            os.close(self._select_breaker)
+            os.close(self._select_breaker_reader)
 
     @_raise_if_not_running
     def stop(self):
