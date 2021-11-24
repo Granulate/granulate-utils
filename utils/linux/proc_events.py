@@ -16,7 +16,7 @@ import selectors
 import socket
 import struct
 import threading
-from typing import Callable, List
+from typing import Callable, List, Optional
 
 
 def _raise_if_not_running(func: Callable):
@@ -188,13 +188,17 @@ class _ProcEventsListener(threading.Thread):
         self._exit_callbacks.remove(callback)
 
 
-_proc_events_listener = _ProcEventsListener()
+_proc_events_listener: Optional[_ProcEventsListener] = None
 
 
 def _ensure_thread_started(func: Callable):
     def wrapper(*args, **kwargs):
-        if not _proc_events_listener.is_alive():
+        global _proc_events_listener
+        if _proc_events_listener is None:
+            _proc_events_listener = _ProcEventsListener()
             _proc_events_listener.start()
+        if not _proc_events_listener.is_alive():
+            raise RuntimeError("Process Events Listener isn't running")
         return func(*args, **kwargs)
 
     return wrapper
@@ -206,9 +210,11 @@ def register_exit_callback(callback: Callable):
 
     The callback should receive three arguments: tid, pid and exit_code.
     """
+    _proc_events_listener: _ProcEventsListener
     _proc_events_listener.register_exit_callback(callback)
 
 
 @_ensure_thread_started
 def unregister_exit_callback(callback: Callable):
+    _proc_events_listener: _ProcEventsListener
     _proc_events_listener.unregister_exit_callback(callback)
