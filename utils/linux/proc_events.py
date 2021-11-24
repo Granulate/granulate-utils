@@ -9,7 +9,7 @@ https://nick-black.com/dankwiki/index.php/The_Proc_Connector_and_Socket_Filters
 
 
 TODO: Add more callbacks.
-TODO: Use socket filter.
+TODO: Use socket filter to avoid waking up for irrelevant events.
 """
 import os
 import selectors
@@ -118,7 +118,9 @@ class _ProcEventsListener(threading.Thread):
         try:
             self._socket.bind((os.getpid(), self._CN_IDX_PROC))
         except PermissionError as e:
-            raise PermissionError("You don't have permissions to bind to the process events connector") from e
+            raise PermissionError(
+                "This process doesn't have permissions to bind to the process events connector"
+            ) from e
 
         self._register_for_connector_events(self._socket)
         self._selector.register(self._socket, selectors.EVENT_READ)
