@@ -29,11 +29,7 @@ def _raise_if_not_running(func: Callable):
 
 
 class _ProcEventsListener(threading.Thread):
-    """Thead listening to process events.
-
-    Notice that there cannot be more than a single instance of this class per-process because it opens a
-    process-connector socket that can (probably) not be opened twice in the same process.
-    """
+    """Thead listening to process events"""
 
     # linux/netlink.h:
     _NETLINK_CONNECTOR = 11
@@ -160,7 +156,7 @@ class _ProcEventsListener(threading.Thread):
     def _proc_events_listener(self):
         """Runs forever and calls registered callbacks on process events"""
         try:
-            self._socket.bind((os.getpid(), self._CN_IDX_PROC))
+            self._socket.bind((0, self._CN_IDX_PROC))
         except PermissionError as e:
             raise PermissionError(
                 "This process doesn't have permissions to bind to the process events connector"
