@@ -216,11 +216,11 @@ def register_exit_callback(callback: Callable):
 
     The callback should receive three arguments: tid, pid and exit_code.
     """
-    _proc_events_listener: _ProcEventsListener
+    assert _proc_events_listener is not None
     _proc_events_listener.register_exit_callback(callback)
 
 
 @_ensure_thread_started
 def unregister_exit_callback(callback: Callable):
-    _proc_events_listener: _ProcEventsListener
+    assert _proc_events_listener is not None
     _proc_events_listener.unregister_exit_callback(callback)
