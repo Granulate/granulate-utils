@@ -26,11 +26,11 @@ def resolve_proc_root_links(proc_root: str, ns_path: str) -> str:
     To work around that, we resolve the path component by component; if any component "escapes", we
     add the /proc/pid/root prefix once again.
     """
+    assert ns_path[0] == "/", f"expected {ns_path!r} to be absolute"
     parts = Path(ns_path).parts
-    assert parts[0] == "/", f"expected {ns_path!r} to be absolute"
 
     path = proc_root
-    for part in parts[1:]:  # skip the /
+    for part in parts[1:]:  # skip the / (or multiple /// as .parts gives them)
         next_path = os.path.join(path, part)
         if os.path.islink(next_path):
             link = os.readlink(next_path)
