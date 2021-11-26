@@ -2,11 +2,18 @@ import ctypes
 import os
 from pathlib import Path
 from threading import Thread
-from typing import Callable, List, Optional, TypeVar
+from typing import Callable, List, Optional, TypeVar, Union
 
 from psutil import NoSuchProcess, Process
 
 T = TypeVar("T")
+
+
+class _Sentinel:
+    pass
+
+
+_SENTINEL = _Sentinel()
 
 
 def resolve_proc_root_links(proc_root: str, ns_path: str) -> str:
@@ -45,7 +52,7 @@ def is_same_ns(pid: int, nstype: str, pid2: int = None) -> bool:
     )
 
 
-def run_in_ns(nstypes: List[str], callback: Callable[[], T], target_pid: int = 1) -> Optional[T]:
+def run_in_ns(nstypes: List[str], callback: Callable[[], T], target_pid: int = 1) -> T:
     """
     Runs a callback in a new thread, switching to a set of the namespaces of a target process before
     doing so.
@@ -62,33 +69,43 @@ def run_in_ns(nstypes: List[str], callback: Callable[[], T], target_pid: int = 1
     # make sure "mnt" is last, once we change it our /proc is gone
     nstypes = sorted(nstypes, key=lambda ns: 1 if ns == "mnt" else 0)
 
-    ret: Optional[T] = None
+    ret: Union[T, _Sentinel] = _SENTINEL
+    exc: Optional[BaseException] = None
 
     def _switch_and_run():
-        libc = ctypes.CDLL("libc.so.6")
-        for nstype in nstypes:
-            if not is_same_ns(target_pid, nstype):
-                flag = {
-                    "mnt": 0x00020000,  # CLONE_NEWNS
-                    "net": 0x40000000,  # CLONE_NEWNET
-                    "pid": 0x20000000,  # CLONE_NEWPID
-                    "uts": 0x04000000,  # CLONE_NEWUTS
-                }[nstype]
-                if libc.unshare(flag) != 0:
-                    raise ValueError(f"Failed to unshare({nstype})")
+        try:
+            libc = ctypes.CDLL("libc.so.6")
+            for nstype in nstypes:
+                if not is_same_ns(target_pid, nstype):
+                    flag = {
+                        "mnt": 0x00020000,  # CLONE_NEWNS
+                        "net": 0x40000000,  # CLONE_NEWNET
+                        "pid": 0x20000000,  # CLONE_NEWPID
+                        "uts": 0x04000000,  # CLONE_NEWUTS
+                    }[nstype]
+                    if libc.unshare(flag) != 0:
+                        raise ValueError(f"Failed to unshare({nstype})")
 
-                with open(f"/proc/{target_pid}/ns/{nstype}", "r") as nsf:
-                    if libc.setns(nsf.fileno(), flag) != 0:
-                        raise ValueError(f"Failed to setns({nstype}) (to pid {target_pid})")
+                    with open(f"/proc/{target_pid}/ns/{nstype}", "r") as nsf:
+                        if libc.setns(nsf.fileno(), flag) != 0:
+                            raise ValueError(f"Failed to setns({nstype}) (to pid {target_pid})")
 
-        nonlocal ret
-        ret = callback()
+            nonlocal ret
+            ret = callback()
+        except BaseException as e:
+            nonlocal exc
+            exc = e
 
     t = Thread(target=_switch_and_run)
     t.start()
     t.join()
 
-    return ret
+    if isinstance(ret, _Sentinel):
+        assert exc is not None
+        raise Exception("run_in_ns execution failed") from exc
+    else:
+        assert exc is None
+        return ret
 
 
 def get_mnt_ns_ancestor(process: Process) -> int:
