@@ -199,11 +199,18 @@ _proc_events_listener: Optional[_ProcEventsListener] = None
 def _ensure_thread_started(func: Callable):
     def wrapper(*args, **kwargs):
         global _proc_events_listener
+
         if _proc_events_listener is None:
-            _proc_events_listener = _ProcEventsListener()
-            _proc_events_listener.start()
+            try:
+                _proc_events_listener = _ProcEventsListener()
+                _proc_events_listener.start()
+            except Exception:
+                _proc_events_listener = None
+                raise
+
         if not _proc_events_listener.is_alive():
             raise RuntimeError("Process Events Listener isn't running")
+
         return func(*args, **kwargs)
 
     return wrapper
