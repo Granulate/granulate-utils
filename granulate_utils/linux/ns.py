@@ -98,6 +98,7 @@ def run_in_ns(nstypes: List[str], callback: Callable[[], T], target_pid: int = 1
             nonlocal ret
             ret = callback()
         except BaseException as e:
+            # save the exception so we can re-raise it in the calling thread
             nonlocal exc
             exc = e
 
