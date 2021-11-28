@@ -168,6 +168,8 @@ class _ProcEventsListener(threading.Thread):
             os.close(self._select_breaker_reader)
 
     def start(self):
+        # We make these initializations here (and not in the new thread) so if an exception occures it'll be
+        # visible in the calling thread
         try:
             self._socket.bind((0, self._CN_IDX_PROC))
             self._register_for_connector_events(self._socket)
@@ -205,6 +207,7 @@ def _ensure_thread_started(func: Callable):
                 _proc_events_listener = _ProcEventsListener()
                 _proc_events_listener.start()
             except Exception:
+                # TODO: We leak the pipe FDs here...
                 _proc_events_listener = None
                 raise
 
