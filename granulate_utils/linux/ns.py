@@ -79,7 +79,10 @@ def run_in_ns(nstypes: List[str], callback: Callable[[], T], target_pid: int = 1
 
     def _switch_and_run():
         try:
-            libc = ctypes.CDLL("libc.so.6")
+            global libc
+            if libc is None:
+                libc = ctypes.CDLL("libc.so.6")
+
             for nstype in nstypes:
                 if not is_same_ns(target_pid, nstype):
                     flag = {
