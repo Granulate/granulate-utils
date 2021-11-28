@@ -155,14 +155,6 @@ class _ProcEventsListener(threading.Thread):
 
     def _proc_events_listener(self):
         """Runs forever and calls registered callbacks on process events"""
-        try:
-            self._socket.bind((0, self._CN_IDX_PROC))
-        except PermissionError as e:
-            raise PermissionError(
-                "This process doesn't have permissions to bind to the process events connector"
-            ) from e
-
-        self._register_for_connector_events(self._socket)
         self._selector.register(self._socket, selectors.EVENT_READ)
 
         try:
@@ -174,6 +166,19 @@ class _ProcEventsListener(threading.Thread):
             self._socket.close()
             os.close(self._select_breaker)
             os.close(self._select_breaker_reader)
+
+    def start(self):
+        # We make these initializations here (and not in the new thread) so if an exception occures it'll be
+        # visible in the calling thread
+        try:
+            self._socket.bind((0, self._CN_IDX_PROC))
+            self._register_for_connector_events(self._socket)
+        except PermissionError as e:
+            raise PermissionError(
+                "This process doesn't have permissions to bind/connect to the process events connector"
+            ) from e
+
+        super().start()
 
     @_raise_if_not_running
     def stop(self):
@@ -196,11 +201,19 @@ _proc_events_listener: Optional[_ProcEventsListener] = None
 def _ensure_thread_started(func: Callable):
     def wrapper(*args, **kwargs):
         global _proc_events_listener
+
         if _proc_events_listener is None:
-            _proc_events_listener = _ProcEventsListener()
-            _proc_events_listener.start()
+            try:
+                _proc_events_listener = _ProcEventsListener()
+                _proc_events_listener.start()
+            except Exception:
+                # TODO: We leak the pipe FDs here...
+                _proc_events_listener = None
+                raise
+
         if not _proc_events_listener.is_alive():
             raise RuntimeError("Process Events Listener isn't running")
+
         return func(*args, **kwargs)
 
     return wrapper
