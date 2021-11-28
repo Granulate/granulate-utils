@@ -29,6 +29,9 @@ class NsType(enum.IntFlag):
     uts = 0x04000000  # CLONE_NEWUTS
 
 
+libc: Optional[ctypes.CDLL] = None
+
+
 def resolve_proc_root_links(proc_root: str, ns_path: str) -> str:
     """
     Resolves "ns_path" which (possibly) resides in another mount namespace.
