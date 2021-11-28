@@ -5,6 +5,7 @@
 
 import ctypes
 import os
+import enum
 from pathlib import Path
 from threading import Thread
 from typing import Callable, List, Optional, TypeVar, Union
@@ -19,6 +20,13 @@ class _Sentinel:
 
 
 _SENTINEL = _Sentinel()
+
+
+class NsType(enum.IntFlag):
+    mnt = 0x00020000  # CLONE_NEWNS
+    net = 0x40000000  # CLONE_NEWNET
+    pid = 0x20000000  # CLONE_NEWPID
+    uts = 0x04000000  # CLONE_NEWUTS
 
 
 def resolve_proc_root_links(proc_root: str, ns_path: str) -> str:
@@ -85,12 +93,7 @@ def run_in_ns(nstypes: List[str], callback: Callable[[], T], target_pid: int = 1
 
             for nstype in nstypes:
                 if not is_same_ns(target_pid, nstype):
-                    flag = {
-                        "mnt": 0x00020000,  # CLONE_NEWNS
-                        "net": 0x40000000,  # CLONE_NEWNET
-                        "pid": 0x20000000,  # CLONE_NEWPID
-                        "uts": 0x04000000,  # CLONE_NEWUTS
-                    }[nstype]
+                    flag = NsType[nstype].value
                     if libc.unshare(flag) != 0:
                         raise ValueError(f"Failed to unshare({nstype})")
 
