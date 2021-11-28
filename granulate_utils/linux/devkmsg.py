@@ -18,6 +18,7 @@ class DevKmsgProvider:
     The /dev/kmsg interface is described at Documentation/ABI/testing/dev-kmsg in the kernel source tree
     and can be viewed at https://github.com/torvalds/linux/blob/master/Documentation/ABI/testing/dev-kmsg.
     """
+
     def __init__(self):
         self.dev_kmsg_fd = os.open("/dev/kmsg", os.O_RDONLY)
         os.set_blocking(self.dev_kmsg_fd, False)
