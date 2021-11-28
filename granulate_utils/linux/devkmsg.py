@@ -7,11 +7,13 @@ import os
 import time
 from typing import List, Tuple
 
+from granulate_utils.linux.kernel_messages import KernelMessagesProvider
+
 # See linux/printk.h
 CONSOLE_EXT_LOG_MAX = 8192
 
 
-class DevKmsgProvider:
+class DevKmsgProvider(KernelMessagesProvider):
     """
     Provides a stream of kernel messages via /dev/kmsg. Requires Linux 3.5+.
 
@@ -40,10 +42,6 @@ class DevKmsgProvider:
                 raise
 
         yield from self._parse_raw_messages(messages)
-
-    def on_missed(self):
-        """Gets called when some kernel messages are missed."""
-        pass
 
     @staticmethod
     def _parse_raw_messages(messages: List[Tuple[float, bytes]]):
