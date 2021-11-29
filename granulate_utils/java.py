@@ -1,5 +1,5 @@
 import re
-from typing import Iterable
+from typing import Iterable, List
 
 NATIVE_FRAMES_REGEX = re.compile(r"^Native frames:[^\n]*\n(.*?)\n\n", re.MULTILINE | re.DOTALL)
 """
@@ -53,7 +53,7 @@ Example:
 """
 
 
-def locate_hotspot_error_file(nspid, cmdline) -> Iterable[str]:
+def locate_hotspot_error_file(nspid: int, cmdline: List[str]) -> Iterable[str]:
     """
     Locate a fatal error log written by the Hotspot JVM, if one exists.
     See https://docs.oracle.com/javase/8/docs/technotes/guides/troubleshoot/felog001.html.
