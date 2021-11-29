@@ -22,10 +22,10 @@ class DevKmsgProvider(KernelMessagesProvider):
     """
 
     def __init__(self):
-        self.dev_kmsg_fd = os.open("/dev/kmsg", os.O_RDONLY)
-        os.set_blocking(self.dev_kmsg_fd, False)
+        self.dev_kmsg = open("/dev/kmsg", "rb", buffering=0)
+        os.set_blocking(self.dev_kmsg.fileno(), False)
         # skip all historical messages:
-        os.lseek(self.dev_kmsg_fd, 0, os.SEEK_END)
+        os.lseek(self.dev_kmsg.fileno(), 0, os.SEEK_END)
 
     def iter_new_messages(self):
         messages: List[Tuple[float, bytes]] = []
@@ -33,7 +33,7 @@ class DevKmsgProvider(KernelMessagesProvider):
             # Each read() is one message
             while True:
                 try:
-                    message = os.read(self.dev_kmsg_fd, CONSOLE_EXT_LOG_MAX)
+                    message = os.read(self.dev_kmsg.fileno(), CONSOLE_EXT_LOG_MAX)
                     messages.append((time.time(), message))
                 except BrokenPipeError:
                     self.on_missed()
