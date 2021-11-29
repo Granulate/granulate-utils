@@ -12,4 +12,5 @@ def get_kernel_release() -> Tuple[int, int]:
     return int(major_str), int(minor_str)
 
 
+# TASK_COMM_LEN is 16, and it is always null-terminated, so 15.
 COMM_PATTERN = r".{0,15}"
