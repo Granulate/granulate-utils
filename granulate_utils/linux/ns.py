@@ -16,6 +16,7 @@ T = TypeVar("T")
 
 HOST_ROOT_PREFIX = '/proc/1/root'
 
+
 class _Sentinel:
     pass
 
@@ -32,9 +33,9 @@ class NsType(enum.IntFlag):
 
 libc: Optional[ctypes.CDLL] = None
 
+
 def resolve_host_root_links(ns_path: str) -> str:
-    assert ns_path.startswith('/'), 'Must pass full path and not relative'
-    return resolve_proc_root_links(HOST_ROOT_PREFIX, path_suffix)
+    return resolve_proc_root_links(HOST_ROOT_PREFIX, ns_path)
 
 
 def resolve_proc_root_links(proc_root: str, ns_path: str) -> str:
@@ -68,8 +69,8 @@ def resolve_proc_root_links(proc_root: str, ns_path: str) -> str:
 
 def is_same_ns(pid: int, nstype: str, pid2: int = None) -> bool:
     return (
-        os.stat(f"/proc/{pid2 if pid2 is not None else 'self'}/ns/{nstype}").st_ino
-        == os.stat(f"/proc/{pid}/ns/{nstype}").st_ino
+            os.stat(f"/proc/{pid2 if pid2 is not None else 'self'}/ns/{nstype}").st_ino
+            == os.stat(f"/proc/{pid}/ns/{nstype}").st_ino
     )
 
 
