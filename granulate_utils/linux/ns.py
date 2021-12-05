@@ -164,9 +164,8 @@ def get_proc_root_path(process: Process) -> str:
     return f"/proc/{get_mnt_ns_ancestor(process)}/root"
 
 
-def get_resolved_proc_root_path(process: Process, ns_path: str) -> str:
+def resolve_host_path(process: Process, ns_path: str) -> str:
     """
-    Gets /proc/<pid>/root of a given process, just like `get_proc_root_path` except that here we also resolve all the
-    filesystem links.
+    Get a path in the host mount namespace pointing to path in process mount namespace.
     """
     return resolve_proc_root_links(get_proc_root_path(process), ns_path)
