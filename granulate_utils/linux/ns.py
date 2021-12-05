@@ -155,3 +155,17 @@ def is_running_in_init_pid() -> bool:
         # technically, funny processes can name themselves "kthreadd", causing this check to pass in a non-init NS.
         # but we don't need to handle such extreme cases, I think.
         return p.name() == "kthreadd"
+
+
+def get_proc_root_path(process: Process) -> str:
+    """
+    Gets /proc/<pid>/root of a given process, then a file can be read from the host mnt ns.
+    """
+    return f"/proc/{get_mnt_ns_ancestor(process)}/root"
+
+
+def resolve_host_path(process: Process, ns_path: str) -> str:
+    """
+    Get a path in the host mount namespace pointing to path in process mount namespace.
+    """
+    return resolve_proc_root_links(get_proc_root_path(process), ns_path)
