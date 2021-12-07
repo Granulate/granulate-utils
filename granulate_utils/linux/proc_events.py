@@ -132,6 +132,7 @@ class _ProcEventsListener(threading.Thread):
                 except OSError as e:
                     if e.errno == 105:
                         continue
+                    raise
 
                 nl_hdr = dict(
                     zip(("len", "type", "flags", "seq", "pid"), self._nlmsghdr.unpack(data[: self._nlmsghdr.size]))
