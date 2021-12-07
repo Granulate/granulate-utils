@@ -234,20 +234,22 @@ class _ProcEventsListener(threading.Thread):
 
 
 _proc_events_listener: Optional[_ProcEventsListener] = None
+_listener_creation_lock = threading.Lock()
 
 
 def _ensure_thread_started(func: Callable):
     def wrapper(*args, **kwargs):
         global _proc_events_listener
 
-        if _proc_events_listener is None:
-            try:
-                _proc_events_listener = _ProcEventsListener()
-                _proc_events_listener.start()
-            except Exception:
-                # TODO: We leak the pipe FDs here...
-                _proc_events_listener = None
-                raise
+        with _listener_creation_lock:
+            if _proc_events_listener is None:
+                try:
+                    _proc_events_listener = _ProcEventsListener()
+                    _proc_events_listener.start()
+                except Exception:
+                    # TODO: We leak the pipe FDs here...
+                    _proc_events_listener = None
+                    raise
 
         if not _proc_events_listener.is_alive():
             raise RuntimeError("Process Events Listener isn't running")
