@@ -77,6 +77,7 @@ class _ProcEventsListener(threading.Thread):
     _base_proc_event = struct.Struct("=2IQ")
 
     # From enum what
+    _PROC_EVENT_EXEC = 0x00000002
     _PROC_EVENT_EXIT = 0x80000000
 
     # From enum proc_cn_mcast_op
@@ -89,9 +90,16 @@ class _ProcEventsListener(threading.Thread):
     # } exit;
     _exit_proc_event = struct.Struct("=4I")
 
+    # struct exec_proc_event {
+    #     pid_t process_pid;
+    #     pid_t process_tgid;
+    # } exec;
+    _exec_proc_event = struct.Struct("=2I")
+
     def __init__(self):
         self._socket = socket.socket(socket.AF_NETLINK, socket.SOCK_DGRAM, self._NETLINK_CONNECTOR)
         self._exit_callbacks: List[Callable] = []
+        self._exec_callbacks: List[Callable] = []
         self._should_stop = False
 
         self._selector = selectors.DefaultSelector()
@@ -116,7 +124,15 @@ class _ProcEventsListener(threading.Thread):
                 break
 
             for key, _ in events:
-                data = key.fileobj.recv(256)
+                try:
+                    # When stressed, reading from the socket can raise
+                    #   OSError: [Errno 105] No buffer space available
+                    # This seems to be safe to ignore, empirically no events were missed
+                    data = key.fileobj.recv(256)
+                except OSError as e:
+                    if e.errno == 105:
+                        continue
+                    raise
 
                 nl_hdr = dict(
                     zip(("len", "type", "flags", "seq", "pid"), self._nlmsghdr.unpack(data[: self._nlmsghdr.size]))
@@ -152,6 +168,20 @@ class _ProcEventsListener(threading.Thread):
 
                     for callback in self._exit_callbacks:
                         callback(event_data["pid"], event_data["tgid"], event_data["exit_code"])
+                elif event["what"] == self._PROC_EVENT_EXEC:
+                    event_data = dict(
+                        zip(
+                            ("pid", "tgid"),
+                            self._exec_proc_event.unpack(
+                                data[
+                                    self._base_proc_event.size : self._base_proc_event.size + self._exec_proc_event.size
+                                ]
+                            ),
+                        )
+                    )
+
+                    for callback in self._exec_callbacks:
+                        callback(event_data["pid"], event_data["tgid"])
 
     def _proc_events_listener(self):
         """Runs forever and calls registered callbacks on process events"""
@@ -194,22 +224,32 @@ class _ProcEventsListener(threading.Thread):
     def unregister_exit_callback(self, callback: Callable):
         self._exit_callbacks.remove(callback)
 
+    @_raise_if_not_running
+    def register_exec_callback(self, callback: Callable):
+        self._exec_callbacks.append(callback)
+
+    @_raise_if_not_running
+    def unregister_exec_callback(self, callback: Callable):
+        self._exec_callbacks.remove(callback)
+
 
 _proc_events_listener: Optional[_ProcEventsListener] = None
+_listener_creation_lock = threading.Lock()
 
 
 def _ensure_thread_started(func: Callable):
     def wrapper(*args, **kwargs):
         global _proc_events_listener
 
-        if _proc_events_listener is None:
-            try:
-                _proc_events_listener = _ProcEventsListener()
-                _proc_events_listener.start()
-            except Exception:
-                # TODO: We leak the pipe FDs here...
-                _proc_events_listener = None
-                raise
+        with _listener_creation_lock:
+            if _proc_events_listener is None:
+                try:
+                    _proc_events_listener = _ProcEventsListener()
+                    _proc_events_listener.start()
+                except Exception:
+                    # TODO: We leak the pipe FDs here...
+                    _proc_events_listener = None
+                    raise
 
         if not _proc_events_listener.is_alive():
             raise RuntimeError("Process Events Listener isn't running")
@@ -233,3 +273,19 @@ def register_exit_callback(callback: Callable):
 def unregister_exit_callback(callback: Callable):
     assert _proc_events_listener is not None
     _proc_events_listener.unregister_exit_callback(callback)
+
+
+@_ensure_thread_started
+def register_exec_callback(callback: Callable):
+    """Register a function to be called whenever exec is called on a process
+
+    The callback should receive two arguments: pid and tgid.
+    """
+    assert _proc_events_listener is not None
+    _proc_events_listener.register_exec_callback(callback)
+
+
+@_ensure_thread_started
+def unregister_exec_callback(callback: Callable):
+    assert _proc_events_listener is not None
+    _proc_events_listener.unregister_exec_callback(callback)
