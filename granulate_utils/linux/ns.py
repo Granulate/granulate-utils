@@ -123,17 +123,17 @@ def run_in_ns(nstypes: List[str], callback: Callable[[], T], target_pid: int = 1
         return ret
 
 
-def get_mnt_ns_ancestor(process: Process) -> int:
+def get_mnt_ns_ancestor(process: Process) -> Process:
     """
     Gets the topmost ancestor of "process" that runs in the same mount namespace of "process".
     """
     while True:
         parent = process.parent()
         if parent is None:  # topmost ancestor?
-            return process.pid
+            return process
 
         if not is_same_ns(process.pid, "mnt", parent.pid):
-            return process.pid
+            return process
 
         process = parent
 
@@ -161,7 +161,7 @@ def get_proc_root_path(process: Process) -> str:
     """
     Gets /proc/<pid>/root of a given process, then a file can be read from the host mnt ns.
     """
-    return f"/proc/{get_mnt_ns_ancestor(process)}/root"
+    return f"/proc/{get_mnt_ns_ancestor(process.pid)}/root"
 
 
 def resolve_host_path(process: Process, ns_path: str) -> str:
