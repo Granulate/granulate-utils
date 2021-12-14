@@ -161,7 +161,7 @@ def get_proc_root_path(process: Process) -> str:
     """
     Gets /proc/<pid>/root of a given process, then a file can be read from the host mnt ns.
     """
-    return f"/proc/{get_mnt_ns_ancestor(process.pid)}/root"
+    return f"/proc/{get_mnt_ns_ancestor(process).pid}/root"
 
 
 def resolve_host_path(process: Process, ns_path: str) -> str:
