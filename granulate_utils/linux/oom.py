@@ -9,7 +9,6 @@ from typing import Optional
 
 from granulate_utils.linux import COMM_PATTERN
 
-
 # see function in oom_kill.c:__oom_kill_process. example string:
 # "Out of memory: Killed process 765074 (chrome) total-vm:38565352kB, anon-rss:209356kB, file-rss:1624kB, shmem-rss:0kB"
 # recent kernels added more fields (e.g UID, pgtables) but we don't care about them, for now; and this regex still

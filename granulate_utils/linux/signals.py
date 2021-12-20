@@ -9,7 +9,6 @@ from typing import Optional
 
 from granulate_utils.linux import COMM_PATTERN
 
-
 # see show_signal() for x86, e.g:
 # "a[613450]: segfault at 0 ip 000056087e9aa136 sp 00007fffab66a9f0 error 6 in a[56087e9aa000+1000]"
 SHOW_SIGNAL_X86 = re.compile(
