@@ -69,8 +69,8 @@ def resolve_proc_root_links(proc_root: str, ns_path: str) -> str:
 
 def is_same_ns(pid: int, nstype: str, pid2: int = None) -> bool:
     return (
-            os.stat(f"/proc/{pid2 if pid2 is not None else 'self'}/ns/{nstype}").st_ino
-            == os.stat(f"/proc/{pid}/ns/{nstype}").st_ino
+        os.stat(f"/proc/{pid2 if pid2 is not None else 'self'}/ns/{nstype}").st_ino
+        == os.stat(f"/proc/{pid}/ns/{nstype}").st_ino
     )
 
 
