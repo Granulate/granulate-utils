@@ -14,6 +14,8 @@ from psutil import NoSuchProcess, Process
 
 T = TypeVar("T")
 
+HOST_ROOT_PREFIX = "/proc/1/root"
+
 
 class _Sentinel:
     pass
@@ -30,6 +32,10 @@ class NsType(enum.IntFlag):
 
 
 libc: Optional[ctypes.CDLL] = None
+
+
+def resolve_host_root_links(ns_path: str) -> str:
+    return resolve_proc_root_links(HOST_ROOT_PREFIX, ns_path)
 
 
 def resolve_proc_root_links(proc_root: str, ns_path: str) -> str:
