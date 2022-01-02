@@ -14,7 +14,7 @@ from psutil import NoSuchProcess, Process
 
 T = TypeVar("T")
 
-HOST_ROOT_PREFIX = '/proc/1/root'
+HOST_ROOT_PREFIX = "/proc/1/root"
 
 
 class _Sentinel:
