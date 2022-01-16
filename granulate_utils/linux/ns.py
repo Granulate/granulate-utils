@@ -6,6 +6,7 @@
 import ctypes
 import enum
 import os
+import re
 from pathlib import Path
 from threading import Thread
 from typing import Callable, List, Optional, TypeVar, Union
@@ -74,11 +75,44 @@ def get_process_nspid(pid: int) -> Optional[int]:
             if fields[0] == "NSpid:":
                 return int(fields[-1])
 
-    # old kernel (pre 4.1) with no NSpid.
-    # TODO if needed, this can be implemented for pre 4.1, by reading all /proc/pid/sched files as
-    # seen by the PID NS; they expose the init NS PID (due to a bug fixed in 4.14~), and we can get the NS PID
-    # from the listing of those files itself.
-    return None
+    if is_same_ns(pid, NsType.pid.name):
+        # If we're in the same PID namespace, then the outer PID is also the inner pid (NSpid)
+        return pid
+
+    return _get_process_nspid_by_sched_files(pid)
+
+
+def _get_process_nspid_by_sched_files(pid: int):
+    # Old kernel (pre 4.1) doesn't have an NSpid field in their /proc/pid/status file
+    # Instead, we can look through all /proc/*/sched files from inside the process' pid namespace, and due to a bug
+    # (fixed in 4.14) the outer PID is exposed, so we can find the target process by comparing the outer PID
+
+    def _find_inner_pid() -> Optional[int]:
+        pattern = re.compile(r"\((\d+), #threads: ")
+
+        procfs = Path('/proc')
+        for process_dir in procfs.iterdir():
+            is_process_dir = process_dir.is_dir() and process_dir.name.isdigit()
+            if not is_process_dir:
+                continue
+
+            try:
+                sched_file = process_dir / 'sched'
+                sched_contents = sched_file.open('r').readline()
+                match = pattern.search(sched_contents)
+                if match:
+                    outer_pid = int(match.group(1))
+                    if outer_pid == pid:
+                        return int(process_dir.name)
+            except FileNotFoundError:
+                # That's OK, processes might disappear before we get the chance to handle them
+                continue
+
+        return None
+
+    # We're searching `/proc`, so we only need to set our mount namespace
+    inner_pid = run_in_ns(['mnt'], _find_inner_pid, pid)
+    return inner_pid
 
 
 def is_same_ns(pid: int, nstype: str, pid2: int = None) -> bool:
