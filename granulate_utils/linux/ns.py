@@ -67,6 +67,20 @@ def resolve_proc_root_links(proc_root: str, ns_path: str) -> str:
     return path
 
 
+def get_process_nspid(pid: int) -> Optional[int]:
+    with open(f"/proc/{pid}/status") as f:
+        for line in f:
+            fields = line.split()
+            if fields[0] == "NSpid:":
+                return int(fields[-1])
+
+    # old kernel (pre 4.1) with no NSpid.
+    # TODO if needed, this can be implemented for pre 4.1, by reading all /proc/pid/sched files as
+    # seen by the PID NS; they expose the init NS PID (due to a bug fixed in 4.14~), and we can get the NS PID
+    # from the listing of those files itself.
+    return None
+
+
 def is_same_ns(pid: int, nstype: str, pid2: int = None) -> bool:
     return (
         os.stat(f"/proc/{pid2 if pid2 is not None else 'self'}/ns/{nstype}").st_ino
