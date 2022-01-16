@@ -91,13 +91,13 @@ def _get_process_nspid_by_sched_files(pid: int):
         pattern = re.compile(r"\((\d+), #threads: ")  # Match example: "java (12329, #threads: 11)"
 
         procfs = Path("/proc")
-        for process_dir in procfs.iterdir():
-            is_process_dir = process_dir.is_dir() and process_dir.name.isdigit()
+        for procfs_child in procfs.iterdir():
+            is_process_dir = procfs_child.is_dir() and procfs_child.name.isdigit()
             if not is_process_dir:
                 continue
 
             try:
-                sched_file_path = process_dir / "sched"
+                sched_file_path = procfs_child / "sched"
                 with sched_file_path.open("r") as sched_file:
                     sched_contents = sched_file.readline()  # The first line contains the outer PID
             except FileNotFoundError:
@@ -108,7 +108,7 @@ def _get_process_nspid_by_sched_files(pid: int):
             if match is not None:
                 outer_pid = int(match.group(1))
                 if outer_pid == pid:
-                    return int(process_dir.name)
+                    return int(procfs_child.name)
 
         return None
 
