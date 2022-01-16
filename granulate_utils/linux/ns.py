@@ -102,7 +102,7 @@ def _get_process_nspid_by_sched_files(pid: int):
                     sched_contents = sched_file.readline()  # The first line contains the outer PID
 
                     match = pattern.search(sched_contents)
-                    if match:
+                    if match is not None:
                         outer_pid = int(match.group(1))
                         if outer_pid == pid:
                             return int(process_dir.name)
