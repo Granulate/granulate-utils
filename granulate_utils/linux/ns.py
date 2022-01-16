@@ -100,7 +100,7 @@ def _get_process_nspid_by_sched_files(pid: int):
                 sched_file_path = procfs_child / "sched"
                 with sched_file_path.open("r") as sched_file:
                     sched_header_line = sched_file.readline()  # The first line contains the outer PID
-            except FileNotFoundError:
+            except (FileNotFoundError, ProcessLookupError):
                 # That's OK, processes might disappear before we get the chance to handle them
                 continue
 
