@@ -90,15 +90,15 @@ def _get_process_nspid_by_sched_files(pid: int):
     def _find_inner_pid() -> Optional[int]:
         pattern = re.compile(r"\((\d+), #threads: ")
 
-        procfs = Path('/proc')
+        procfs = Path("/proc")
         for process_dir in procfs.iterdir():
             is_process_dir = process_dir.is_dir() and process_dir.name.isdigit()
             if not is_process_dir:
                 continue
 
             try:
-                sched_file = process_dir / 'sched'
-                sched_contents = sched_file.open('r').readline()
+                sched_file = process_dir / "sched"
+                sched_contents = sched_file.open("r").readline()
                 match = pattern.search(sched_contents)
                 if match:
                     outer_pid = int(match.group(1))
@@ -111,7 +111,7 @@ def _get_process_nspid_by_sched_files(pid: int):
         return None
 
     # We're searching `/proc`, so we only need to set our mount namespace
-    inner_pid = run_in_ns(['mnt'], _find_inner_pid, pid)
+    inner_pid = run_in_ns(["mnt"], _find_inner_pid, pid)
     return inner_pid
 
 
