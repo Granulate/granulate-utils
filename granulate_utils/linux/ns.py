@@ -100,15 +100,15 @@ def _get_process_nspid_by_sched_files(pid: int):
                 sched_file_path = process_dir / "sched"
                 with sched_file_path.open("r") as sched_file:
                     sched_contents = sched_file.readline()  # The first line contains the outer PID
-
-                    match = pattern.search(sched_contents)
-                    if match is not None:
-                        outer_pid = int(match.group(1))
-                        if outer_pid == pid:
-                            return int(process_dir.name)
             except FileNotFoundError:
                 # That's OK, processes might disappear before we get the chance to handle them
                 continue
+
+            match = pattern.search(sched_contents)
+            if match is not None:
+                outer_pid = int(match.group(1))
+                if outer_pid == pid:
+                    return int(process_dir.name)
 
         return None
 
