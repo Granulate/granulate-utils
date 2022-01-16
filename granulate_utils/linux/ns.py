@@ -88,7 +88,7 @@ def _get_process_nspid_by_sched_files(pid: int):
     # (fixed in 4.14) the outer PID is exposed, so we can find the target process by comparing the outer PID
 
     def _find_inner_pid() -> Optional[int]:
-        pattern = re.compile(r"\((\d+), #threads: ")
+        pattern = re.compile(r"\((\d+), #threads: ")  # Match example: "java (12329, #threads: 11)"
 
         procfs = Path("/proc")
         for process_dir in procfs.iterdir():
