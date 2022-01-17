@@ -68,35 +68,42 @@ def resolve_proc_root_links(proc_root: str, ns_path: str) -> str:
     return path
 
 
-def get_process_nspid(pid: int) -> int:
+def get_process_nspid(process: Union[Process, int]) -> int:
     """
     :raises NoSuchProcess: If the process doesn't or no longer exists
     """
-    nspid = _get_process_nspid_by_status_file(pid)
+    if isinstance(process, int):
+        process = Process(process)
+
+    nspid = _get_process_nspid_by_status_file(process)
     if nspid is not None:
         return nspid
 
-    if is_same_ns(pid, NsType.pid.name):
+    if is_same_ns(process, NsType.pid.name):
         # If we're in the same PID namespace, then the outer PID is also the inner pid (NSpid)
-        return pid
+        return process.pid
 
-    return _get_process_nspid_by_sched_files(pid)
+    return _get_process_nspid_by_sched_files(process)
 
 
-def _get_process_nspid_by_status_file(pid: int) -> Optional[int]:
+def _get_process_nspid_by_status_file(process: Process) -> Optional[int]:
     try:
-        with open(f"/proc/{pid}/status") as f:
+        with open(f"/proc/{process.pid}/status") as f:
+            # If the process isn't running, then we opened the wrong `status` file
+            if not process.is_running():
+                raise NoSuchProcess(process.pid)
+
             for line in f:
                 fields = line.split()
                 if fields[0] == "NSpid:":
-                    return int(fields[-1])
+                    return int(fields[-1])  # The last pid in the list is the innermost pid, according to `man 5 proc`
 
         return None
     except (FileNotFoundError, ProcessLookupError) as e:
-        raise NoSuchProcess(pid) from e
+        raise NoSuchProcess(process.pid) from e
 
 
-def _get_process_nspid_by_sched_files(pid: int) -> int:
+def _get_process_nspid_by_sched_files(process: Process) -> int:
     # Old kernel (pre 4.1) doesn't have an NSpid field in their /proc/pid/status file
     # Instead, we can look through all /proc/*/sched files from inside the process' pid namespace, and due to a bug
     # (fixed in 4.14) the outer PID is exposed, so we can find the target process by comparing the outer PID
@@ -121,31 +128,49 @@ def _get_process_nspid_by_sched_files(pid: int) -> int:
             match = pattern.search(sched_header_line)
             if match is not None:
                 outer_pid = int(match.group(1))
-                if outer_pid == pid:
+                if outer_pid == process.pid:
                     return int(procfs_child.name)
 
         return None
 
     # We're searching `/proc`, so we only need to set our mount namespace
-    inner_pid = run_in_ns(["mnt"], _find_inner_pid, pid)
+    inner_pid = run_in_ns(["mnt"], _find_inner_pid, process.pid)
     if inner_pid is not None:
+        if not process.is_running():  # Make sure the pid wasn't reused for another process
+            raise NoSuchProcess(process.pid)
+
         return inner_pid
 
     # If we weren't able to find the process' nspid, he must have been killed while searching
-    assert not Path(f"/proc/{pid}").exists(), f"Process {pid} is running, but we failed to find his nspid"
+    assert not process.is_running(), f"Process {process.pid} is running, but we failed to find his nspid"
 
-    raise NoSuchProcess(pid)
-
-
-def is_same_ns(pid: int, nstype: str, pid2: int = None) -> bool:
-    return get_process_ns_inode(pid2 if pid2 is not None else "self", nstype) == get_process_ns_inode(pid, nstype)
+    raise NoSuchProcess(process.pid)
 
 
-def get_process_ns_inode(pid: Union[int, str], nstype: str):
+def is_same_ns(process: Union[Process, int], nstype: str, process2: Union[Process, int] = None) -> bool:
+    if isinstance(process, int):
+        process = Process(process)
+    if isinstance(process2, int):
+        process2 = Process(process2)
+    elif process2 is None:
+        process2 = Process()  # `self`
+
+    is_the_same_ns = get_process_ns_inode(process, nstype) == get_process_ns_inode(process2, nstype)
+
+    # If one of the processes isn't running, we checked the wrong one
+    if not process.is_running():
+        raise NoSuchProcess(process.pid)
+    if not process2.is_running():
+        raise NoSuchProcess(process2.pid)
+
+    return is_the_same_ns
+
+
+def get_process_ns_inode(process: Process, nstype: str):
     try:
-        return os.stat(f"/proc/{pid}/ns/{nstype}").st_ino
+        return os.stat(f"/proc/{process.pid}/ns/{nstype}").st_ino
     except FileNotFoundError as e:
-        raise NoSuchProcess(pid) from e
+        raise NoSuchProcess(process.pid) from e
 
 
 def run_in_ns(nstypes: List[str], callback: Callable[[], T], target_pid: int = 1) -> T:
