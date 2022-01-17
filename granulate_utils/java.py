@@ -1,6 +1,7 @@
+import os
 import re
 import signal
-from typing import Iterable, List, Union
+from typing import Iterable, List, Optional, Union
 
 NATIVE_FRAMES_REGEX = re.compile(r"^Native frames:[^\n]*\n(.*?)\n\n", re.MULTILINE | re.DOTALL)
 """
@@ -83,3 +84,14 @@ def is_java_fatal_signal(sig: Union[int, signal.Signals]) -> bool:
     else:
         signo = sig.value
     return signo in (signal.SIGABRT.value, signal.SIGKILL.value, signal.SIGSEGV.value)
+
+
+def java_exit_code_to_signo(exit_code: int) -> Optional[int]:
+    if os.WIFSIGNALED(exit_code):
+        return os.WTERMSIG(exit_code)
+    elif exit_code == 0x8F00:
+        # java exits with 143 upon SIGTERM
+        return signal.SIGTERM.value
+    else:
+        # not a signal
+        return None
