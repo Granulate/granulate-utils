@@ -1,5 +1,6 @@
 import re
-from typing import Iterable, List
+import signal
+from typing import Iterable, List, Union
 
 NATIVE_FRAMES_REGEX = re.compile(r"^Native frames:[^\n]*\n(.*?)\n\n", re.MULTILINE | re.DOTALL)
 """
@@ -68,3 +69,17 @@ def locate_hotspot_error_file(nspid: int, cmdline: List[str]) -> Iterable[str]:
     default_error_file = f"hs_err_pid{nspid}.log"
     yield default_error_file
     yield f"/tmp/{default_error_file}"
+
+
+def is_java_fatal_signal(sig: Union[int, signal.Signals]) -> bool:
+    # SIGABRT is what JVMs (at least HotSpot) exit with upon a VM error (e.g after writing the hs_err file).
+    # SIGKILL is the result of OOM.
+    # SIGSEGV is added because in some extreme cases, the signal handler (which usually ends up with SIGABRT)
+    # causes another SIGSEGV (possibly in some loop), and eventually Java really dies with SIGSEGV.
+    # Other signals (such as SIGTERM which is common) are ignored until proven relevant
+    # to hard errors such as crashes. (SIGTERM, for example, is used as containers' stop signal)
+    if isinstance(sig, int):
+        signo = sig
+    else:
+        signo = sig.value
+    return signo in (signal.SIGABRT.value, signal.SIGKILL.value, signal.SIGSEGV.value)
