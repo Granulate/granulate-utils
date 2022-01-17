@@ -78,5 +78,8 @@ def is_java_fatal_signal(sig: Union[int, signal.Signals]) -> bool:
     # causes another SIGSEGV (possibly in some loop), and eventually Java really dies with SIGSEGV.
     # Other signals (such as SIGTERM which is common) are ignored until proven relevant
     # to hard errors such as crashes. (SIGTERM, for example, is used as containers' stop signal)
-    signo = sig if isinstance(sig, int) else sig.value
+    if isinstance(sig, int):
+        signo = sig
+    else:
+        signo = sig.value
     return signo in (signal.SIGABRT.value, signal.SIGKILL.value, signal.SIGSEGV.value)
