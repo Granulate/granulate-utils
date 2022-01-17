@@ -132,13 +132,13 @@ def _get_process_nspid_by_sched_files(pid: int) -> int:
         return inner_pid
 
     # If we weren't able to find the process' nspid, he must have been killed while searching
-    assert not Path(f'/proc/{pid}').exists(), f"Process {pid} is running, but we failed to find his nspid"
+    assert not Path(f"/proc/{pid}").exists(), f"Process {pid} is running, but we failed to find his nspid"
 
     raise NoSuchProcess(pid)
 
 
 def is_same_ns(pid: int, nstype: str, pid2: int = None) -> bool:
-    return get_process_ns_inode(pid2 if pid2 is not None else 'self', nstype) == get_process_ns_inode(pid, nstype)
+    return get_process_ns_inode(pid2 if pid2 is not None else "self", nstype) == get_process_ns_inode(pid, nstype)
 
 
 def get_process_ns_inode(pid: Union[int, str], nstype: str):
