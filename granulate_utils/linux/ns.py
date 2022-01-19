@@ -13,6 +13,8 @@ from typing import Callable, List, Optional, TypeVar, Union
 
 from psutil import NoSuchProcess, Process
 
+from granulate_utils.exceptions import UnsupportedNamespaceError
+
 T = TypeVar("T")
 
 HOST_ROOT_PREFIX = "/proc/1/root"
@@ -156,22 +158,27 @@ def is_same_ns(process: Union[Process, int], nstype: str, process2: Union[Proces
     elif process2 is None:
         process2 = Process()  # `self`
 
-    is_the_same_ns = get_process_ns_inode(process, nstype) == get_process_ns_inode(process2, nstype)
-
-    # If one of the processes isn't running, we checked the wrong one
-    if not process.is_running():
-        raise NoSuchProcess(process.pid)
-    if not process2.is_running():
-        raise NoSuchProcess(process2.pid)
-
-    return is_the_same_ns
+    try:
+        return get_process_ns_inode(process, nstype) == get_process_ns_inode(process2, nstype)
+    except UnsupportedNamespaceError:
+        # The namespace does not exist in this kernel, hence the two processes are logically in the same namespace
+        return True
 
 
 def get_process_ns_inode(process: Process, nstype: str):
     try:
-        return os.stat(f"/proc/{process.pid}/ns/{nstype}").st_ino
+        ns_inode = os.stat(f"/proc/{process.pid}/ns/{nstype}").st_ino
     except FileNotFoundError as e:
-        raise NoSuchProcess(process.pid) from e
+        if process.is_running():
+            raise UnsupportedNamespaceError(nstype) from e
+        else:
+            raise NoSuchProcess(process.pid) from e
+
+    # If the process isn't running, we checked the wrong one
+    if not process.is_running():
+        raise NoSuchProcess(process.pid)
+
+    return ns_inode
 
 
 def run_in_ns(nstypes: List[str], callback: Callable[[], T], target_pid: int = 1) -> T:
