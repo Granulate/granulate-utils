@@ -159,13 +159,13 @@ def is_same_ns(process: Union[Process, int], nstype: str, process2: Union[Proces
         process2 = Process()  # `self`
 
     try:
-        return get_process_ns_inode(process, nstype) == get_process_ns_inode(process2, nstype)
+        return _get_process_ns_inode(process, nstype) == _get_process_ns_inode(process2, nstype)
     except UnsupportedNamespaceError:
         # The namespace does not exist in this kernel, hence the two processes are logically in the same namespace
         return True
 
 
-def get_process_ns_inode(process: Process, nstype: str):
+def _get_process_ns_inode(process: Process, nstype: str):
     try:
         ns_inode = os.stat(f"/proc/{process.pid}/ns/{nstype}").st_ino
     except FileNotFoundError as e:
