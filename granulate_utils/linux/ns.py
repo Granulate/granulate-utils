@@ -6,11 +6,14 @@
 import ctypes
 import enum
 import os
+import re
 from pathlib import Path
 from threading import Thread
 from typing import Callable, List, Optional, TypeVar, Union
 
 from psutil import NoSuchProcess, Process
+
+from granulate_utils.exceptions import UnsupportedNamespaceError
 
 T = TypeVar("T")
 
@@ -67,11 +70,115 @@ def resolve_proc_root_links(proc_root: str, ns_path: str) -> str:
     return path
 
 
-def is_same_ns(pid: int, nstype: str, pid2: int = None) -> bool:
-    return (
-        os.stat(f"/proc/{pid2 if pid2 is not None else 'self'}/ns/{nstype}").st_ino
-        == os.stat(f"/proc/{pid}/ns/{nstype}").st_ino
-    )
+def get_process_nspid(process: Union[Process, int]) -> int:
+    """
+    :raises NoSuchProcess: If the process doesn't or no longer exists
+    """
+    if isinstance(process, int):
+        process = Process(process)
+
+    nspid = _get_process_nspid_by_status_file(process)
+    if nspid is not None:
+        return nspid
+
+    if is_same_ns(process, NsType.pid.name):
+        # If we're in the same PID namespace, then the outer PID is also the inner pid (NSpid)
+        return process.pid
+
+    return _get_process_nspid_by_sched_files(process)
+
+
+def _get_process_nspid_by_status_file(process: Process) -> Optional[int]:
+    try:
+        with open(f"/proc/{process.pid}/status") as f:
+            # If the process isn't running, then we opened the wrong `status` file
+            if not process.is_running():
+                raise NoSuchProcess(process.pid)
+
+            for line in f:
+                fields = line.split()
+                if fields[0] == "NSpid:":
+                    return int(fields[-1])  # The last pid in the list is the innermost pid, according to `man 5 proc`
+
+        return None
+    except (FileNotFoundError, ProcessLookupError) as e:
+        raise NoSuchProcess(process.pid) from e
+
+
+def _get_process_nspid_by_sched_files(process: Process) -> int:
+    # Old kernel (pre 4.1) doesn't have an NSpid field in their /proc/pid/status file
+    # Instead, we can look through all /proc/*/sched files from inside the process' pid namespace, and due to a bug
+    # (fixed in 4.14) the outer PID is exposed, so we can find the target process by comparing the outer PID
+
+    def _find_inner_pid() -> Optional[int]:
+        pattern = re.compile(r"\((\d+), #threads: ")  # Match example: "java (12329, #threads: 11)"
+
+        procfs = Path("/proc")
+        for procfs_child in procfs.iterdir():
+            is_process_dir = procfs_child.is_dir() and procfs_child.name.isdigit()
+            if not is_process_dir:
+                continue
+
+            try:
+                sched_file_path = procfs_child / "sched"
+                with sched_file_path.open("r") as sched_file:
+                    sched_header_line = sched_file.readline()  # The first line contains the outer PID
+            except (FileNotFoundError, ProcessLookupError):
+                # That's OK, processes might disappear before we get the chance to handle them
+                continue
+
+            match = pattern.search(sched_header_line)
+            if match is not None:
+                outer_pid = int(match.group(1))
+                if outer_pid == process.pid:
+                    return int(procfs_child.name)
+
+        return None
+
+    # We're searching `/proc`, so we only need to set our mount namespace
+    inner_pid = run_in_ns(["mnt"], _find_inner_pid, process.pid)
+    if inner_pid is not None:
+        if not process.is_running():  # Make sure the pid wasn't reused for another process
+            raise NoSuchProcess(process.pid)
+
+        return inner_pid
+
+    # If we weren't able to find the process' nspid, it must have been killed while searching (we only search
+    # `/proc/pid/sched` files, and they exist as long as the process is running (including zombie processes)
+    assert not process.is_running(), f"Process {process.pid} is running, but we failed to find his nspid"
+
+    raise NoSuchProcess(process.pid)
+
+
+def is_same_ns(process: Union[Process, int], nstype: str, process2: Union[Process, int] = None) -> bool:
+    if isinstance(process, int):
+        process = Process(process)
+    if isinstance(process2, int):
+        process2 = Process(process2)
+    elif process2 is None:
+        process2 = Process()  # `self`
+
+    try:
+        return _get_process_ns_inode(process, nstype) == _get_process_ns_inode(process2, nstype)
+    except UnsupportedNamespaceError:
+        # The namespace does not exist in this kernel, hence the two processes are logically in the same namespace
+        return True
+
+
+def _get_process_ns_inode(process: Process, nstype: str):
+    try:
+        ns_inode = os.stat(f"/proc/{process.pid}/ns/{nstype}").st_ino
+    except FileNotFoundError as e:
+        if process.is_running():
+            raise UnsupportedNamespaceError(nstype) from e
+        else:
+            raise NoSuchProcess(process.pid) from e
+
+    # If the process isn't running, we checked the wrong one
+    if not process.is_running():
+        raise NoSuchProcess(process.pid)
+
+    return ns_inode
 
 
 def run_in_ns(nstypes: List[str], callback: Callable[[], T], target_pid: int = 1) -> T:
