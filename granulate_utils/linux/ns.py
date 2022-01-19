@@ -143,7 +143,7 @@ def _get_process_nspid_by_sched_files(process: Process) -> int:
 
         return inner_pid
 
-    # If we weren't able to find the process' nspid, he must have been killed while searching (we only search
+    # If we weren't able to find the process' nspid, it must have been killed while searching (we only search
     # `/proc/pid/sched` files, and they exist as long as the process is running (including zombie processes)
     assert not process.is_running(), f"Process {process.pid} is running, but we failed to find his nspid"
 
