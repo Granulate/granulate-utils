@@ -11,7 +11,7 @@ from pathlib import Path
 from threading import Thread
 from typing import Callable, List, Optional, TypeVar, Union
 
-from psutil import NoSuchProcess, Process
+from psutil import NoSuchProcess, Process, process_iter
 
 from granulate_utils.exceptions import UnsupportedNamespaceError
 
@@ -282,3 +282,19 @@ def resolve_host_path(process: Process, ns_path: str) -> str:
     Get a path in the host mount namespace pointing to path in process mount namespace.
     """
     return resolve_proc_root_links(get_proc_root_path(process), ns_path)
+
+
+def get_host_pid(nspid: int, container_id: str) -> Optional[int]:
+    pid_namespace = ""
+    for process in process_iter():
+        try:
+            if not pid_namespace and container_id in Path(f"/proc/{process.pid}/cgroup").read_text():
+                pid_namespace = os.readlink(f"/proc/{process.pid}/ns/pid")
+            if pid_namespace and os.readlink(f"/proc/{process.pid}/ns/pid") == pid_namespace:
+                status = Path(f"/proc/{process.pid}/status").read_text()
+                for line in status.splitlines():
+                    if line.startswith("NSpid") and line.split()[-1] == str(nspid):
+                        return process.pid
+        except (FileNotFoundError, NoSuchProcess):
+            continue
+    return None
