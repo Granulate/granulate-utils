@@ -285,16 +285,15 @@ def resolve_host_path(process: Process, ns_path: str) -> str:
 
 
 def get_host_pid(nspid: int, container_id: str) -> Optional[int]:
+    assert len(container_id) == 64, f"Invalid container id {container_id!r}"
     pid_namespace = ""
     for process in process_iter():
         try:
             if not pid_namespace and container_id in Path(f"/proc/{process.pid}/cgroup").read_text():
                 pid_namespace = os.readlink(f"/proc/{process.pid}/ns/pid")
             if pid_namespace and os.readlink(f"/proc/{process.pid}/ns/pid") == pid_namespace:
-                status = Path(f"/proc/{process.pid}/status").read_text()
-                for line in status.splitlines():
-                    if line.startswith("NSpid") and line.split()[-1] == str(nspid):
-                        return process.pid
+                if get_process_nspid(process) == nspid:
+                    return process.pid
         except (FileNotFoundError, NoSuchProcess):
             continue
     return None
