@@ -18,6 +18,8 @@ import struct
 import threading
 from typing import Callable, List, Optional
 
+from granulate_utils.linux.ns import run_in_ns
+
 
 def _raise_if_not_running(func: Callable):
     def wrapper(self, *args, **kwargs):
@@ -201,7 +203,8 @@ class _ProcEventsListener(threading.Thread):
         # We make these initializations here (and not in the new thread) so if an exception occures it'll be
         # visible in the calling thread
         try:
-            self._socket.bind((0, self._CN_IDX_PROC))
+            # needs to run in init net NS - see netlink_kernel_create() call on init_net in cn_init().
+            run_in_ns(["net"], lambda: self._socket.bind((0, self._CN_IDX_PROC)))
             self._register_for_connector_events(self._socket)
         except PermissionError as e:
             raise PermissionError(
