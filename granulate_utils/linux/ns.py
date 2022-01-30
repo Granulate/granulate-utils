@@ -286,14 +286,29 @@ def resolve_host_path(process: Process, ns_path: str) -> str:
 
 def get_host_pid(nspid: int, container_id: str) -> Optional[int]:
     assert len(container_id) == 64, f"Invalid container id {container_id!r}"
+
     pid_namespace = ""
-    for process in process_iter():
+    running_processes = list(process_iter())
+
+    # Get the pid namespace of the given container
+    for process in running_processes:
         try:
-            if not pid_namespace and container_id in Path(f"/proc/{process.pid}/cgroup").read_text():
+            if container_id in Path(f"/proc/{process.pid}/cgroup").read_text():
                 pid_namespace = os.readlink(f"/proc/{process.pid}/ns/pid")
-            if pid_namespace and os.readlink(f"/proc/{process.pid}/ns/pid") == pid_namespace:
-                if get_process_nspid(process) == nspid:
-                    return process.pid
+                break
         except (FileNotFoundError, NoSuchProcess):
             continue
+
+    if not pid_namespace:
+        return None
+
+    # Here we need to find the process by comparing pid namespaces and not by comparing cgroups, because
+    # technically a process that's running in a container pid namespace doesn't have to share its cgroup
+    for process in running_processes:
+        try:
+            if os.readlink(f"/proc/{process.pid}/ns/pid") == pid_namespace and get_process_nspid(process) == nspid:
+                return process.pid
+        except (FileNotFoundError, NoSuchProcess):
+            continue
+
     return None
