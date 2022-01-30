@@ -4,10 +4,10 @@
 #
 
 import re
-from typing import Optional, Union
-from psutil import Process, NoSuchProcess
 from pathlib import Path
+from typing import Optional, Union
 
+from psutil import NoSuchProcess, Process
 
 # ECS uses /ecs/uuid/container-id
 # standard Docker uses /docker/container-id
