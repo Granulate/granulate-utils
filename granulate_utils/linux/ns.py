@@ -11,7 +11,7 @@ from pathlib import Path
 from threading import Thread
 from typing import Callable, List, Optional, TypeVar, Union
 
-from psutil import NoSuchProcess, Process
+from psutil import NoSuchProcess, Process, process_iter
 
 from granulate_utils.exceptions import UnsupportedNamespaceError
 
@@ -282,3 +282,33 @@ def resolve_host_path(process: Process, ns_path: str) -> str:
     Get a path in the host mount namespace pointing to path in process mount namespace.
     """
     return resolve_proc_root_links(get_proc_root_path(process), ns_path)
+
+
+def get_host_pid(nspid: int, container_id: str) -> Optional[int]:
+    assert len(container_id) == 64, f"Invalid container id {container_id!r}"
+
+    pid_namespace = ""
+    running_processes = list(process_iter())
+
+    # Get the pid namespace of the given container
+    for process in running_processes:
+        try:
+            if container_id in Path(f"/proc/{process.pid}/cgroup").read_text():
+                pid_namespace = os.readlink(f"/proc/{process.pid}/ns/pid")
+                break
+        except (FileNotFoundError, NoSuchProcess):
+            continue
+
+    if not pid_namespace:
+        return None
+
+    # Here we need to find the process by comparing pid namespaces and not by comparing cgroups, because
+    # technically a process that's running in a container pid namespace doesn't have to share its cgroup
+    for process in running_processes:
+        try:
+            if os.readlink(f"/proc/{process.pid}/ns/pid") == pid_namespace and get_process_nspid(process) == nspid:
+                return process.pid
+        except (FileNotFoundError, NoSuchProcess):
+            continue
+
+    return None
