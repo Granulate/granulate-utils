@@ -14,6 +14,7 @@ from typing import Callable, List, Optional, TypeVar, Union
 from psutil import NoSuchProcess, Process, process_iter
 
 from granulate_utils.exceptions import UnsupportedNamespaceError
+from granulate_utils.linux.containers import get_process_container_id
 
 T = TypeVar("T")
 
@@ -293,7 +294,7 @@ def get_host_pid(nspid: int, container_id: str) -> Optional[int]:
     # Get the pid namespace of the given container
     for process in running_processes:
         try:
-            if container_id in Path(f"/proc/{process.pid}/cgroup").read_text():
+            if container_id == get_process_container_id(process):
                 pid_namespace = os.readlink(f"/proc/{process.pid}/ns/pid")
                 break
         except (FileNotFoundError, NoSuchProcess):
