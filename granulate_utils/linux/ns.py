@@ -295,7 +295,7 @@ def get_host_pid(nspid: int, container_id: str) -> Optional[int]:
         try:
             if container_id in Path(f"/proc/{process.pid}/cgroup").read_text():
                 pid_namespace = os.readlink(f"/proc/{process.pid}/ns/pid")
-                if os.readlink(f"/proc/{process.pid}/ns/pid") == pid_namespace and get_process_nspid(process) == nspid:
+                if get_process_nspid(process) == nspid:
                     return process.pid
                 break
         except (FileNotFoundError, NoSuchProcess):
