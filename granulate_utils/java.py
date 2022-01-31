@@ -54,6 +54,14 @@ Example:
     vm_info: OpenJDK 64-Bit Server VM (25.292-b10) for linux-amd64 JRE (1.8.0_292-8u292-b10-0ubuntu1~18.04-b10), ...
 """
 
+THREAD_REGEX = re.compile(r"^(Current thread .*)$")
+"""
+See the "current thread" step in VMError::report.
+Examples:
+    Current thread (0x00007f13ec001000):  JavaThread "Attach Listener" daemon [_thread_in_native, id=73, stack(0x00007f143feff000,0x00007f1440000000)]
+    Current thread is native thread
+"""
+
 
 def locate_hotspot_error_file(nspid: int, cmdline: List[str]) -> Iterable[str]:
     """
