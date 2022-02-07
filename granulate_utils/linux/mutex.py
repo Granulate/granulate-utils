@@ -20,7 +20,7 @@ def try_acquire_mutex(name: str) -> None:
 
     sock = socket.socket(socket.AF_UNIX)
     try:
-        sock.bind('\0' + name)
+        sock.bind("\0" + name)
     except OSError as e:
         if e.errno != errno.EADDRINUSE:
             raise
@@ -34,6 +34,6 @@ def release_mutex(name: str) -> None:
     try:
         sock = _mutexes.pop(name)
     except KeyError:
-        raise Exception(f'Mutex {name!r} was not acquired!') from None
+        raise Exception(f"Mutex {name!r} was not acquired!") from None
     else:
         sock.close()
