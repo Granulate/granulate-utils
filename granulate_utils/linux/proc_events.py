@@ -1,3 +1,8 @@
+#
+# Copyright (c) Granulate. All rights reserved.
+# Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
+#
+
 """Callbacks for process events
 
 This module uses the Linux's Process Connector mechanism to invoke registered callbacks on various process events.
