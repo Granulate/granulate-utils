@@ -4,10 +4,9 @@
 #
 
 import re
-from pathlib import Path
 from typing import Optional, Union
 
-from psutil import NoSuchProcess, Process
+from psutil import Process
 
 from granulate_utils.linux.cgroups import get_cgroups
 
