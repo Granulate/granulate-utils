@@ -4,10 +4,11 @@
 #
 
 import re
-from pathlib import Path
 from typing import Optional, Union
 
-from psutil import NoSuchProcess, Process
+from psutil import Process
+
+from granulate_utils.linux.cgroups import get_cgroups
 
 # ECS uses /ecs/uuid/container-id
 # standard Docker uses /docker/container-id
@@ -23,13 +24,8 @@ def get_process_container_id(process: Union[int, Process]) -> Optional[str]:
     :raises NoSuchProcess: If the process doesn't or no longer exists
     """
     pid = process if isinstance(process, int) else process.pid
-    try:
-        cgroup = Path(f"/proc/{pid}/cgroup").read_text()
-    except FileNotFoundError:
-        raise NoSuchProcess(pid)
-
-    for line in cgroup.splitlines():
-        found = CONTAINER_ID_PATTERN.findall(line)
+    for _, _, cgpath in get_cgroups(pid):
+        found = CONTAINER_ID_PATTERN.findall(cgpath)
         if found:
             return found[-1]
 
