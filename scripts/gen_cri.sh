@@ -11,7 +11,7 @@ CONTAINERS_CRI="$SCRIPT_DIR/../granulate_utils/containers/cri/generated/"
 # released at Oct 26, 2018
 wget -O gogo.proto https://raw.githubusercontent.com/gogo/protobuf/v1.3.2/gogoproto/gogo.proto
 python3 -m grpc_tools.protoc -I. --python_out="$CONTAINERS_CRI" gogo.proto
-# release at Aug 27, 2021
+# released at Aug 27, 2021
 wget -O api.proto https://raw.githubusercontent.com/kubernetes/cri-api/v0.24.0-alpha.2/pkg/apis/runtime/v1alpha2/api.proto
 sed -i s,github.com/gogo/protobuf/gogoproto/gogo.proto,gogo.proto, api.proto  # patch its import
 python3 -m grpc_tools.protoc -I. --python_out="$CONTAINERS_CRI" --grpc_python_out="$CONTAINERS_CRI" api.proto
