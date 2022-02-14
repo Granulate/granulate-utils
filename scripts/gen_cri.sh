@@ -6,7 +6,7 @@
 set -euo pipefail
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-CONTAINERS_CRI="$SCRIPT_DIR/../granulate_utils/containers/cri/"
+CONTAINERS_CRI="$SCRIPT_DIR/../granulate_utils/containers/cri/generated/"
 
 # released at Oct 26, 2018
 wget -O gogo.proto https://raw.githubusercontent.com/gogo/protobuf/v1.3.2/gogoproto/gogo.proto
