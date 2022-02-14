@@ -3,10 +3,11 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 
-import grpc
+# no types-grpc sadly
+import grpc  # type: ignore
 
-from granulate_utils.containers.cri.generated.api_pb2 import ListContainersRequest
-from granulate_utils.containers.cri.generated.api_pb2_grpc import RuntimeServiceStub
+from granulate_utils.containers.cri.generated.api_pb2 import ListContainersRequest  # type: ignore
+from granulate_utils.containers.cri.generated.api_pb2_grpc import RuntimeServiceStub  # type: ignore
 
 
 def list_containers():
