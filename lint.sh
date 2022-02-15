@@ -11,7 +11,7 @@ if [[ "$1" = "--ci" ]]; then
 fi
 
 # see also isort --skip and flake8 config.
-EXCLUDE_RE='build|granulate_utils/generated'
+EXCLUDE_RE='venv/bin/|build|granulate_utils/generated'
 
 isort --settings-path .isort.cfg --skip granulate_utils/generated .
 black --line-length 120 $check_arg --exclude $EXCLUDE_RE .
