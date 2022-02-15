@@ -3,6 +3,7 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 
+import logging
 from typing import List
 
 from granulate_utils.containers.container import Container
@@ -17,12 +18,20 @@ class ContainersClient:
     """
 
     def __init__(self):
-        self._docker_client = DockerClient()
-        self._cri_client = CRIClient()
+        try:
+            self._docker_client = DockerClient()
+        except Exception:
+            logging.warning("Failed to initialize DockerClient, skipping...", exc_info=True)
+            self._docker_client = None
+        try:
+            self._cri_client = CRIClient()
+        except Exception:
+            logging.warning("Failed to initialize CRIClient, skipping...", exc_info=True)
+            self._cri_client = None
 
     def list_containers(self, all_info: bool = False) -> List[Container]:
-        docker_containers = self._docker_client.list_containers(all_info)
-        cri_containers = self._cri_client.list_containers(all_info)
+        docker_containers = self._docker_client.list_containers(all_info) if self._docker_client is not None else []
+        cri_containers = self._cri_client.list_containers(all_info) if self._cri_client is not None else []
 
         # start with all Docker containers
         containers = docker_containers.copy()
