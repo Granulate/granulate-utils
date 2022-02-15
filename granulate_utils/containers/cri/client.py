@@ -61,7 +61,7 @@ class CRIClient:
         sandbox_name = container.labels["io.kubernetes.pod.name"]
         namespace = container.labels["io.kubernetes.pod.namespace"]
         sandbox_uid = container.labels["io.kubernetes.pod.uid"]
-        restart_count = container.labels["io.kubernetes.container.restartCount"]
+        restart_count = container.annotations["io.kubernetes.container.restartCount"]
         return f"k8s_{container_name}_{sandbox_name}_{namespace}_{sandbox_uid}_{restart_count}"
 
     def _translate_cri_state(self, state: int) -> str:
