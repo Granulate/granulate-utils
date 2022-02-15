@@ -78,7 +78,7 @@ class CRIClient:
         with RuntimeServiceWrapper(self._path) as stub:
             for container in stub.ListContainers(api_pb2.ListContainersRequest()).containers:
                 if all_info:
-                    # need verbose=True to get the info which containers the PID
+                    # need verbose=True to get the info which contains the PID
                     status = stub.ContainerStatus(
                         api_pb2.ContainerStatusRequest(container_id=container.id, verbose=True)
                     )
