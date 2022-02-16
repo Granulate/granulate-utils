@@ -12,7 +12,7 @@ from google.protobuf import symbol_database as _symbol_database
 _sym_db = _symbol_database.Default()
 
 
-import granulate_utils.containers.cri.generated.gogo_pb2 as gogo__pb2
+import granulate_utils.generated.containers.cri.gogo_pb2 as gogo__pb2
 
 
 DESCRIPTOR = _descriptor.FileDescriptor(

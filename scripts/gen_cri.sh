@@ -15,7 +15,8 @@ python3 -m grpc_tools.protoc -I. --python_out="$CONTAINERS_CRI" gogo.proto
 wget -O api.proto https://raw.githubusercontent.com/kubernetes/cri-api/v0.24.0-alpha.2/pkg/apis/runtime/v1alpha2/api.proto
 sed -i s,github.com/gogo/protobuf/gogoproto/gogo.proto,gogo.proto, api.proto  # patch its import
 python3 -m grpc_tools.protoc -I. --python_out="$CONTAINERS_CRI" --grpc_python_out="$CONTAINERS_CRI" api.proto
-sed -i 's,import gogo_pb2,import granulate_utils.generated.containers.cri.gogo_pb2,' "$CONTAINERS_CRI/api_pb2.py"
-sed -i 's,import api_pb2,import granulate_utils.generated.containers.cri.api_pb2,' "$CONTAINERS_CRI/api_pb2_grpc.py"
+# '.bak' needed for BSD sed on Mac
+sed -i'.bak' 's,import gogo_pb2,import granulate_utils.generated.containers.cri.gogo_pb2,' "$CONTAINERS_CRI/api_pb2.py"
+sed -i'.bak' 's,import api_pb2,import granulate_utils.generated.containers.cri.api_pb2,' "$CONTAINERS_CRI/api_pb2_grpc.py"
 
-rm api.proto gogo.proto
+rm api.proto gogo.proto "$CONTAINERS_CRI/api_pb2_grpc.py.bak" "$CONTAINERS_CRI/api_pb2.py.bak"

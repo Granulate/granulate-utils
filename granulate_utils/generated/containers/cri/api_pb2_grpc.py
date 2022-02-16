@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import granulate_utils.containers.cri.generated.api_pb2 as api__pb2
+import granulate_utils.generated.containers.cri.api_pb2 as api__pb2
 
 
 class RuntimeServiceStub(object):
