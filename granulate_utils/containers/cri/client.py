@@ -9,10 +9,10 @@ from typing import List, Optional
 # no types-grpc sadly
 import grpc  # type: ignore
 
-import granulate_utils.containers.cri.generated.api_pb2 as api_pb2  # type: ignore
+import granulate_utils.generated.containers.cri.api_pb2 as api_pb2  # type: ignore
 from granulate_utils.containers.container import Container
-from granulate_utils.containers.cri.generated.api_pb2_grpc import RuntimeServiceStub  # type: ignore
 from granulate_utils.exceptions import CRINotAvailable
+from granulate_utils.generated.containers.cri.api_pb2_grpc import RuntimeServiceStub  # type: ignore
 from granulate_utils.linux.ns import resolve_host_root_links
 
 RUNTIMES = (
