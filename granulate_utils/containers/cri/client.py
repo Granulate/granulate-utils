@@ -63,15 +63,6 @@ class CriClient:
         restart_count = container.annotations["io.kubernetes.container.restartCount"]
         return "_".join(["k8s", container_name, sandbox_name, namespace, sandbox_uid, restart_count])
 
-    def _translate_cri_state(self, state: int) -> str:
-        # see https://github.com/kubernetes/cri-api/blob/v0.24.0-alpha.2/pkg/apis/runtime/v1alpha2/api.proto#L1013
-        return {
-            0: "created",
-            1: "running",
-            2: "exited",
-            3: "unknown",
-        }[state]
-
     def list_containers(self, all_info: bool) -> List[Container]:
         containers: List[Container] = []
 
@@ -92,7 +83,9 @@ class CriClient:
                         name=self._reconstruct_name(container),
                         id=container.id,
                         labels=container.labels,
-                        state=self._translate_cri_state(container.state),
+                        # see https://github.com/kubernetes/cri-api/blob/v0.24.0-alpha.2/pkg/apis/runtime/v1alpha2/api.proto#L1013
+                        # 1 is CONTAINER_RUNNING
+                        running=container.state == 1,
                         pid=pid,
                     )
                 )

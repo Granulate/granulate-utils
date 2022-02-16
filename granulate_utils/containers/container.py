@@ -19,7 +19,6 @@ class Container:
     name: str
     id: str
     labels: Dict[str, str]
-    # follows CRI convention: created, running, exited, unknown
-    state: str
+    running: bool
     # None if not requested / container is dead
     pid: Optional[int]
