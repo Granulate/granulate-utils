@@ -6,7 +6,7 @@
 set -euo pipefail
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-CONTAINERS_CRI="$SCRIPT_DIR/../granulate_utils/containers/cri/generated/"
+CONTAINERS_CRI="$SCRIPT_DIR/../granulate_utils/generated/containers/cri/"
 
 # released at Oct 26, 2018
 wget -O gogo.proto https://raw.githubusercontent.com/gogo/protobuf/v1.3.2/gogoproto/gogo.proto
@@ -15,7 +15,7 @@ python3 -m grpc_tools.protoc -I. --python_out="$CONTAINERS_CRI" gogo.proto
 wget -O api.proto https://raw.githubusercontent.com/kubernetes/cri-api/v0.24.0-alpha.2/pkg/apis/runtime/v1alpha2/api.proto
 sed -i s,github.com/gogo/protobuf/gogoproto/gogo.proto,gogo.proto, api.proto  # patch its import
 python3 -m grpc_tools.protoc -I. --python_out="$CONTAINERS_CRI" --grpc_python_out="$CONTAINERS_CRI" api.proto
-sed -i 's,import gogo_pb2,import granulate_utils.containers.cri.generated.gogo_pb2,' "$CONTAINERS_CRI/api_pb2.py"
-sed -i 's,import api_pb2,import granulate_utils.containers.cri.generated.api_pb2,' "$CONTAINERS_CRI/api_pb2_grpc.py"
+sed -i 's,import gogo_pb2,import granulate_utils.generated.containers.cri.gogo_pb2,' "$CONTAINERS_CRI/api_pb2.py"
+sed -i 's,import api_pb2,import granulate_utils.generated.containers.cri.api_pb2,' "$CONTAINERS_CRI/api_pb2_grpc.py"
 
 rm api.proto gogo.proto

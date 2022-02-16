@@ -10,7 +10,7 @@ if [[ "$1" = "--ci" ]]; then
     check_arg="--check"
 fi
 
-isort --settings-path .isort.cfg --skip granulate_utils/containers/cri/generated .
-black --line-length 120 $check_arg --exclude granulate_utils/containers/cri/generated .
+isort --settings-path .isort.cfg --skip granulate_utils/generated .
+black --line-length 120 $check_arg --exclude granulate_utils/generated .
 flake8 --config .flake8 .
-mypy --exclude 'build|granulate_utils/containers/cri/generated' .
+mypy --exclude 'build|granulate_utils/generated' .
