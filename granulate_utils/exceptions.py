@@ -17,3 +17,7 @@ class CouldNotAcquireMutex(Exception):
 
 class CriNotAvailableError(Exception):
     pass
+
+
+class NoContainerRuntimesError(Exception):
+    pass

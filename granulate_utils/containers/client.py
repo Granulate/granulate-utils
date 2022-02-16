@@ -3,12 +3,12 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 
-import logging
 from typing import List
 
 from granulate_utils.containers.container import Container
 from granulate_utils.containers.cri.client import CriClient
 from granulate_utils.containers.docker import DockerClient
+from granulate_utils.exceptions import NoContainerRuntimesError
 
 
 class ContainersClient:
@@ -24,13 +24,15 @@ class ContainersClient:
         try:
             self._docker_client = DockerClient()
         except Exception:
-            logging.warning("Failed to initialize DockerClient, skipping...", exc_info=True)
             self._docker_client = None
+
         try:
             self._cri_client = CriClient()
         except Exception:
-            logging.warning("Failed to initialize CriClient, skipping...", exc_info=True)
             self._cri_client = None
+
+        if self._docker_client is None and self._cri_client is None:
+            raise NoContainerRuntimesError()
 
     def list_containers(self, all_info: bool = False) -> List[Container]:
         """
