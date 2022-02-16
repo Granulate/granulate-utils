@@ -3,7 +3,7 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 
-from typing import List
+from typing import List, Optional
 
 from granulate_utils.containers.container import Container
 from granulate_utils.containers.cri import CriClient
@@ -20,14 +20,14 @@ class ContainersClient:
     or not.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         try:
-            self._docker_client = DockerClient()
+            self._docker_client: Optional[DockerClient] = DockerClient()
         except Exception:
             self._docker_client = None
 
         try:
-            self._cri_client = CriClient()
+            self._cri_client: Optional[CriClient] = CriClient()
         except Exception:
             self._cri_client = None
 
