@@ -44,7 +44,8 @@ class ContainersClient:
         # start with all Docker containers
         containers = docker_containers.copy()
         # then add CRI containers that are not already listed
-        # TODO explain why both, ...
+        # we select container from Docker first because Docker provides all information in one RPC go
+        # (e.g, pid) so it's better to use when appropriate.
         for cri_container in cri_containers:
             matching_docker = filter(lambda c: c.id == cri_container.id, containers)
             try:
