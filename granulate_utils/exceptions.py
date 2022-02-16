@@ -15,5 +15,5 @@ class CouldNotAcquireMutex(Exception):
         super().__init__(f"Could not acquire mutex {name!r}. Another process might be holding it.")
 
 
-class CRINotAvailable(Exception):
+class CriNotAvailableError(Exception):
     pass

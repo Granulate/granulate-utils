@@ -4,7 +4,7 @@
 #
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Dict, Optional
 
 
 @dataclass
@@ -18,7 +18,7 @@ class Container:
     # reconstructed container name (as if it were Docker) for CRI
     name: str
     id: str
-    labels: dict
+    labels: Dict[str, str]
     # follows CRI convention: created, running, exited, unknown
     state: str
     # None if not requested / container is dead

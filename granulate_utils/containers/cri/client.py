@@ -6,12 +6,11 @@
 import json
 from typing import List, Optional
 
-# no types-grpc sadly
-import grpc  # type: ignore
+import grpc  # type: ignore # no types-grpc sadly
 
 import granulate_utils.generated.containers.cri.api_pb2 as api_pb2  # type: ignore
 from granulate_utils.containers.container import Container
-from granulate_utils.exceptions import CRINotAvailable
+from granulate_utils.exceptions import CriNotAvailableError
 from granulate_utils.generated.containers.cri.api_pb2_grpc import RuntimeServiceStub  # type: ignore
 from granulate_utils.linux.ns import resolve_host_root_links
 
@@ -33,16 +32,16 @@ class RuntimeServiceWrapper(RuntimeServiceStub):
         self._channel.close()
 
 
-class CRIClient:
+class CriClient:
     def __init__(self):
         for rt, path in RUNTIMES:
             path = "unix://" + resolve_host_root_links(path)
             if self._is_cri_available(path):
                 self._path = path
-                self._runtime = rt
+                self._runtime_name = rt
                 break
         else:
-            raise CRINotAvailable(f"CRI is not available at any of {RUNTIMES}")
+            raise CriNotAvailableError(f"CRI is not available at any of {RUNTIMES}")
 
     def _is_cri_available(self, path: str) -> bool:
         with RuntimeServiceWrapper(path) as stub:
@@ -62,9 +61,10 @@ class CRIClient:
         namespace = container.labels["io.kubernetes.pod.namespace"]
         sandbox_uid = container.labels["io.kubernetes.pod.uid"]
         restart_count = container.annotations["io.kubernetes.container.restartCount"]
-        return f"k8s_{container_name}_{sandbox_name}_{namespace}_{sandbox_uid}_{restart_count}"
+        return "_".join(["k8s", container_name, sandbox_name, namespace, sandbox_uid, restart_count])
 
     def _translate_cri_state(self, state: int) -> str:
+        # see https://github.com/kubernetes/cri-api/blob/v0.24.0-alpha.2/pkg/apis/runtime/v1alpha2/api.proto#L1013
         return {
             0: "created",
             1: "running",
@@ -82,13 +82,13 @@ class CRIClient:
                     status = stub.ContainerStatus(
                         api_pb2.ContainerStatusRequest(container_id=container.id, verbose=True)
                     )
-                    pid: Optional[int] = json.loads(status.info["info"]).get("pid")
+                    pid: Optional[int] = json.loads(status.info.get("info", "{}")).get("pid")
                 else:
                     pid = None
 
                 containers.append(
                     Container(
-                        runtime=self._runtime,
+                        runtime=self._runtime_name,
                         name=self._reconstruct_name(container),
                         id=container.id,
                         labels=container.labels,
