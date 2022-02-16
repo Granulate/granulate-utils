@@ -27,7 +27,7 @@ class DockerClient:
                     name=container.name,
                     id=container.id,
                     labels=container.labels,
-                    runing=container.status == "running",
+                    running=container.status == "running",
                     pid=container.attrs["State"].get("Pid"),
                 )
             )
