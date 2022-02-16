@@ -19,6 +19,9 @@ RUNTIMES = (
     ("crio", "/var/run/crio/crio.sock"),
 )
 
+# see https://github.com/kubernetes/cri-api/blob/v0.24.0-alpha.2/pkg/apis/runtime/v1alpha2/api.proto#L1013
+CONTAINER_RUNNING = 1
+
 
 class RuntimeServiceWrapper(RuntimeServiceStub):
     def __init__(self, path: str):
@@ -83,9 +86,7 @@ class CriClient:
                         name=self._reconstruct_name(container),
                         id=container.id,
                         labels=container.labels,
-                        # see https://github.com/kubernetes/cri-api/blob/v0.24.0-alpha.2/pkg/apis/runtime/v1alpha2/api.proto#L1013
-                        # 1 is CONTAINER_RUNNING
-                        running=container.state == 1,
+                        running=container.state == CONTAINER_RUNNING,
                         pid=pid,
                     )
                 )
