@@ -6,8 +6,8 @@
 # no types-grpc sadly
 import grpc  # type: ignore
 
-from granulate_utils.containers.cri.generated.api_pb2 import ListContainersRequest  # type: ignore
-from granulate_utils.containers.cri.generated.api_pb2_grpc import RuntimeServiceStub  # type: ignore
+from granulate_utils.generated.containers.cri.api_pb2 import ListContainersRequest  # type: ignore
+from granulate_utils.generated.containers.cri.api_pb2_grpc import RuntimeServiceStub  # type: ignore
 
 
 def list_containers():
