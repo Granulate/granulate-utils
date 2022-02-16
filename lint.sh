@@ -10,7 +10,10 @@ if [[ "$1" = "--ci" ]]; then
     check_arg="--check"
 fi
 
-isort --settings-path .isort.cfg .
-black --line-length 120 $check_arg .
-flake8 --config .flake8 .
-mypy --exclude build .
+# see also isort --skip and flake8 config.
+EXCLUDE_RE='build|granulate_utils/generated'
+
+isort --settings-path .isort.cfg --skip granulate_utils/generated .
+black --line-length 120 $check_arg --exclude $EXCLUDE_RE .
+flake8 --config .flake8  .
+mypy --exclude $EXCLUDE_RE .
