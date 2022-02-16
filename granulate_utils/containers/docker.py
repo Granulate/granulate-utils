@@ -3,7 +3,7 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 
-from typing import List
+from typing import List, Optional
 
 import docker
 
@@ -21,6 +21,9 @@ class DockerClient:
         containers: List[Container] = []
 
         for container in self._docker.containers.list():
+            pid: Optional[int] = container.attrs["State"].get("Pid")
+            if pid == 0:  # Docker returns 0 for dead containers
+                pid = None
             containers.append(
                 Container(
                     runtime="docker",
@@ -28,7 +31,7 @@ class DockerClient:
                     id=container.id,
                     labels=container.labels,
                     running=container.status == "running",
-                    pid=container.attrs["State"].get("Pid"),
+                    pid=pid,
                 )
             )
 
