@@ -59,6 +59,7 @@ class CriClient:
         Reconstruct the name that dockershim would have used, for compatibility with DockerClient.
         See makeContainerName in kubernetes/pkg/kubelet/dockershim/naming.go
         """
+        # I know that those labels exist because CRI lists only k8s containers.
         container_name = container.labels["io.kubernetes.container.name"]
         sandbox_name = container.labels["io.kubernetes.pod.name"]
         namespace = container.labels["io.kubernetes.pod.namespace"]
