@@ -13,3 +13,11 @@ class UnsupportedNamespaceError(Exception):
 class CouldNotAcquireMutex(Exception):
     def __init__(self, name) -> None:
         super().__init__(f"Could not acquire mutex {name!r}. Another process might be holding it.")
+
+
+class CriNotAvailableError(Exception):
+    pass
+
+
+class NoContainerRuntimesError(Exception):
+    pass
