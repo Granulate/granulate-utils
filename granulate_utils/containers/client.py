@@ -11,7 +11,7 @@ from granulate_utils.containers.docker import DockerClient
 from granulate_utils.exceptions import NoContainerRuntimesError
 
 
-class ContainersClient:
+class ContainersClient(ContainersClientInterface):
     """
     Wraps DockerClient and CriClient to provide a unified view of all containers
     running on a system.

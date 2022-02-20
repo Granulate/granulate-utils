@@ -4,7 +4,7 @@
 #
 
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 
 @dataclass
@@ -22,3 +22,8 @@ class Container:
     running: bool
     # None if not requested / container is dead
     pid: Optional[int]
+
+
+class ContainersClientInterface:
+    def list_containers(self, all_info: bool) -> List[Container]:
+        raise NotImplementedError

@@ -9,7 +9,7 @@ from typing import List, Optional
 import grpc  # type: ignore # no types-grpc sadly
 
 import granulate_utils.generated.containers.cri.api_pb2 as api_pb2  # type: ignore
-from granulate_utils.containers.container import Container
+from granulate_utils.containers.container import Container, ContainersClientInterface
 from granulate_utils.exceptions import CriNotAvailableError
 from granulate_utils.generated.containers.cri.api_pb2_grpc import RuntimeServiceStub  # type: ignore
 from granulate_utils.linux.ns import resolve_host_root_links
@@ -35,7 +35,7 @@ class RuntimeServiceWrapper(RuntimeServiceStub):
         self._channel.close()
 
 
-class CriClient:
+class CriClient(ContainersClientInterface):
     def __init__(self):
         for rt, path in RUNTIMES:
             path = "unix://" + resolve_host_root_links(path)

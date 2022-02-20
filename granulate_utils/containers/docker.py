@@ -7,13 +7,13 @@ from typing import List, Optional
 
 import docker
 
-from granulate_utils.containers.container import Container
+from granulate_utils.containers.container import Container, ContainersClientInterface
 from granulate_utils.linux.ns import resolve_host_root_links
 
 DOCKER_SOCK = "/var/run/docker.sock"
 
 
-class DockerClient:
+class DockerClient(ContainersClientInterface):
     def __init__(self):
         self._docker = docker.DockerClient(base_url="unix://" + resolve_host_root_links(DOCKER_SOCK))
 
