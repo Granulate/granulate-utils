@@ -48,9 +48,9 @@ class ContainersClient:
         # then add CRI containers that are not already listed
         # we collect containers from Docker first because Docker provides all information in one RPC go
         # (e.g, pid) so it's better to use when appropriate.
-        # and we need to collect from both, because Docker might be installed and running on systems where containerd
-        # CRI is used, and CRI won't list containers controlled by Docker (although in both cases they are run
-        # over containerd)
+        # we need to collect from both, because Docker might be installed and running on systems where containerd
+        # CRI is used, and containerd when asked over CRI won't list containers started by Docker (although in both
+        # cases they are controlled by containerd)
         for cri_container in cri_containers:
             matching_docker = filter(lambda c: c.id == cri_container.id, containers)
             try:
