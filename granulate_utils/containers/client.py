@@ -5,7 +5,7 @@
 
 from typing import List, Optional
 
-from granulate_utils.containers.container import Container
+from granulate_utils.containers.container import Container, ContainersClientInterface
 from granulate_utils.containers.cri import CriClient
 from granulate_utils.containers.docker import DockerClient
 from granulate_utils.exceptions import NoContainerRuntimesError
