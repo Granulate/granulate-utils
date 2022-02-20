@@ -50,7 +50,7 @@ class ContainersClient(ContainersClientInterface):
         # (e.g, pid) so it's better to use when appropriate.
         # we need to collect from both, because Docker might be installed and running on systems where containerd
         # CRI is used, and containerd when asked over CRI won't list containers started by Docker (although in both
-        # cases they are controlled by containerd); I suppose this happens due to the use of containerd namespaces,
+        # cases they are controlled by containerd); this happens due to the use of containerd namespaces,
         # Docker & CRI use different ones.
         for cri_container in cri_containers:
             matching_docker = filter(lambda c: c.id == cri_container.id, containers)
