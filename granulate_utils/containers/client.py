@@ -63,3 +63,8 @@ class ContainersClient(ContainersClientInterface):
                 containers.append(cri_container)
 
         return containers
+
+    def get_runtimes(self) -> List[str]:
+        return (self._docker_client.get_runtimes() if self._docker_client is not None else []) + (
+            self._cri_client.get_runtimes() if self._cri_client is not None else []
+        )

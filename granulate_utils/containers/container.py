@@ -27,3 +27,6 @@ class Container:
 class ContainersClientInterface:
     def list_containers(self, all_info: bool) -> List[Container]:
         raise NotImplementedError
+
+    def get_runtimes(self) -> List[str]:
+        raise NotImplementedError

@@ -36,3 +36,6 @@ class DockerClient(ContainersClientInterface):
             )
 
         return containers
+
+    def get_runtimes(self) -> List[str]:
+        return ["docker"]

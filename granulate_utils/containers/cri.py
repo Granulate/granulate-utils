@@ -93,3 +93,6 @@ class CriClient(ContainersClientInterface):
                 )
 
         return containers
+
+    def get_runtimes(self) -> List[str]:
+        return [self._runtime_name]
