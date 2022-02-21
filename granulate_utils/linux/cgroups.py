@@ -3,8 +3,9 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 from pathlib import Path
-from psutil import NoSuchProcess
 from typing import List, Tuple
+
+from psutil import NoSuchProcess
 
 
 def get_cgroups(pid: int) -> List[Tuple[str, List[str], str]]:
