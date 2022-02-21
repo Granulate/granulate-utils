@@ -1,7 +1,8 @@
 """
 See section 3.5 in https://www.kernel.org/doc/Documentation/filesystems/proc.txt
 """
-from typing import NamedTuple, Iterable, List
+from typing import Iterable, List, NamedTuple, Union
+from typing_extensions import Literal
 
 
 class Mount(NamedTuple):
@@ -17,7 +18,7 @@ class Mount(NamedTuple):
     super_options: List[str]
 
 
-def iter_mountinfo(pid: int) -> Iterable[Mount]:
+def iter_mountinfo(pid: Union[int, Literal["self"]] = "self") -> Iterable[Mount]:
     """
     Iterate over mounts in mount namespace of pid.
     """
