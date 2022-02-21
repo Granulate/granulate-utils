@@ -59,6 +59,8 @@ Example:
     vm_info: OpenJDK 64-Bit Server VM (25.292-b10) for linux-amd64 JRE (1.8.0_292-8u292-b10-0ubuntu1~18.04-b10), ...
 """
 
+DETECTED_JAVA_PROCESSES_REGEX = r"^.+/libjvm\.so$"
+
 
 def locate_hotspot_error_file(nspid: int, cmdline: List[str]) -> Iterable[str]:
     """
