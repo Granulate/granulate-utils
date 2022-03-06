@@ -2,6 +2,7 @@
 See section 3.5 in https://www.kernel.org/doc/Documentation/filesystems/proc.txt
 """
 from typing import Iterable, List, NamedTuple, Union
+
 from typing_extensions import Literal
 
 
