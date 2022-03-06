@@ -15,7 +15,7 @@ from granulate_utils.linux import COMM_PATTERN
 # works.
 KILLED_PROCESS = re.compile(
     r"(?:<\d>)?(?:\[(?P<timestamp>\d+\.\d+)\] )?(?:(?P<message>.*): )?Killed process (?P<pid>\d+) "
-    fr"\((?P<comm>{COMM_PATTERN})\) total-vm:(?P<total_vm>\d+)kB, anon-rss:(?P<anon_rss>\d+)kB, "
+    rf"\((?P<comm>{COMM_PATTERN})\) total-vm:(?P<total_vm>\d+)kB, anon-rss:(?P<anon_rss>\d+)kB, "
     r"file-rss:(?P<file_rss>\d+)kB, shmem-rss:(?P<shmem_rss>\d+)kB"
 )
 KB = 1024
