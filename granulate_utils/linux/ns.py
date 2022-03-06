@@ -33,6 +33,9 @@ class NsType(enum.IntFlag):
     net = 0x40000000  # CLONE_NEWNET
     pid = 0x20000000  # CLONE_NEWPID
     uts = 0x04000000  # CLONE_NEWUTS
+    cgroup = 0x02000000  # CLONE_NEWCGROUP
+    ipc = 0x08000000  # CLONE_NEWIPC
+    user = 0x10000000  # CLONE_NEWUSER
 
 
 libc: Optional[ctypes.CDLL] = None
