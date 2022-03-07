@@ -8,7 +8,7 @@ from typing import List, Optional
 from granulate_utils.containers.container import Container, ContainersClientInterface
 from granulate_utils.containers.cri import CriClient
 from granulate_utils.containers.docker import DockerClient
-from granulate_utils.exceptions import NoContainerRuntimesError
+from granulate_utils.exceptions import ContainerNotFound, NoContainerRuntimesError
 
 
 class ContainersClient(ContainersClientInterface):
@@ -63,6 +63,12 @@ class ContainersClient(ContainersClientInterface):
                 containers.append(cri_container)
 
         return containers
+
+    def get_container(self, container_id: str) -> Container:
+        try:
+            return self._docker_client.get_container(container_id) if self._docker_client is not None else None
+        except ContainerNotFound:
+            return self._cri_client.get_container(container_id) if self._cri_client is not None else []
 
     def get_runtimes(self) -> List[str]:
         return (self._docker_client.get_runtimes() if self._docker_client is not None else []) + (

@@ -4,13 +4,13 @@
 #
 
 import json
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import grpc  # type: ignore # no types-grpc sadly
 
 import granulate_utils.generated.containers.cri.api_pb2 as api_pb2  # type: ignore
 from granulate_utils.containers.container import Container, ContainersClientInterface
-from granulate_utils.exceptions import CriNotAvailableError
+from granulate_utils.exceptions import ContainerNotFound, CriNotAvailableError
 from granulate_utils.generated.containers.cri.api_pb2_grpc import RuntimeServiceStub  # type: ignore
 from granulate_utils.linux.ns import resolve_host_root_links
 
@@ -37,16 +37,17 @@ class RuntimeServiceWrapper(RuntimeServiceStub):
 
 class CriClient(ContainersClientInterface):
     def __init__(self):
+        self._runtimes = {}
         for rt, path in RUNTIMES:
             path = "unix://" + resolve_host_root_links(path)
             if self._is_cri_available(path):
-                self._path = path
-                self._runtime_name = rt
-                break
-        else:
+                self._runtimes[rt] = path
+
+        if not self._runtimes:
             raise CriNotAvailableError(f"CRI is not available at any of {RUNTIMES}")
 
-    def _is_cri_available(self, path: str) -> bool:
+    @staticmethod
+    def _is_cri_available(path: str) -> bool:
         with RuntimeServiceWrapper(path) as stub:
             try:
                 stub.Version(api_pb2.VersionRequest())
@@ -54,7 +55,8 @@ class CriClient(ContainersClientInterface):
             except grpc._channel._InactiveRpcError:
                 return False
 
-    def _reconstruct_name(self, container: api_pb2.Container) -> str:
+    @staticmethod
+    def _reconstruct_name(container: Union[api_pb2.Container, api_pb2.ContainerStatus]) -> str:
         """
         Reconstruct the name that dockershim would have used, for compatibility with DockerClient.
         See makeContainerName in kubernetes/pkg/kubelet/dockershim/naming.go
@@ -70,29 +72,45 @@ class CriClient(ContainersClientInterface):
     def list_containers(self, all_info: bool) -> List[Container]:
         containers: List[Container] = []
 
-        with RuntimeServiceWrapper(self._path) as stub:
-            for container in stub.ListContainers(api_pb2.ListContainersRequest()).containers:
-                if all_info:
-                    # need verbose=True to get the info which contains the PID
-                    status = stub.ContainerStatus(
-                        api_pb2.ContainerStatusRequest(container_id=container.id, verbose=True)
-                    )
-                    pid: Optional[int] = json.loads(status.info.get("info", "{}")).get("pid")
-                else:
-                    pid = None
+        for rt, path in self._runtimes.items():
+            with RuntimeServiceWrapper(path) as stub:
+                for container in stub.ListContainers(api_pb2.ListContainersRequest()).containers:
+                    if all_info:
+                        # need verbose=True to get the info which contains the PID
+                        status = stub.ContainerStatus(
+                            api_pb2.ContainerStatusRequest(container_id=container.id, verbose=True)
+                        )
+                        pid: Optional[int] = json.loads(status.info.get("info", "{}")).get("pid")
+                    else:
+                        pid = None
 
-                containers.append(
-                    Container(
-                        runtime=self._runtime_name,
-                        name=self._reconstruct_name(container),
-                        id=container.id,
-                        labels=container.labels,
-                        running=container.state == CONTAINER_RUNNING,
-                        pid=pid,
-                    )
-                )
+                    containers.append(self._create_container(container, pid, rt))
 
         return containers
 
+    def get_container(self, container_id: str) -> Container:
+        for rt, path in self._runtimes.items():
+            with RuntimeServiceWrapper(path) as stub:
+                try:
+                    status = stub.ContainerStatus(api_pb2.ContainerStatusRequest(container_id=container_id, verbose=True))
+                except grpc._channel._InactiveRpcError:
+                    continue
+
+                pid: Optional[int] = json.loads(status.info.get("info", "{}")).get("pid")
+                return self._create_container(status.status, pid, rt)
+
+        raise ContainerNotFound(container_id)
+
     def get_runtimes(self) -> List[str]:
-        return [self._runtime_name]
+        return list(self._runtimes.keys())
+
+    @classmethod
+    def _create_container(cls, container: Union[api_pb2.Container, api_pb2.ContainerStatus], pid: Optional[int], runtime: str) -> Container:
+        return Container(
+            runtime=runtime,
+            name=cls._reconstruct_name(container),
+            id=container.id,
+            labels=container.labels,
+            running=container.state == CONTAINER_RUNNING,
+            pid=pid,
+        )
