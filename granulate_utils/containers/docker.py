@@ -40,10 +40,10 @@ class DockerClient(ContainersClientInterface):
         if pid == 0:  # Docker returns 0 for dead containers
             pid = None
         return Container(
-                runtime="docker",
-                name=container.name,
-                id=container.id,
-                labels=container.labels,
-                running=container.status == "running",
-                pid=pid,
-            )
+            runtime="docker",
+            name=container.name,
+            id=container.id,
+            labels=container.labels,
+            running=container.status == "running",
+            pid=pid,
+        )

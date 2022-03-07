@@ -92,7 +92,9 @@ class CriClient(ContainersClientInterface):
         for rt, path in self._runtimes.items():
             with RuntimeServiceWrapper(path) as stub:
                 try:
-                    status = stub.ContainerStatus(api_pb2.ContainerStatusRequest(container_id=container_id, verbose=True))
+                    status = stub.ContainerStatus(
+                        api_pb2.ContainerStatusRequest(container_id=container_id, verbose=True)
+                    )
                 except grpc._channel._InactiveRpcError:
                     continue
 
@@ -105,7 +107,9 @@ class CriClient(ContainersClientInterface):
         return list(self._runtimes.keys())
 
     @classmethod
-    def _create_container(cls, container: Union[api_pb2.Container, api_pb2.ContainerStatus], pid: Optional[int], runtime: str) -> Container:
+    def _create_container(
+        cls, container: Union[api_pb2.Container, api_pb2.ContainerStatus], pid: Optional[int], runtime: str
+    ) -> Container:
         return Container(
             runtime=runtime,
             name=cls._reconstruct_name(container),
