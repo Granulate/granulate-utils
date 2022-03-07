@@ -274,18 +274,18 @@ def is_running_in_init_pid() -> bool:
         return p.name() == "kthreadd"
 
 
-def get_proc_root_path(process: Process) -> str:
+def get_proc_root_path(process: Process, from_ancestor: bool = True) -> str:
     """
     Gets /proc/<pid>/root of a given process, then a file can be read from the host mnt ns.
     """
-    return f"/proc/{get_mnt_ns_ancestor(process).pid}/root"
+    return f"/proc/{get_mnt_ns_ancestor(process).pid if from_ancestor else process.pid}/root"
 
 
-def resolve_host_path(process: Process, ns_path: str) -> str:
+def resolve_host_path(process: Process, ns_path: str, from_ancestor: bool = True) -> str:
     """
     Get a path in the host mount namespace pointing to path in process mount namespace.
     """
-    return resolve_proc_root_links(get_proc_root_path(process), ns_path)
+    return resolve_proc_root_links(get_proc_root_path(process, from_ancestor=from_ancestor), ns_path)
 
 
 def get_host_pid(nspid: int, container_id: str) -> Optional[int]:
