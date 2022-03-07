@@ -3,6 +3,7 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 
+import contextlib
 from typing import List, Optional
 
 from granulate_utils.containers.container import Container, ContainersClientInterface
@@ -65,10 +66,15 @@ class ContainersClient(ContainersClientInterface):
         return containers
 
     def get_container(self, container_id: str) -> Container:
-        try:
-            return self._docker_client.get_container(container_id) if self._docker_client is not None else None
-        except ContainerNotFound:
-            return self._cri_client.get_container(container_id) if self._cri_client is not None else []
+        with contextlib.suppress(ContainerNotFound):
+            if self._docker_client is not None:
+                return self._docker_client.get_container(container_id)
+
+        with contextlib.suppress(ContainerNotFound):
+            if self._cri_client is not None:
+                return self._cri_client.get_container(container_id)
+
+        raise ContainerNotFound(container_id)
 
     def get_runtimes(self) -> List[str]:
         return (self._docker_client.get_runtimes() if self._docker_client is not None else []) + (
