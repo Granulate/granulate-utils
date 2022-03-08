@@ -65,14 +65,14 @@ class ContainersClient(ContainersClientInterface):
 
         return containers
 
-    def get_container(self, container_id: str) -> Container:
+    def get_container(self, container_id: str, all_info: bool) -> Container:
         with contextlib.suppress(ContainerNotFound):
             if self._docker_client is not None:
-                return self._docker_client.get_container(container_id)
+                return self._docker_client.get_container(container_id, all_info)
 
         with contextlib.suppress(ContainerNotFound):
             if self._cri_client is not None:
-                return self._cri_client.get_container(container_id)
+                return self._cri_client.get_container(container_id, all_info)
 
         raise ContainerNotFound(container_id)
 

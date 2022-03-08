@@ -2,15 +2,14 @@
 # Copyright (c) Granulate. All rights reserved.
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
-
 import json
 from typing import List, Optional, Union
 
 import grpc  # type: ignore # no types-grpc sadly
 
-import granulate_utils.generated.containers.cri.api_pb2 as api_pb2  # type: ignore
 from granulate_utils.containers.container import Container, ContainersClientInterface
 from granulate_utils.exceptions import ContainerNotFound, CriNotAvailableError
+from granulate_utils.generated.containers.cri import api_pb2 as api_pb2  # type: ignore
 from granulate_utils.generated.containers.cri.api_pb2_grpc import RuntimeServiceStub  # type: ignore
 from granulate_utils.linux.ns import resolve_host_root_links
 
@@ -88,12 +87,12 @@ class CriClient(ContainersClientInterface):
 
         return containers
 
-    def get_container(self, container_id: str) -> Container:
+    def get_container(self, container_id: str, all_info: bool) -> Container:
         for rt, path in self._runtimes.items():
             with RuntimeServiceWrapper(path) as stub:
                 try:
                     status = stub.ContainerStatus(
-                        api_pb2.ContainerStatusRequest(container_id=container_id, verbose=True)
+                        api_pb2.ContainerStatusRequest(container_id=container_id, verbose=all_info)
                     )
                 except grpc._channel._InactiveRpcError:
                     continue

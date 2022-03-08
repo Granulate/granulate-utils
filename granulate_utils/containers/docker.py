@@ -24,7 +24,7 @@ class DockerClient(ContainersClientInterface):
         containers = self._docker.containers.list()
         return list(map(self._create_container, containers))
 
-    def get_container(self, container_id: str) -> Container:
+    def get_container(self, container_id: str, all_info: bool) -> Container:
         try:
             container = self._docker.containers.get(container_id)
             return self._create_container(container)
