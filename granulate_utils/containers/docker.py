@@ -17,7 +17,7 @@ DOCKER_SOCK = "/var/run/docker.sock"
 
 
 class DockerClient(ContainersClientInterface):
-    def __init__(self):
+    def __init__(self) -> None:
         self._docker = docker.DockerClient(base_url="unix://" + resolve_host_root_links(DOCKER_SOCK))
 
     def list_containers(self, all_info: bool) -> List[Container]:

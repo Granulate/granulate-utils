@@ -35,7 +35,7 @@ class RuntimeServiceWrapper(RuntimeServiceStub):
 
 
 class CriClient(ContainersClientInterface):
-    def __init__(self):
+    def __init__(self) -> None:
         self._runtimes = {}
         for rt, path in RUNTIMES:
             path = "unix://" + resolve_host_root_links(path)
