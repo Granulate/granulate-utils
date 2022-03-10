@@ -62,7 +62,7 @@ Example:
 """
 Match /libjvm.so files. Not ended with $ because it might be suffixed with " (deleted)", in case
 Java was e.g upgrade and the files were replaced on disk.
-I could use (?: \(deleted\))?$ but I'm afraid it'll be too complex for some of the "grep"s that need to
+I could use (?: \\(deleted\\))?$ but I'm afraid it'll be too complex for some of the "grep"s that need to
 handle this regex, haha.
 """
 DETECTED_JAVA_PROCESSES_REGEX = r"^.+/libjvm\.so"
