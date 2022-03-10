@@ -94,8 +94,10 @@ class CriClient(ContainersClientInterface):
                     status = stub.ContainerStatus(
                         api_pb2.ContainerStatusRequest(container_id=container_id, verbose=all_info)
                     )
-                except grpc._channel._InactiveRpcError:
-                    continue
+                except grpc._channel._InactiveRpcError as e:
+                    if e.code() == grpc.StatusCode.NOT_FOUND:
+                        continue
+                    raise
 
                 pid: Optional[int] = json.loads(status.info.get("info", "{}")).get("pid")
                 return self._create_container(status.status, pid, rt)
