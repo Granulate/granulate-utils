@@ -59,7 +59,13 @@ Example:
     vm_info: OpenJDK 64-Bit Server VM (25.292-b10) for linux-amd64 JRE (1.8.0_292-8u292-b10-0ubuntu1~18.04-b10), ...
 """
 
-DETECTED_JAVA_PROCESSES_REGEX = r"^.+/libjvm\.so$"
+"""
+Match /libjvm.so files. Not ended with $ because it might be suffixed with " (deleted)", in case
+Java was e.g upgrade and the files were replaced on disk.
+I could use (?: \\(deleted\\))?$ but I'm afraid it'll be too complex for some of the "grep"s that need to
+handle this regex, haha.
+"""
+DETECTED_JAVA_PROCESSES_REGEX = r"^.+/libjvm\.so"
 
 
 def locate_hotspot_error_file(nspid: int, cmdline: List[str]) -> Iterable[str]:
