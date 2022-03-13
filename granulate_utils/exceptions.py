@@ -21,3 +21,8 @@ class CriNotAvailableError(Exception):
 
 class NoContainerRuntimesError(Exception):
     pass
+
+
+class ContainerNotFound(Exception):
+    def __init__(self, container_id: str) -> None:
+        super().__init__(f"Could not find container with id {container_id!r}")

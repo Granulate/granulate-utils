@@ -3,12 +3,13 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 
+import contextlib
 from typing import List, Optional
 
 from granulate_utils.containers.container import Container, ContainersClientInterface
 from granulate_utils.containers.cri import CriClient
 from granulate_utils.containers.docker import DockerClient
-from granulate_utils.exceptions import NoContainerRuntimesError
+from granulate_utils.exceptions import ContainerNotFound, NoContainerRuntimesError
 
 
 class ContainersClient(ContainersClientInterface):
@@ -63,6 +64,17 @@ class ContainersClient(ContainersClientInterface):
                 containers.append(cri_container)
 
         return containers
+
+    def get_container(self, container_id: str, all_info: bool) -> Container:
+        with contextlib.suppress(ContainerNotFound):
+            if self._docker_client is not None:
+                return self._docker_client.get_container(container_id, all_info)
+
+        with contextlib.suppress(ContainerNotFound):
+            if self._cri_client is not None:
+                return self._cri_client.get_container(container_id, all_info)
+
+        raise ContainerNotFound(container_id)
 
     def get_runtimes(self) -> List[str]:
         return (self._docker_client.get_runtimes() if self._docker_client is not None else []) + (
