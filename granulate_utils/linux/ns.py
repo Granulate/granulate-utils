@@ -185,7 +185,9 @@ def _get_process_ns_inode(process: Process, nstype: str):
     return ns_inode
 
 
-def run_in_ns(nstypes: List[str], callback: Callable[[], T], target_pid: int = 1, mimc_exceptions: bool = False) -> T:
+def run_in_ns(
+    nstypes: List[str], callback: Callable[[], T], target_pid: int = 1, passthrough_exception: bool = False
+) -> T:
     """
     Runs a callback in a new thread, switching to a set of the namespaces of a target process before
     doing so.
@@ -234,7 +236,7 @@ def run_in_ns(nstypes: List[str], callback: Callable[[], T], target_pid: int = 1
 
     if isinstance(ret, _Sentinel):
         assert exc is not None
-        if mimc_exceptions:
+        if passthrough_exception:
             raise exc
         else:
             raise Exception("run_in_ns execution failed") from exc
