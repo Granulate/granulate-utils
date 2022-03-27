@@ -59,9 +59,13 @@ def resolve_proc_root_links(proc_root: str, ns_path: str) -> str:
     parts = Path(ns_path).parts
 
     path = proc_root
+    seen = set()
     for part in parts[1:]:  # skip the / (or multiple /// as .parts gives them)
         next_path = os.path.join(path, part)
-        if os.path.islink(next_path):
+        while os.path.islink(next_path):
+            if next_path in seen:
+                raise OSError("Symlink loop detected")
+            seen.add(next_path)
             link = os.readlink(next_path)
             if os.path.isabs(link):
                 # absolute - prefix with proc_root
