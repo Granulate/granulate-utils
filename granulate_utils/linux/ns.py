@@ -72,10 +72,10 @@ def resolve_proc_root_links(proc_root: str, ns_path: str) -> str:
                 next_path = proc_root + link
             else:
                 # relative: just join
-                next_path = os.path.join(path, link)
+                next_path = os.path.join(os.path.dirname(next_path), link)
         path = next_path
 
-    return path
+    return os.path.abspath(path)
 
 
 def get_process_nspid(process: Union[Process, int]) -> int:
