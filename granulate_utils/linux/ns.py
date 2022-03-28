@@ -64,7 +64,7 @@ def resolve_proc_root_links(proc_root: str, ns_path: str) -> str:
         next_path = os.path.join(path, part)
         while os.path.islink(next_path):
             if next_path in seen:
-                raise OSError("Symlink loop detected")
+                raise RuntimeError("Symlink loop from %r" % os.path.join(path, part))
             seen.add(next_path)
             link = os.readlink(next_path)
             if os.path.isabs(link):
@@ -75,7 +75,7 @@ def resolve_proc_root_links(proc_root: str, ns_path: str) -> str:
                 next_path = os.path.join(os.path.dirname(next_path), link)
         path = next_path
 
-    return os.path.abspath(path)
+    return path
 
 
 def get_process_nspid(process: Union[Process, int]) -> int:
