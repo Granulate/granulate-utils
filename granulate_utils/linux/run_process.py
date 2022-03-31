@@ -14,7 +14,6 @@ from granulate_utils.exceptions import (
     CalledProcessError,
     CalledProcessTimeoutError,
     ProcessStoppedException,
-    StopEventSetException,
 )
 from granulate_utils.linux.process import prctl
 from granulate_utils.wait_event import wait_event
