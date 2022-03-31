@@ -10,11 +10,7 @@ import time
 from threading import Event
 from typing import Any, Callable, List, Optional, Tuple, Union
 
-from granulate_utils.exceptions import (
-    CalledProcessError,
-    CalledProcessTimeoutError,
-    ProcessStoppedException,
-)
+from granulate_utils.exceptions import CalledProcessError, CalledProcessTimeoutError, ProcessStoppedException
 from granulate_utils.linux.process import prctl
 from granulate_utils.wait_event import wait_event
 
@@ -94,11 +90,14 @@ class RunProcess:
         self.logger.debug(
             f"({self.process.args!r}) was killed by us with signal {self.kill_signal} due to timeout or stop request"
         )
-        return self.process.poll()
+        ret = self.process.poll()
+        assert ret is not None, "process should have stopped"
+        return ret
 
     def reap_and_read_output(
         self,
     ) -> Tuple[int, str, str]:
+        assert self.process is not None, "process not started!"
         returncode = self.reap()
         stdout, stderr = self.process.communicate()
         assert returncode is not None  # only None if child has not terminated
@@ -163,11 +162,12 @@ class RunProcess:
 
     def poll(self, timeout: float) -> None:
         assert self.stop_event is not None, "stop_event must be set to use this function!"
-        assert self.process is not None, "process was not started?"
+        assert self.process is not None, "process not started!"
         process = self.process  # helps mypy
         wait_event(timeout, self.stop_event, lambda: process.poll() is not None)
 
     def get_popen(self) -> subprocess.Popen:
+        assert self.process is not None, "process not started!"
         return self.process
 
 
