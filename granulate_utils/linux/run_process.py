@@ -166,11 +166,7 @@ class RunProcess:
         assert self.stop_event is not None, "stop_event must be set to use this function!"
         assert self.process is not None, "process was not started?"
         process = self.process  # helps mypy
-        try:
-            wait_event(timeout, self.stop_event, lambda: process.poll() is not None)
-        except StopEventSetException:
-            self.process.kill()
-            raise
+        wait_event(timeout, self.stop_event, lambda: process.poll() is not None)
 
     def get_popen(self) -> subprocess.Popen:
         return self.process
