@@ -78,7 +78,7 @@ class RunProcess:
         )
         return self.process
 
-    def _set_child_termination_on_parent_death(self, logger: LoggerType) -> None:
+    def _set_child_termination_on_parent_death(self) -> None:
         PR_SET_PDEATHSIG = 1
         try:
             prctl(PR_SET_PDEATHSIG, signal.SIGTERM)
