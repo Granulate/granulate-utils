@@ -56,3 +56,7 @@ class CalledProcessTimeoutError(CalledProcessError):
 
     def __str__(self) -> str:
         return f"Timed out after {self.timeout} seconds\n" + super().__str__()
+
+
+class StopEventSetException(Exception):
+    pass

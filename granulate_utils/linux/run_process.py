@@ -10,8 +10,14 @@ import time
 from threading import Event
 from typing import Any, Callable, List, Optional, Tuple, Union
 
-from granulate_utils.exceptions import CalledProcessError, CalledProcessTimeoutError, ProcessStoppedException
+from granulate_utils.exceptions import (
+    CalledProcessError,
+    CalledProcessTimeoutError,
+    ProcessStoppedException,
+    StopEventSetException,
+)
 from granulate_utils.linux.process import prctl
+from granulate_utils.wait_event import wait_event
 
 LoggerType = Union[logging.Logger, logging.LoggerAdapter]
 
@@ -81,18 +87,21 @@ class RunProcess:
                 f"Failed to set parent-death signal on child process. errno: {e.errno}, strerror: {e.strerror}"
             )
 
-    def _reap_process(
-        self,
-    ) -> Tuple[int, str, str]:
+    def reap(self, signal: signal.Signals = None) -> int:
         assert self.process is not None, "process not started!"
         # kill the process and read its output so far
-        self.process.send_signal(self.kill_signal)
+        self.process.send_signal(self.kill_signal if signal is None else signal)
         self.process.wait()
         self.logger.debug(
             f"({self.process.args!r}) was killed by us with signal {self.kill_signal} due to timeout or stop request"
         )
+        return self.process.poll()
+
+    def reap_and_read_output(
+        self,
+    ) -> Tuple[int, str, str]:
+        returncode = self.reap()
         stdout, stderr = self.process.communicate()
-        returncode = self.process.poll()
         assert returncode is not None  # only None if child has not terminated
         return returncode, stdout, stderr
 
@@ -128,11 +137,11 @@ class RunProcess:
                                 assert self.timeout is not None
                                 raise
             except subprocess.TimeoutExpired:
-                returncode, stdout, stderr = self._reap_process()
+                returncode, stdout, stderr = self.reap_and_read_output()
                 assert self.timeout is not None
                 reraise_exc = CalledProcessTimeoutError(self.timeout, returncode, self.cmd, stdout, stderr)
             except BaseException as e:  # noqa
-                returncode, stdout, stderr = self._reap_process()
+                returncode, stdout, stderr = self.reap_and_read_output()
                 reraise_exc = e
             retcode = self.process.poll()
             assert retcode is not None  # only None if child has not terminated
@@ -152,6 +161,19 @@ class RunProcess:
         elif self.check and retcode != 0:
             raise CalledProcessError(retcode, self.process.args, output=stdout, stderr=stderr)
         return result
+
+    def poll(self, timeout: float) -> None:
+        assert self.stop_event is not None, "stop_event must be set to use this function!"
+        assert self.process is not None, "process was not started?"
+        process = self.process  # helps mypy
+        try:
+            wait_event(timeout, self.stop_event, lambda: process.poll() is not None)
+        except StopEventSetException:
+            self.process.kill()
+            raise
+
+    def get_popen(self) -> subprocess.Popen:
+        return self.process
 
 
 def run_process(
