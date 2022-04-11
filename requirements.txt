@@ -4,3 +4,4 @@ protobuf==3.19.4
 docker==5.0.0
 dataclasses==0.8; python_version < '3.7'
 typing-extensions>=3.7.4
+pyelftools==0.28
