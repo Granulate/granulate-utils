@@ -5,6 +5,7 @@ from typing import Dict, List, Optional, Union
 
 import requests
 from requests import Response
+from requests.exceptions import ConnectionError
 
 from granulate_utils.exceptions import BadResponseCode
 from granulate_utils.metadata import Metadata
@@ -147,11 +148,15 @@ def get_static_cloud_instance_metadata(logger: Union[logging.LoggerAdapter, logg
             response = fetcher()
             if response is not None:
                 return response.__dict__
+        except (ConnectionError, BadResponseCode):
+            pass
         except Exception as exception:
             raised_exceptions.append(exception)
-    formatted_exceptions = ", ".join([repr(exception) for exception in raised_exceptions])
+    formatted_exceptions = (
+        ", ".join([repr(exception) for exception in raised_exceptions]) if raised_exceptions else "(none)"
+    )
     logger.debug(
         f"Could not get any cloud instance metadata because of the following exceptions: {formatted_exceptions}."
-        " The most likely reason is that gProfiler is not installed on a an AWS, GCP or Azure instance."
+        " The most likely reason is that we're not installed on a an AWS, GCP or Azure instance."
     )
     return None
