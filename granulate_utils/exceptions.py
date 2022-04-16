@@ -26,3 +26,8 @@ class NoContainerRuntimesError(Exception):
 class ContainerNotFound(Exception):
     def __init__(self, container_id: str) -> None:
         super().__init__(f"Could not find container with id {container_id!r}")
+
+
+class BadResponseCode(Exception):
+    def __init__(self, response_code: int):
+        super().__init__(f"Got a bad HTTP response code {response_code}")
