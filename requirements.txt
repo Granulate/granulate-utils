@@ -1,4 +1,5 @@
 psutil==5.8.0
+requests==2.25.1
 grpcio==1.43.0
 protobuf==3.19.4
 docker==5.0.0
