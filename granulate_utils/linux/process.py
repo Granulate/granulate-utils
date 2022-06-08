@@ -4,6 +4,12 @@
 #
 
 import psutil
+import os
+
+
+class DeletedExeException(psutil.Error):
+    def __init__(self, pid):
+        super(DeletedExeException, self).__init__(f"exe deleted for pid: {pid}")
 
 
 def process_exe(process: psutil.Process) -> str:
@@ -14,8 +20,13 @@ def process_exe(process: psutil.Process) -> str:
     See https://github.com/giampaolo/psutil/pull/2062
     """
     exe = process.exe()
-    if exe == "" and is_process_zombie(process):
-        raise psutil.ZombieProcess(process.pid)
+    if exe == "":
+        if is_process_zombie(process):
+            raise psutil.ZombieProcess(process.pid)
+        # following to https://man7.org/linux/man-pages/man5/proc.5.html,
+        # an empty exe can be returned in case of a broken link
+        if is_exe_deleted(process):
+            raise DeletedExeException(process.pid)
     return exe
 
 
@@ -29,3 +40,7 @@ def is_process_running(process: psutil.Process, allow_zombie: bool = False) -> b
 
 def is_process_zombie(process: psutil.Process) -> bool:
     return process.status() == "zombie"
+
+
+def is_exe_deleted(process: psutil.Process) -> bool:
+    return os.path.exists(f"/proc/{process.pid}/exe")
