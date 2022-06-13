@@ -96,3 +96,31 @@ def read_process_execfn(process: Process) -> str:
     addr = _read_process_auxv(process, AT_EXECFN)
     fn = _read_process_memory(process, addr, PATH_MAX)
     return fn[: fn.index(b"\0")].decode()
+
+
+def _read_va_from_elf(elf, va: int, size: int) -> Optional[bytes]:
+    for section in elf.iter_sections():
+        section_start = section.header.sh_addr
+        section_end = section.header.sh_addr + section.header.sh_size
+        if section_start <= va and section_end >= va + size:
+            offset_from_section = va - section_start
+            return section.data()[offset_from_section:offset_from_section + size]
+    return None
+
+
+def read_elf_va(path: str, va: int, size: int) -> Optional[bytes]:
+    with open(path, "rb") as f:
+        elf = ELFFile(f)
+        return _read_va_from_elf(elf, va, size)
+
+
+def read_elf_symbol(path: str, sym_name: str, size: int) -> Optional[bytes]:
+    with open(path, "rb") as f:
+        elf = ELFFile(f)
+        symbols = elf.get_section_by_name('.symtab')
+        if symbols is None:
+            return None
+        symbol = symbols.get_symbol_by_name(sym_name)
+        if symbol is None:
+            return None
+        return _read_va_from_elf(elf, symbol[0].entry.st_value, size)
