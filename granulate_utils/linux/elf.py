@@ -117,10 +117,10 @@ def read_elf_va(path: str, va: int, size: int) -> Optional[bytes]:
 def read_elf_symbol(path: str, sym_name: str, size: int) -> Optional[bytes]:
     with open(path, "rb") as f:
         elf = ELFFile(f)
-        symbols = elf.get_section_by_name(".symtab")
-        if symbols is None:
+        symtab = elf.get_section_by_name(".symtab")
+        if symtab is None:
             return None
-        symbol = symbols.get_symbol_by_name(sym_name)
-        if symbol is None:
+        symbols = symtab.get_symbol_by_name(sym_name)
+        if symbols is None or len(symbols) != 1:
             return None
-        return _read_va_from_elf(elf, symbol[0].entry.st_value, size)
+        return _read_va_from_elf(elf, symbols[0].entry.st_value, size)
