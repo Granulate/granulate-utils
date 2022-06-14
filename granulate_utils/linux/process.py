@@ -29,3 +29,9 @@ def is_process_running(process: psutil.Process, allow_zombie: bool = False) -> b
 
 def is_process_zombie(process: psutil.Process) -> bool:
     return process.status() == "zombie"
+
+
+def is_musl(process: psutil.Process) -> bool:
+    # TODO: make sure no glibc libc.so file exists (i.e, return True if musl, False if glibc, and raise
+    # if not conclusive)
+    return any("ld-musl" in m.path for m in process.memory_maps())
