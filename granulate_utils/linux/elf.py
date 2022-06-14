@@ -124,3 +124,12 @@ def read_elf_symbol(path: str, sym_name: str, size: int) -> Optional[bytes]:
         if symbols is None or len(symbols) != 1:
             return None
         return _read_va_from_elf(elf, symbols[0].entry.st_value, size)
+
+
+def is_statically_linked(path: str) -> bool:
+    with open(path, "rb") as f:
+        elf = ELFFile(f)
+        for segment in elf.iter_segments():
+            if segment.header.p_type == "PT_DYNAMIC":
+                return False
+    return True
