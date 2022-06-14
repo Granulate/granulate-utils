@@ -38,5 +38,4 @@ class BadResponseCode(Exception):
 class MissingExePath(Exception):
     def __init__(self, process: Process):
         self.process = process
-        super(MissingExePath, self).__init__(
-            f"No exe path was found for pid {process.pid}, threads: {process.threads()}")
+        super(MissingExePath, self).__init__(f"No exe path was found for {process}, threads: {process.threads()}")

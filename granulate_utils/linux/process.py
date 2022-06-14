@@ -4,6 +4,7 @@
 #
 
 import psutil
+
 from granulate_utils.exceptions import MissingExePath
 
 
