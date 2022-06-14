@@ -6,6 +6,11 @@
 import psutil
 
 
+class MissingExePath(Exception):
+    def __init__(self, process):
+        super(MissingExePath, self).__init__(f"No exe path was found for pid {process.pid}")
+
+
 def process_exe(process: psutil.Process) -> str:
     """
     psutil.Process(pid).exe() returns "" for zombie processes, incorrectly. It should raise ZombieProcess, and return ""
@@ -14,8 +19,10 @@ def process_exe(process: psutil.Process) -> str:
     See https://github.com/giampaolo/psutil/pull/2062
     """
     exe = process.exe()
-    if exe == "" and is_process_zombie(process):
-        raise psutil.ZombieProcess(process.pid)
+    if exe == "":
+        if is_process_zombie(process):
+            raise psutil.ZombieProcess(process.pid)
+        raise MissingExePath(process)
     return exe
 
 
