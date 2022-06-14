@@ -4,11 +4,7 @@
 #
 
 import psutil
-
-
-class MissingExePath(Exception):
-    def __init__(self, process):
-        super(MissingExePath, self).__init__(f"No exe path was found for pid {process.pid}")
+from granulate_utils.exceptions import MissingExePath
 
 
 def process_exe(process: psutil.Process) -> str:
