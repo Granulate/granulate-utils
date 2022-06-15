@@ -5,6 +5,8 @@
 
 import psutil
 
+from granulate_utils.exceptions import MissingExePath
+
 
 def process_exe(process: psutil.Process) -> str:
     """
@@ -14,8 +16,10 @@ def process_exe(process: psutil.Process) -> str:
     See https://github.com/giampaolo/psutil/pull/2062
     """
     exe = process.exe()
-    if exe == "" and is_process_zombie(process):
-        raise psutil.ZombieProcess(process.pid)
+    if exe == "":
+        if is_process_zombie(process):
+            raise psutil.ZombieProcess(process.pid)
+        raise MissingExePath(process)
     return exe
 
 

@@ -3,6 +3,8 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 
+from psutil import Process
+
 
 class UnsupportedNamespaceError(Exception):
     def __init__(self, nstype: str):
@@ -31,3 +33,9 @@ class ContainerNotFound(Exception):
 class BadResponseCode(Exception):
     def __init__(self, response_code: int):
         super().__init__(f"Got a bad HTTP response code {response_code}")
+
+
+class MissingExePath(Exception):
+    def __init__(self, process: Process):
+        self.process = process
+        super(MissingExePath, self).__init__(f"No exe path was found for {process}, threads: {process.threads()}")
