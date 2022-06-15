@@ -7,6 +7,7 @@ import logging
 from dataclasses import dataclass
 from http.client import NOT_FOUND
 from typing import Dict, List, Optional, Union
+from urllib.request import getproxies
 
 import requests
 from requests import Response
@@ -14,6 +15,7 @@ from requests.exceptions import ConnectionError
 
 from granulate_utils.exceptions import BadResponseCode
 from granulate_utils.metadata import Metadata
+
 
 METADATA_REQUEST_TIMEOUT = 5
 
@@ -136,7 +138,7 @@ def get_azure_metadata() -> Optional[AzureInstanceMetadata]:
 
 
 def send_request(url: str, headers: Dict[str, str] = None) -> Optional[Response]:
-    response = requests.get(url, headers=headers or {}, timeout=METADATA_REQUEST_TIMEOUT)
+    response = requests.get(url, headers=headers or {}, timeout=METADATA_REQUEST_TIMEOUT, proxies=getproxies())
     if response.status_code == NOT_FOUND:
         # It's most likely the wrong cloud provider
         return None
