@@ -38,7 +38,7 @@ class NsType(enum.IntFlag):
     user = 0x10000000  # CLONE_NEWUSER
 
 
-# TODO: keep in sync with the above NsType, duh.
+# note: keep in sync with the above NsType, duh.
 ValidNsTypeLiteral = Union[
     Literal["mnt"],
     Literal["net"],
