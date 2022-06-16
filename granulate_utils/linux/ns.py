@@ -9,7 +9,7 @@ import os
 import re
 from pathlib import Path
 from threading import Thread
-from typing import Callable, List, Optional, TypeVar, Union
+from typing import Callable, List, Literal, Optional, TypeVar, Union
 
 from psutil import NoSuchProcess, Process, process_iter
 
@@ -36,6 +36,22 @@ class NsType(enum.IntFlag):
     cgroup = 0x02000000  # CLONE_NEWCGROUP
     ipc = 0x08000000  # CLONE_NEWIPC
     user = 0x10000000  # CLONE_NEWUSER
+
+
+# note: keep in sync with the above NsType, duh.
+NsStr = Union[
+    Literal["mnt"],
+    Literal["net"],
+    Literal["pid"],
+    Literal["uts"],
+    Literal["cgroup"],
+    Literal["ipc"],
+    Literal["user"],
+]
+
+
+def assert_ns_str(ns: str) -> None:
+    assert ns in NsType.__members__, f"{ns} is not a valid namespace!"
 
 
 libc: Optional[ctypes.CDLL] = None
@@ -158,7 +174,7 @@ def _get_process_nspid_by_sched_files(process: Process) -> int:
     raise NoSuchProcess(process.pid)
 
 
-def is_same_ns(process: Union[Process, int], nstype: str, process2: Union[Process, int] = None) -> bool:
+def is_same_ns(process: Union[Process, int], nstype: NsStr, process2: Union[Process, int] = None) -> bool:
     if isinstance(process, int):
         process = Process(process)
     if isinstance(process2, int):
@@ -173,7 +189,8 @@ def is_same_ns(process: Union[Process, int], nstype: str, process2: Union[Proces
         return True
 
 
-def _get_process_ns_inode(process: Process, nstype: str):
+def _get_process_ns_inode(process: Process, nstype: NsStr):
+    assert_ns_str(nstype)
     try:
         ns_inode = os.stat(f"/proc/{process.pid}/ns/{nstype}").st_ino
     except FileNotFoundError as e:
@@ -190,7 +207,10 @@ def _get_process_ns_inode(process: Process, nstype: str):
 
 
 def run_in_ns(
-    nstypes: List[str], callback: Callable[[], T], target_pid: int = 1, passthrough_exception: bool = False
+    nstypes: List[NsStr],
+    callback: Callable[[], T],
+    target_pid: int = 1,
+    passthrough_exception: bool = False,
 ) -> T:
     """
     Runs a callback in a new thread, switching to a set of the namespaces of a target process before
@@ -205,6 +225,8 @@ def run_in_ns(
     By default, run stuff in init NS. You can pass 'target_pid' to run in the namespace of that process.
     """
 
+    for ns in nstypes:
+        assert_ns_str(ns)
     # make sure "mnt" is last, once we change it our /proc is gone
     nstypes = sorted(nstypes, key=lambda ns: 1 if ns == "mnt" else 0)
 
