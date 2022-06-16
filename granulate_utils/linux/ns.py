@@ -39,7 +39,7 @@ class NsType(enum.IntFlag):
 
 
 # note: keep in sync with the above NsType, duh.
-ValidNsTypeLiteral = Union[
+NsStr = Union[
     Literal["mnt"],
     Literal["net"],
     Literal["pid"],
@@ -170,7 +170,7 @@ def _get_process_nspid_by_sched_files(process: Process) -> int:
     raise NoSuchProcess(process.pid)
 
 
-def is_same_ns(process: Union[Process, int], nstype: ValidNsTypeLiteral, process2: Union[Process, int] = None) -> bool:
+def is_same_ns(process: Union[Process, int], nstype: NsStr, process2: Union[Process, int] = None) -> bool:
     if isinstance(process, int):
         process = Process(process)
     if isinstance(process2, int):
@@ -185,7 +185,7 @@ def is_same_ns(process: Union[Process, int], nstype: ValidNsTypeLiteral, process
         return True
 
 
-def _get_process_ns_inode(process: Process, nstype: ValidNsTypeLiteral):
+def _get_process_ns_inode(process: Process, nstype: NsStr):
     try:
         ns_inode = os.stat(f"/proc/{process.pid}/ns/{nstype}").st_ino
     except FileNotFoundError as e:
@@ -202,7 +202,7 @@ def _get_process_ns_inode(process: Process, nstype: ValidNsTypeLiteral):
 
 
 def run_in_ns(
-    nstypes: List[ValidNsTypeLiteral],
+    nstypes: List[NsStr],
     callback: Callable[[], T],
     target_pid: int = 1,
     passthrough_exception: bool = False,
