@@ -50,6 +50,10 @@ NsStr = Union[
 ]
 
 
+def assert_ns_str(ns: str) -> None:
+    assert ns in NsType.__members__, f"{ns} is not a valid namespace!"
+
+
 libc: Optional[ctypes.CDLL] = None
 
 
@@ -186,6 +190,7 @@ def is_same_ns(process: Union[Process, int], nstype: NsStr, process2: Union[Proc
 
 
 def _get_process_ns_inode(process: Process, nstype: NsStr):
+    assert_ns_str(nstype)
     try:
         ns_inode = os.stat(f"/proc/{process.pid}/ns/{nstype}").st_ino
     except FileNotFoundError as e:
@@ -220,6 +225,8 @@ def run_in_ns(
     By default, run stuff in init NS. You can pass 'target_pid' to run in the namespace of that process.
     """
 
+    for ns in nstypes:
+        assert_ns_str(ns)
     # make sure "mnt" is last, once we change it our /proc is gone
     nstypes = sorted(nstypes, key=lambda ns: 1 if ns == "mnt" else 0)
 
