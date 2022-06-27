@@ -91,7 +91,10 @@ def get_gcp_metadata() -> Optional[GcpInstanceMetadata]:
     return GcpInstanceMetadata(
         provider="gcp",
         zone=instance["zone"],
-        instance_type=instance["machineType"],
+        # From https://cloud.google.com/compute/docs/metadata/default-metadata-values:
+        # "The machine type for this VM. This value has the following format: projects/PROJECT_NUM/machineTypes/MACHINE_TYPE"
+        # Therefore keep only the last part:
+        instance_type=instance["machineType"].split("/")[-1],
         preemptible=instance["scheduling"]["preemptible"] == "TRUE",
         preempted=instance["preempted"] == "TRUE",
         instance_id=str(instance["id"]),
