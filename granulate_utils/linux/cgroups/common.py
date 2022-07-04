@@ -5,11 +5,14 @@
 
 from typing import List
 
+
 def bytes_to_gigabytes(value: float) -> float:
-    return value / 1024 ** 3
+    return value / 1024**3
+
 
 def gigabytes_to_bytes(value: float) -> float:
-    return value * 1024 ** 3
+    return value * 1024**3
+
 
 def split_and_filter(content: str) -> List[str]:
-    return list(filter(None, content.split('\n')))
+    return list(filter(None, content.split("\n")))
