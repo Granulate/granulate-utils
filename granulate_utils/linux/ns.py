@@ -9,7 +9,7 @@ import os
 import re
 from pathlib import Path
 from threading import Thread
-from typing import Callable, List, Literal, Optional, TypeVar, Union
+from typing import Callable, List, Optional, TypeVar, Union
 
 from psutil import NoSuchProcess, Process, process_iter
 
@@ -39,15 +39,6 @@ class NsType(enum.IntFlag):
 
 
 # note: keep in sync with the above NsType, duh.
-NsStr = Union[
-    Literal["mnt"],
-    Literal["net"],
-    Literal["pid"],
-    Literal["uts"],
-    Literal["cgroup"],
-    Literal["ipc"],
-    Literal["user"],
-]
 
 
 def assert_ns_str(ns: str) -> None:
@@ -174,7 +165,7 @@ def _get_process_nspid_by_sched_files(process: Process) -> int:
     raise NoSuchProcess(process.pid)
 
 
-def is_same_ns(process: Union[Process, int], nstype: NsStr, process2: Union[Process, int] = None) -> bool:
+def is_same_ns(process: Union[Process, int], nstype: str, process2: Union[Process, int] = None) -> bool:
     if isinstance(process, int):
         process = Process(process)
     if isinstance(process2, int):
@@ -189,7 +180,7 @@ def is_same_ns(process: Union[Process, int], nstype: NsStr, process2: Union[Proc
         return True
 
 
-def _get_process_ns_inode(process: Process, nstype: NsStr):
+def _get_process_ns_inode(process: Process, nstype: str):
     assert_ns_str(nstype)
     try:
         ns_inode = os.stat(f"/proc/{process.pid}/ns/{nstype}").st_ino
@@ -207,7 +198,7 @@ def _get_process_ns_inode(process: Process, nstype: NsStr):
 
 
 def run_in_ns(
-    nstypes: List[NsStr],
+    nstypes: List[str],
     callback: Callable[[], T],
     target_pid: int = 1,
     passthrough_exception: bool = False,
