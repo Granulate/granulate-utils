@@ -8,8 +8,8 @@ from enum import Enum
 from pathlib import Path
 from typing import List
 
-from granulate_utils.linux.cgroups.common import split_and_filter
-from granulate_utils.linux.cgroups.exceptions import MissingCgroup, SkippedCgroup, UnsupportedCgroup
+from granulate_utils.linux.cgroups_client.common import split_and_filter
+from granulate_utils.linux.cgroups_client.exceptions import MissingCgroup, SkippedCgroup, UnsupportedCgroup
 
 PID_CGROUPS = Path("/proc/self/cgroup")
 CGROUP_PARENT_PATH = Path("/sys/fs/cgroup")

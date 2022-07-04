@@ -3,8 +3,8 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 
-from granulate_utils.linux.cgroups.base_cgroup import BaseCgroup
-from granulate_utils.linux.cgroups.common import bytes_to_gigabytes
+from granulate_utils.linux.cgroups_client.base_cgroup import BaseCgroup
+from granulate_utils.linux.cgroups_client.common import bytes_to_gigabytes
 
 
 class MemoryCgroup(BaseCgroup):
