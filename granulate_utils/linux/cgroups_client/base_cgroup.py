@@ -14,7 +14,7 @@ from granulate_utils.linux.cgroups_client.exceptions import MissingCgroup, Skipp
 PID_CGROUPS = Path("/proc/self/cgroup")
 CGROUP_PARENT_PATH = Path("/sys/fs/cgroup")
 
-IGNORE_LIST = ["kubepods", "docker"]
+IGNORE_LIST = ["kubepods", "docker", "ecs"]
 
 
 class HIERARCHIES(Enum):
