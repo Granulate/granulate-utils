@@ -18,6 +18,7 @@ class MemoryCgroup(BaseCgroup):
 
     def set_memory_limit(self, limit_in_gb: float) -> None:
         self.write_to_controller("memory.limit_in_bytes", f"{limit_in_gb}G")
+        self.write_to_controller("memory.memsw.limit_in_bytes", f"{limit_in_gb}G")
 
     def reset_memory_limit(self) -> None:
         self.write_to_controller("memory.limit_in_bytes", "-1")
