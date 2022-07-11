@@ -20,6 +20,7 @@ class MissingCgroup(Exception):
     def __init__(self, cgroup_type: str, pid_cgroup_file: str) -> None:
         super().__init__(f"{cgroup_type} cgroup is missing from {pid_cgroup_file}")
 
+
 class MissingController(Exception):
     def __init__(self, controller_path: Path) -> None:
         super().__init__(f"{controller_path.as_posix()} controller is missing")

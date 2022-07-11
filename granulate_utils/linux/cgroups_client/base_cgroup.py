@@ -48,7 +48,8 @@ class CgroupVerifications:
     def controller_exists(controller_path: Path) -> None:
         if not controller_path.is_file():
             raise MissingController(controller_path)
-            
+
+
 class BaseCgroup:
     HIERARCHY = ""
 
