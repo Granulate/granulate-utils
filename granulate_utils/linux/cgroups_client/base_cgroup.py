@@ -9,7 +9,12 @@ from pathlib import Path
 from typing import List
 
 from granulate_utils.linux.cgroups_client.common import split_and_filter
-from granulate_utils.linux.cgroups_client.exceptions import MissingCgroup, SkippedCgroup, UnsupportedCgroup
+from granulate_utils.linux.cgroups_client.exceptions import (
+    MissingCgroup,
+    MissingController,
+    SkippedCgroup,
+    UnsupportedCgroup,
+)
 
 PID_CGROUPS = Path("/proc/self/cgroup")
 CGROUP_PARENT_PATH = Path("/sys/fs/cgroup")
@@ -39,7 +44,11 @@ class CgroupVerifications:
         if any(x in IGNORE_LIST for x in cgroup.split("/")):
             raise SkippedCgroup(cgroup, cgroup_name)
 
-
+    @staticmethod
+    def controller_exists(controller_path: Path) -> None:
+        if not controller_path.is_file():
+            raise MissingController(controller_path)
+            
 class BaseCgroup:
     HIERARCHY = ""
 
@@ -70,10 +79,14 @@ class BaseCgroup:
         return Path(CGROUP_PARENT_PATH / self.HIERARCHY / self.cgroup[1:])
 
     def read_from_controller(self, file_name: str) -> str:
-        return Path(self.cgroup_path / file_name).read_text()
+        controller = Path(self.cgroup_path / file_name)
+        CgroupVerifications.controller_exists(controller)
+        return controller.read_text()
 
     def write_to_controller(self, file_name: str, data: str) -> None:
-        Path(self.cgroup_path / file_name).write_text(data)
+        controller = Path(self.cgroup_path / file_name)
+        CgroupVerifications.controller_exists(controller)
+        controller.write_text(data)
 
     def get_cgroup_pids(self) -> List[str]:
         return split_and_filter(Path(self.cgroup_path / "tasks").read_text())
