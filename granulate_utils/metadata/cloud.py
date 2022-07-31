@@ -108,6 +108,10 @@ def get_gcp_metadata() -> Optional[GcpInstanceMetadata]:
 
 
 def get_gcp_region_from_zone(zone: str) -> str:
+    """
+    :return: Given zone ="projects/234/zones/us-east1-a"
+    get_gcp_region_from_zone should return -> us-east1
+    """
     zone = zone.rsplit('/', 1)[-1]
     if zone[-2] == '-':
         return zone[:-2]
