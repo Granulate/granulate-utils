@@ -44,7 +44,7 @@ class GcpInstanceMetadata(InstanceMetadataBase):
     instance_id: str
     image_id: str
     name: str
-    region: str = None
+    region: str
 
 
 @dataclass
