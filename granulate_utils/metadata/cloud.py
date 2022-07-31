@@ -44,6 +44,7 @@ class GcpInstanceMetadata(InstanceMetadataBase):
     instance_id: str
     image_id: str
     name: str
+    region: str = None
 
 
 @dataclass
@@ -88,9 +89,12 @@ def get_gcp_metadata() -> Optional[GcpInstanceMetadata]:
     if response is None:
         return None
     instance = response.json()
+    zone = instance["zone"]
+    region = get_gcp_region_from_zone(zone)
     return GcpInstanceMetadata(
         provider="gcp",
-        zone=instance["zone"],
+        zone=zone,
+        region=region,
         # From https://cloud.google.com/compute/docs/metadata/default-metadata-values: "The machine type for this VM.
         # This value has the following format: projects/PROJECT_NUM/machineTypes/MACHINE_TYPE"
         # Therefore keep only the last part:
@@ -101,6 +105,13 @@ def get_gcp_metadata() -> Optional[GcpInstanceMetadata]:
         image_id=instance["image"],
         name=instance["name"],
     )
+
+
+def get_gcp_region_from_zone(zone: str) -> str:
+    zone = zone.rsplit('/', 1)[-1]
+    if zone[-2] == '-':
+        return zone[:-2]
+    return zone
 
 
 def get_azure_metadata() -> Optional[AzureInstanceMetadata]:
