@@ -104,6 +104,10 @@ def _get_process_nspid_by_status_file(process: Process) -> Optional[int]:
                 raise NoSuchProcess(process.pid)
 
             for line in f:
+                if not line.strip():
+                    # https://bugs.launchpad.net/ubuntu/+source/linux/+bug/1772671
+                    continue
+
                 fields = line.split()
                 if fields[0] == "NSpid:":
                     return int(fields[-1])  # The last pid in the list is the innermost pid, according to `man 5 proc`
