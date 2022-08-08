@@ -64,9 +64,13 @@ def get_aws_metadata() -> Optional[AwsInstanceMetadata]:
     # Documentation:
     # on the format: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-categories.html
     # on the protocol: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html
-    token = send_request(
+    token_resp = send_request(
         "http://169.254.169.254/latest/api/token", method="put", headers={"X-aws-ec2-metadata-token-ttl-seconds": "120"}
-    ).text
+    )
+    if token_resp is None:
+        return None
+
+    token = token_resp.text
     metadata_response = send_request(
         "http://169.254.169.254/latest/dynamic/instance-identity/document", headers={"X-aws-ec2-metadata-token": token}
     )
