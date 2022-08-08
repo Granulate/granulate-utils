@@ -4,12 +4,12 @@
 #
 
 import struct
-import psutil
 from typing import Optional
+
+import psutil
 
 from granulate_utils.exceptions import MissingExePath
 from granulate_utils.linux.elf import get_elf_id
-
 
 _AUXV_ENTRY = struct.Struct("LL")
 
