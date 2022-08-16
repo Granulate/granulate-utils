@@ -7,3 +7,4 @@ types-setuptools==57.4.3
 types-psutil==5.8.0
 grpcio-tools==1.43.0
 types-dataclasses==0.6.4
+backoff-stubs~=1.10
