@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class Batch(NamedTuple):
     """A collection of messages sent to the server."""
 
-    logs: List[bytes]
+    logs: List[str]
     size: int
     head_serial_no: int
 
@@ -39,7 +39,7 @@ class MessagesBuffer:
         self.max_total_length = max_total_length
         self.overflow_drop_factor = overflow_drop_factor
         self.total_length = 0
-        self.buffer: List[bytes] = []
+        self.buffer: List[str] = []
         self.lengths: List[int] = []
         self.head_serial_no = 0
         self.next_serial_no = 0
@@ -121,14 +121,14 @@ class BatchRequestsHandler(Handler):
         item = self.dump_record_locked(record)
         self.messages_buffer.append(item)
 
-    def dump_record_locked(self, record: LogRecord) -> bytes:
+    def dump_record_locked(self, record: LogRecord) -> str:
         # `format` is required to fill in some record members such as `message` and `asctime`.
         self.format(record)
         record_dict = self.dictify_record(record)
         if record.truncated:  # type: ignore
             record_dict["truncated"] = True
         record_dict["serial_no"] = self.messages_buffer.next_serial_no
-        return json.dumps(record_dict).encode("utf-8")
+        return json.dumps(record_dict)
 
     def format(self, record: LogRecord) -> str:
         """Override to customize record fields."""
@@ -173,7 +173,7 @@ class BatchRequestsHandler(Handler):
             batch, response = self._send_logs()
             response.raise_for_status()
         except Exception:
-            logger.error(f"Error posting {len(batch.logs)} messages ({batch.size/1024}kb)")
+            logger.exception("Error posting to server")
         else:
             self.drop_sent_batch(batch)
 
