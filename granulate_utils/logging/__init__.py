@@ -195,11 +195,12 @@ class BatchRequestsHandler(Handler):
         data = {
             "id": uuid.uuid4().hex,
             "metadata": self.get_metadata(),
-            # TODO: batch.logs is a list of strings so ",".join() it into the final json string instead of json-ing the
-            #  list.
-            "logs": batch.logs,
+            "logs": '<LOGS_JSON>',
         }
-        response = self.session.post(f"{self.scheme}://{self.server_address}/", json=data, timeout=self.request_timeout)
+        # batch.logs is a list of strings so ",".join() it into the final json string instead of json-ing the list.
+        body = json.dumps(data).replace('"<LOGS_JSON>"', f"[{','.join(batch.logs)}]")
+        response = self.session.post(f"{self.scheme}://{self.server_address}/", data=body.encode('utf-8'),
+                                     headers={'Content-Type': 'application/json'}, timeout=self.request_timeout)
         return batch, response
 
     def get_metadata(self) -> dict:
