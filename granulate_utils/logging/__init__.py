@@ -57,11 +57,11 @@ class MessagesBuffer:
         self.lengths.append(len(item))
         self.total_length += len(item)
         self.next_serial_no += 1
-        self.check_overflow()
+        self.handle_overflow()
 
-    def check_overflow(self) -> None:
+    def handle_overflow(self) -> None:
         if self.total_length >= self.max_total_length:
-            self.drop(int(self.overflow_drop_factor * self.count))
+            self.drop(max(1, int(self.overflow_drop_factor * self.count)))
 
     def drop(self, n: int):
         assert n > 0, "n must be positive!"
@@ -87,6 +87,7 @@ class BatchRequestsHandler(Handler):
     # If Tuple[float, float], then the first value is connection-timeout and the second read-timeout.
     # See https://docs.python-requests.org/en/latest/api/#requests.request
     request_timeout: Union[float, Tuple[float, float]] = 1.5
+    stop_timeout: float = 60.0
 
     def __init__(
         self,
@@ -216,9 +217,10 @@ class BatchRequestsHandler(Handler):
 
     def stop(self) -> bool:
         """
-        Signals the communicator to stop receiving new messages.
-        Blocks until the communicator has finished processing all messages in the queue (or a `timeout` is reached).
+        Signals to stop flushing messages asynchronously.
+        Blocks until current flushing operation has finished or `stop_timeout` seconds passed.
+        :return: Whether timeout has been reached.
         """
         self.stop_event.set()
-        self.flush_thread.join(60.0)
+        self.flush_thread.join(self.stop_timeout)
         return not self.flush_thread.is_alive()
