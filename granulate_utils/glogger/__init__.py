@@ -35,27 +35,32 @@ class MessagesBuffer:
 
     def __init__(self, max_total_length: int, overflow_drop_factor: float):
         assert max_total_length > 0, "max_total_length must be positive!"
-        self.max_total_length = max_total_length
+        self.max_total_length = max_total_length  # maximum size of buffer in bytes
         self.overflow_drop_factor = overflow_drop_factor  # drop this percentage of messages upon overflow
         self.total_length = 0
         self.buffer: List[str] = []
         self.lengths: List[int] = []
         self.head_serial_no = 0
-        self.next_serial_no = 0
 
     @property
     def count(self) -> int:
+        """Number of strings currently in the buffer."""
         return len(self.buffer)
 
     @property
     def utilized(self) -> float:
+        """Total length used divided by maximum total length."""
         return self.total_length / self.max_total_length
+
+    @property
+    def next_serial_no(self) -> int:
+        """The serial number of the next item to be inserted."""
+        return self.head_serial_no + self.count
 
     def append(self, item: str) -> None:
         self.buffer.append(item)
         self.lengths.append(len(item))
         self.total_length += len(item)
-        self.next_serial_no += 1
         self.handle_overflow()
 
     def handle_overflow(self) -> None:
@@ -106,11 +111,10 @@ class BatchRequestsHandler(Handler):
     ):
         super().__init__(logging.DEBUG)
         self.max_message_size = max_message_size  # maximum message size
-        self.capacity = max_total_length  # maximum size of buffer in bytes
         self.flush_interval = flush_interval  # maximum amount of seconds between flushes
         self.flush_threshold = flush_threshold  # force flush if buffer size reaches this percentage of capacity
         self.max_send_tries = max_send_tries  # maximum number of times to retry sending logs if request fails
-        self.messages_buffer = MessagesBuffer(self.capacity, overflow_drop_factor)
+        self.messages_buffer = MessagesBuffer(max_total_length, overflow_drop_factor)
         self.stop_event = threading.Event()
         self.time_fn = time.time
         self.server_address = server_address
