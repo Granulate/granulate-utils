@@ -15,8 +15,6 @@ import backoff
 import requests
 from requests import RequestException
 
-REQUEST_MAX_TRIES = 5
-
 logger = logging.getLogger(__name__)
 
 
@@ -103,6 +101,7 @@ class BatchRequestsHandler(Handler):
         flush_interval=10.0,
         flush_threshold=0.8,
         overflow_drop_factor=0.25,
+        max_send_tries=5,
     ):
         super().__init__(logging.DEBUG)
         self.max_message_size = max_message_size  # maximum message size
@@ -110,6 +109,7 @@ class BatchRequestsHandler(Handler):
         self.flush_interval = flush_interval  # maximum amount of seconds between flushes
         self.flush_threshold = flush_threshold  # force flush if buffer size reaches this percentage of capacity
         self.overflow_drop_factor = overflow_drop_factor  # drop this percentage of messages upon overflow
+        self.max_send_tries = max_send_tries  # maximum number of times to retry sending logs if request fails
         self.messages_buffer = MessagesBuffer(self.capacity, self.overflow_drop_factor)
         self.stop_event = threading.Event()
         self.time_fn = time.time
@@ -175,9 +175,14 @@ class BatchRequestsHandler(Handler):
         )
 
     def flush(self) -> None:
+        # Allow configuring max_tries via class member. Alternatively we could decorate _send_logs in __init__ but that
+        # would be easier to miss and less flexible.
+        send = backoff.on_exception(
+            backoff.expo, exception=RequestException, max_tries=self.max_send_tries)(self._send_logs)
+
         self.last_flush_time = self.time_fn()
         try:
-            batch, response = self._send_logs()
+            batch, response = send()
             response.raise_for_status()
         except Exception:
             logger.exception("Error posting to server")
@@ -192,7 +197,6 @@ class BatchRequestsHandler(Handler):
             if n > 0:
                 self.messages_buffer.drop(n)
 
-    @backoff.on_exception(backoff.expo, exception=RequestException, max_tries=REQUEST_MAX_TRIES)
     def _send_logs(self) -> Tuple[Batch, requests.Response]:
         """
         :return: (batch that was sent, response)
