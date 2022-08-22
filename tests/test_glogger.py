@@ -6,7 +6,7 @@ from contextlib import ExitStack
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
 
-from granulate_utils.logging import BatchRequestsHandler
+from granulate_utils.glogger import BatchRequestsHandler
 
 
 class HttpBatchRequestsHandler(BatchRequestsHandler):
