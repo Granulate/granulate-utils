@@ -21,7 +21,7 @@ class DockerClient(ContainersClientInterface):
         self._docker = docker.DockerClient(base_url="unix://" + resolve_host_root_links(DOCKER_SOCK))
 
     def list_containers(self, all_info: bool) -> List[Container]:
-        containers = self._docker.containers.list()
+        containers = self._docker.containers.list(ignore_removed=True)  # ignore_removed to avoid races, see my commit
         return list(map(self._create_container, containers))
 
     def get_container(self, container_id: str, all_info: bool) -> Container:
