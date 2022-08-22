@@ -136,9 +136,9 @@ class BatchRequestsHandler(Handler):
         s = super().format(record)
         if len(record.message) > self.max_message_size:
             record.message = record.message[: self.max_message_size]
-            record.truncated = True
+            record.truncated = True  # type: ignore
         else:
-            record.truncated = False
+            record.truncated = False  # type: ignore
         return s
 
     def dictify_record(self, record):
