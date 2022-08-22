@@ -194,14 +194,14 @@ class BatchRequestsHandler(Handler):
         # Upon every retry we will remake the batch, in case we are able to batch more messages together.
         batch = self.make_batch()
         data = {
-            "id": uuid.uuid4().hex,
+            "batch_id": uuid.uuid4().hex,
             "metadata": self.get_metadata(),
             "logs": "<LOGS_JSON>",
         }
         # batch.logs is a list of strings so ",".join() it into the final json string instead of json-ing the list.
         body = json.dumps(data).replace('"<LOGS_JSON>"', f"[{','.join(batch.logs)}]")
         response = self.session.post(
-            f"{self.scheme}://{self.server_address}/",
+            f"{self.scheme}://{self.server_address}/api/v1/logs",
             data=body.encode("utf-8"),
             headers={"Content-Type": "application/json"},
             timeout=self.request_timeout,
