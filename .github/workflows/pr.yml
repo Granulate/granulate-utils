@@ -45,5 +45,8 @@ jobs:
         pip install -r requirements.txt
         pip install -r dev-requirements.txt
 
+    - name: Install self
+      run: pip install -e .
+
     - name: Test
       run: pytest tests/
