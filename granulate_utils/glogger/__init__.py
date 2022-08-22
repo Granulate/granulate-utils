@@ -34,9 +34,9 @@ class MessagesBuffer:
     """
 
     def __init__(self, max_total_length: int, overflow_drop_factor: float):
-        assert max_total_length > 0, 'max_total_length must be positive!'
+        assert max_total_length > 0, "max_total_length must be positive!"
         self.max_total_length = max_total_length
-        self.overflow_drop_factor = overflow_drop_factor
+        self.overflow_drop_factor = overflow_drop_factor  # drop this percentage of messages upon overflow
         self.total_length = 0
         self.buffer: List[str] = []
         self.lengths: List[int] = []
@@ -109,9 +109,8 @@ class BatchRequestsHandler(Handler):
         self.capacity = max_total_length  # maximum size of buffer in bytes
         self.flush_interval = flush_interval  # maximum amount of seconds between flushes
         self.flush_threshold = flush_threshold  # force flush if buffer size reaches this percentage of capacity
-        self.overflow_drop_factor = overflow_drop_factor  # drop this percentage of messages upon overflow
         self.max_send_tries = max_send_tries  # maximum number of times to retry sending logs if request fails
-        self.messages_buffer = MessagesBuffer(self.capacity, self.overflow_drop_factor)
+        self.messages_buffer = MessagesBuffer(self.capacity, overflow_drop_factor)
         self.stop_event = threading.Event()
         self.time_fn = time.time
         self.server_address = server_address
