@@ -68,7 +68,7 @@ def test_content_type_json():
             assert self.headers["Content-Type"] == "application/json"
             json_data = json.load(self.rfile)
             assert isinstance(json_data, dict)
-            assert set(json_data.keys()) == {"id", "metadata", "logs"}
+            assert set(json_data.keys()) == {"batch_id", "metadata", "logs"}
             logs = json_data["logs"]
             assert isinstance(logs, list)
             for log_item in logs:
