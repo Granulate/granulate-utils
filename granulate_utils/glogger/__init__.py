@@ -34,6 +34,7 @@ class MessagesBuffer:
     """
 
     def __init__(self, max_total_length: int, overflow_drop_factor: float):
+        assert max_total_length > 0, 'max_total_length must be positive!'
         self.max_total_length = max_total_length
         self.overflow_drop_factor = overflow_drop_factor
         self.total_length = 0
@@ -47,7 +48,7 @@ class MessagesBuffer:
         return len(self.buffer)
 
     @property
-    def utilization(self) -> float:
+    def utilized(self) -> float:
         return self.total_length / self.max_total_length
 
     def append(self, item: str) -> None:
@@ -170,15 +171,16 @@ class BatchRequestsHandler(Handler):
     def should_flush(self) -> bool:
         return (
             self.messages_buffer.count > 0
-            and (self.messages_buffer.utilization >= self.flush_threshold)
+            and (self.messages_buffer.utilized >= self.flush_threshold)
             or (self.time_since_last_flush >= self.flush_interval)
         )
 
     def flush(self) -> None:
         # Allow configuring max_tries via class member. Alternatively we could decorate _send_logs in __init__ but that
         # would be easier to miss and less flexible.
-        send = backoff.on_exception(
-            backoff.expo, exception=RequestException, max_tries=self.max_send_tries)(self._send_logs)
+        send = backoff.on_exception(backoff.expo, exception=RequestException, max_tries=self.max_send_tries)(
+            self._send_logs
+        )
 
         self.last_flush_time = self.time_fn()
         try:
