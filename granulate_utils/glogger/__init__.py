@@ -52,7 +52,7 @@ class MessagesBuffer:
     def utilization(self) -> float:
         return self.total_length / self.max_total_length
 
-    def append(self, item):
+    def append(self, item: str) -> None:
         self.buffer.append(item)
         self.lengths.append(len(item))
         self.total_length += len(item)
@@ -61,18 +61,24 @@ class MessagesBuffer:
 
     def handle_overflow(self) -> None:
         if self.total_length >= self.max_total_length:
-            self.drop(max(1, int(self.overflow_drop_factor * self.count)))
+            dropped = self.drop(max(1, int(self.overflow_drop_factor * self.count)))
+            logger.warning(f"Maximum total length ({self.max_total_length}) exceeded. Dropped {dropped} messages.")
 
-    def drop(self, n: int):
+    def drop(self, n: int) -> int:
+        """
+        Drop n messages from the buffer.
+        :return: How many messages were actually dropped.
+        """
         assert n > 0, "n must be positive!"
         if self.count == 0:
-            return
+            return 0
         if n > self.count:
             n = self.count
         self.head_serial_no += n
         self.total_length -= sum(self.lengths[:n])
         del self.lengths[:n]
         del self.buffer[:n]
+        return n
 
 
 class BatchRequestsHandler(Handler):
