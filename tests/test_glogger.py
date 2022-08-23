@@ -13,8 +13,13 @@ class HttpBatchRequestsHandler(BatchRequestsHandler):
     scheme = "http"
 
 
+class HTTP11RequestHandler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+
+
 class LogsServer(HTTPServer):
     timeout = 5.0
+    disable_nagle_algorithm = True
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -66,7 +71,7 @@ def test_max_buffer_size():
 def test_content_type_json():
     """Test handler sends valid JSON."""
 
-    class ReqHandler(BaseHTTPRequestHandler):
+    class ReqHandler(HTTP11RequestHandler):
         def do_POST(self):
             assert self.headers["Content-Type"] == "application/json"
             json_data = json.load(self.rfile)
@@ -76,7 +81,7 @@ def test_content_type_json():
             assert isinstance(logs, list)
             for log_item in logs:
                 assert isinstance(log_item, dict)
-                assert set(log_item.keys()) == {"serial_no", "level", "timestamp", "logger_name", "message"}
+                assert set(log_item.keys()) == {"serial_no", "severity", "timestamp", "logger_name", "message"}
             self.send_response(200, "OK")
             self.end_headers()
 
@@ -99,10 +104,9 @@ def test_content_type_json():
 def test_error_flushing():
     """Test handler logs a message when it get an error response from server."""
 
-    class ErrorRequestHandler(BaseHTTPRequestHandler):
+    class ErrorRequestHandler(HTTP11RequestHandler):
         def do_POST(self):
-            self.send_response(403, "Forbidden")
-            self.end_headers()
+            self.send_error(403, "Forbidden")
 
     with ExitStack() as exit_stack:
         logs_server = LogsServer(("localhost", 0), ErrorRequestHandler)
@@ -111,13 +115,14 @@ def test_error_flushing():
         handler = HttpBatchRequestsHandler(logs_server.authority, max_total_length=10000)
         exit_stack.callback(handler.stop)
 
-        logging.basicConfig(force=True, handlers=[handler], level=0)
-        logging.info("A" * 1000)
-        logging.info("B" * 2000)
-        logging.info("C" * 3000)
-        logging.info("D" * 4000)
+        logging.basicConfig(force=True, handlers=[handler], level=30)
+        logging.warning("A" * 3000)
+        logging.warning("B" * 3000)
+        logging.warning("C" * 3000)
         logs_server.handle_request()
         assert logs_server.processed > 0
+        # wait for the flush thread to log the error:
+        time.sleep(0.5)
         last_message = json.loads(handler.messages_buffer.buffer[-1])
         assert last_message["severity"] == logging.ERROR
         assert last_message["message"] == "Error posting to server"
@@ -158,7 +163,7 @@ def test_identifiers():
 def test_flush_when_length_threshold_reached():
     """Test that logs are flushed when max length threshold is reached."""
 
-    class ReqHandler(BaseHTTPRequestHandler):
+    class ReqHandler(HTTP11RequestHandler):
         def do_POST(self):
             json_data = json.load(self.rfile)
             logs = json_data["logs"]

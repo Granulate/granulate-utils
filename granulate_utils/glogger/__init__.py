@@ -38,7 +38,7 @@ class BatchRequestsHandler(Handler):
     scheme = "https"
 
     # If Tuple[float, float], then the first value is connection-timeout and the second read-timeout.
-    # See https://docs.python-requests.org/en/latest/api/#requests.request
+    # See https://requests.readthedocs.io/en/latest/user/advanced/#timeouts
     request_timeout: Union[float, Tuple[float, float]] = 1.5
     stop_timeout: float = 60.0
 
@@ -108,7 +108,7 @@ class BatchRequestsHandler(Handler):
         while not self.stop_event.is_set():
             if self.should_flush():
                 self.flush()
-            self.stop_event.wait(1.0)
+            self.stop_event.wait(0.5)
 
     @property
     def time_since_last_flush(self) -> float:
