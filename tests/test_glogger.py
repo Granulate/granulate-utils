@@ -56,8 +56,11 @@ def test_max_buffer_size():
         assert_buffer_attributes(handler, count=2, head_serial_no=0, next_serial_no=2)
         assert handler.messages_buffer.total_length > 3000
         logging.info("A" * 1500)
-        assert_buffer_attributes(handler, count=2, head_serial_no=1, next_serial_no=3)
-        assert handler.messages_buffer.total_length > 3000
+        # Check that one message was dropped, and an additional warning message was added
+        assert_buffer_attributes(handler, count=3, head_serial_no=1, next_serial_no=4)
+        last_message = json.loads(handler.messages_buffer.buffer[-1])
+        assert last_message["severity"] == logging.WARNING
+        assert last_message["message"] == "Maximum total length (4000) exceeded. Dropped 1 messages."
 
 
 def test_content_type_json():
@@ -91,6 +94,33 @@ def test_content_type_json():
         logging.info("D" * 4000)
         logs_server.handle_request()
         assert logs_server.processed > 0
+
+
+def test_error_flushing():
+    """Test handler logs a message when it get an error response from server."""
+
+    class ErrorRequestHandler(BaseHTTPRequestHandler):
+        def do_POST(self):
+            self.send_response(403, "Forbidden")
+            self.end_headers()
+
+    with ExitStack() as exit_stack:
+        logs_server = LogsServer(("localhost", 0), ErrorRequestHandler)
+        exit_stack.callback(logs_server.server_close)
+
+        handler = HttpBatchRequestsHandler(logs_server.authority, max_total_length=10000)
+        exit_stack.callback(handler.stop)
+
+        logging.basicConfig(force=True, handlers=[handler], level=0)
+        logging.info("A" * 1000)
+        logging.info("B" * 2000)
+        logging.info("C" * 3000)
+        logging.info("D" * 4000)
+        logs_server.handle_request()
+        assert logs_server.processed > 0
+        last_message = json.loads(handler.messages_buffer.buffer[-1])
+        assert last_message["severity"] == logging.ERROR
+        assert last_message["message"] == "Error posting to server"
 
 
 def test_truncate_long_message():
