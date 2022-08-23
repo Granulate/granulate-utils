@@ -4,7 +4,6 @@
 #
 
 from granulate_utils.linux.cgroups_client.base_cgroup import BaseCgroup
-from granulate_utils.linux.cgroups_client.common import bytes_to_gigabytes
 from granulate_utils.linux.cgroups_client.exceptions import MissingController
 
 
@@ -12,15 +11,16 @@ class MemoryCgroup(BaseCgroup):
     HIERARCHY = "memory"
 
     def get_memory_limit(self) -> float:
-        return bytes_to_gigabytes(float(self.read_from_controller("memory.limit_in_bytes")))
+        return float(self.read_from_controller("memory.limit_in_bytes"))
 
     def get_max_memory(self) -> float:
-        return bytes_to_gigabytes(float(self.read_from_controller("memory.max_usage_in_bytes")))
+        return float(self.read_from_controller("memory.max_usage_in_bytes"))
 
-    def set_memory_limit(self, limit_in_gb: float) -> None:
-        self.write_to_controller("memory.limit_in_bytes", f"{limit_in_gb}G")
+    def set_memory_limit(self, limit: int) -> None:
+
+        self.write_to_controller("memory.limit_in_bytes", f"{limit}")
         try:
-            self.write_to_controller("memory.memsw.limit_in_bytes", f"{limit_in_gb}G")
+            self.write_to_controller("memory.memsw.limit_in_bytes", f"{limit}")
         except MissingController:
             # if swap extension is not enabled (CONFIG_MEMCG_SWAP) this file doesn't exist
             pass
