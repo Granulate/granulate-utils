@@ -97,7 +97,7 @@ class BatchRequestsHandler(Handler):
     def dictify_record(self, record):
         formatted_timestamp = datetime.utcfromtimestamp(record.created).isoformat()
         return {
-            "level": record.levelname,
+            "severity": record.levelno,
             "timestamp": formatted_timestamp,
             "logger_name": record.name,
             "message": record.message,
