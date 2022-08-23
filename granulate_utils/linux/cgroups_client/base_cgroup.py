@@ -8,7 +8,6 @@ from enum import Enum
 from pathlib import Path
 from typing import List
 
-from granulate_utils.linux.cgroups_client.common import split_and_filter
 from granulate_utils.linux.cgroups_client.exceptions import (
     MissingCgroup,
     MissingController,
@@ -90,4 +89,5 @@ class BaseCgroup:
         controller.write_text(data)
 
     def get_cgroup_pids(self) -> List[str]:
-        return split_and_filter(Path(self.cgroup_path / "tasks").read_text())
+        content = Path(self.cgroup_path / "tasks").read_text()
+        return list(filter(None, content.split("\n")))

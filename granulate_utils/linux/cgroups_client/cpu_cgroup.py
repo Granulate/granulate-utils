@@ -9,7 +9,7 @@ from granulate_utils.linux.cgroups_client.base_cgroup import BaseCgroup
 class CpuCgroup(BaseCgroup):
     HIERARCHY = "cpu"
 
-    def set_cpu_limit_cores(self, cores: int) -> None:
+    def set_cpu_limit_cores(self, cores: float) -> None:
         period = int(self.read_from_controller("cpu.cfs_period_us").split("\n")[0])
         self.write_to_controller("cpu.cfs_quota_us", str(period * cores))
 
