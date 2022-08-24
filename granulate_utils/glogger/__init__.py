@@ -3,7 +3,6 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 import gzip
-import json
 import logging
 import threading
 import time
@@ -82,6 +81,7 @@ class BatchRequestsHandler(Handler):
 
     def start(self) -> None:
         """Called to start the flush thread."""
+        assert not self.stop_event.is_set(), "restart not allowed!"
         self.flush_thread.start()
 
     def emit(self, record: LogRecord) -> None:
@@ -224,11 +224,14 @@ class BatchRequestsHandler(Handler):
         """
         Signals to stop flushing messages asynchronously.
         Blocks until current flushing operation has finished or `stop_timeout` seconds passed.
-        :return: Whether timeout has been reached.
+        :return: Whether thread terminated within alloted timeout.
         """
-        self.stop_event.set()
-        self.flush_thread.join(timeout)
-        return not self.flush_thread.is_alive()
+        if self.stop_event.is_set():
+            return True
+        else:
+            self.stop_event.set()
+            self.flush_thread.join(timeout)
+            return not self.flush_thread.is_alive()
 
     def close(self) -> None:
         self.stop()
