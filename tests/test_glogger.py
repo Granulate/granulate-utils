@@ -14,7 +14,7 @@ class HttpBatchRequestsHandler(BatchRequestsHandler):
     scheme = "http"
 
     def __init__(self, *args, **kwargs):
-        super().__init__("app", *args, **kwargs)
+        super().__init__("app", "token", *args, **kwargs)
 
 
 class HTTP11RequestHandler(BaseHTTPRequestHandler):

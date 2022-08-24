@@ -49,6 +49,7 @@ class BatchRequestsHandler(Handler):
     def __init__(
         self,
         application_name: str,
+        auth_token: str,
         server_address: str,
         max_message_size=1 * 1024 * 1024,  # 1mb
         max_total_length=5 * 1024 * 1024,  # 5mb
@@ -58,7 +59,6 @@ class BatchRequestsHandler(Handler):
         max_send_tries=5,
     ):
         super().__init__(logging.DEBUG)
-        self.application_name = application_name
         self.max_message_size = max_message_size  # maximum message size
         self.flush_interval = flush_interval  # maximum amount of seconds between flushes
         self.flush_threshold = flush_threshold  # force flush if buffer size reaches this percentage of capacity
@@ -68,6 +68,12 @@ class BatchRequestsHandler(Handler):
         self.time_fn = time.time
         self.server_address = server_address
         self.session = requests.Session()
+        self.session.headers.update(
+            {
+                "X-Application-Name": application_name,
+                "X-Token": auth_token,
+            }
+        )
         self.last_flush_time = 0.0
         self.flush_thread = threading.Thread(target=self._flush_loop, daemon=True, name="Logs flusher")
         self.start()
@@ -174,7 +180,6 @@ class BatchRequestsHandler(Handler):
             headers={
                 "Content-Encoding": "gzip",
                 "Content-Type": "application/json",
-                "X-Application-Name": self.application_name,
             },
             timeout=self.request_timeout,
         )
