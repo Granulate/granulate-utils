@@ -1,3 +1,4 @@
+import gzip
 import json
 import logging
 import random
@@ -17,8 +18,16 @@ class HttpBatchRequestsHandler(BatchRequestsHandler):
         super().__init__("app", "token", *args, **kwargs)
 
 
-class HTTP11RequestHandler(BaseHTTPRequestHandler):
+class GzipRequestHandler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
+
+    def parse_request(self) -> bool:
+        v = super().parse_request()
+        if v:
+            self.body = self.rfile.read()
+            if self.headers.get("Content-Encoding") == "gzip":
+                self.body = gzip.decompress(self.body)
+        return v
 
 
 class LogsServer(HTTPServer):
@@ -103,10 +112,10 @@ def test_max_buffer_size_lost_many():
 def test_content_type_json():
     """Test handler sends valid JSON."""
 
-    class ReqHandler(HTTP11RequestHandler):
+    class ReqHandler(GzipRequestHandler):
         def do_POST(self):
             assert self.headers["Content-Type"] == "application/json"
-            json_data = json.load(self.rfile)
+            json_data = json.loads(self.body)
             assert isinstance(json_data, dict)
             assert set(json_data.keys()) == {"batch_id", "metadata", "logs"}
             logs = json_data["logs"]
@@ -136,7 +145,7 @@ def test_content_type_json():
 def test_error_flushing():
     """Test handler logs a message when it get an error response from server."""
 
-    class ErrorRequestHandler(HTTP11RequestHandler):
+    class ErrorRequestHandler(GzipRequestHandler):
         def do_POST(self):
             self.send_error(403, "Forbidden")
 
@@ -198,9 +207,9 @@ def test_identifiers():
 def test_flush_when_length_threshold_reached():
     """Test that logs are flushed when max length threshold is reached."""
 
-    class ReqHandler(HTTP11RequestHandler):
+    class ReqHandler(GzipRequestHandler):
         def do_POST(self):
-            json_data = json.load(self.rfile)
+            json_data = json.loads(self.body)
             logs = json_data["logs"]
             assert logs, "no logs!"
             self.send_response(200, "OK")
