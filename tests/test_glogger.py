@@ -8,6 +8,10 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from logging import ERROR, WARNING
 from threading import Thread
 
+from requests.adapters import HTTPAdapter
+from requests.models import PreparedRequest, Response
+from requests.structures import CaseInsensitiveDict
+
 from granulate_utils.glogger import SERVER_SEND_ERROR_MESSAGE, BatchRequestsHandler
 
 
@@ -24,7 +28,8 @@ class GzipRequestHandler(BaseHTTPRequestHandler):
     def parse_request(self) -> bool:
         v = super().parse_request()
         if v:
-            self.body = self.rfile.read()
+            length = int(self.headers.get("Content-Length", "0"))
+            self.body = self.rfile.read(length)
             if self.headers.get("Content-Encoding") == "gzip":
                 self.body = gzip.decompress(self.body)
         return v
@@ -46,6 +51,39 @@ class LogsServer(HTTPServer):
     def authority(self):
         addr = self.server_address
         return f"{addr[0]}:{addr[1]}"
+
+
+class MockAdapter(HTTPAdapter):
+    def __init__(self):
+        super().__init__()
+        self.sends = 0
+        self.errors = 0
+        self.successes = 0
+
+    def send(self, request: PreparedRequest, *args, **kwargs) -> Response:
+        self.sends += 1
+
+        response = Response()
+        response.request = request
+        response.url = request.url or ""
+        response.status_code = 502
+        response.reason = "Internal Server Error"
+        response.headers = CaseInsensitiveDict()
+        response.encoding = "utf-8"
+        try:
+            assert isinstance(request.body, bytes)
+            json_data = json.loads(gzip.decompress(request.body))
+            assert_serial_nos_ok([log["serial_no"] for log in json_data["logs"]])
+        except Exception as e:
+            response.status_code = 400
+            response.reason = str(e)
+            self.errors += 1
+        else:
+            response.status_code = 200
+            response.reason = "OK"
+            self.successes += 1
+        finally:
+            return response
 
 
 def get_logger(handler):
@@ -239,38 +277,25 @@ def test_flush_when_length_threshold_reached():
 
 
 def test_multiple_threads():
+
     """Test that multiple threads writing simultaneously do not corrupt the buffer."""
 
-    class MockSession:
-        def __init__(self):
-            self.posts = 0
-            self.errors = 0
-            self.successes = 0
-
-        def post(self, uri, *, data, **kwargs):
-            self.posts += 1
-            try:
-                json_data = json.loads(data.decode("utf-8"))
-                assert_serial_nos_ok([log["serial_no"] for log in json_data["logs"]])
-                self.successes += 1
-            except Exception:
-                self.errors += 1
-
     with ExitStack() as exit_stack:
-        session = MockSession()
-        handler = HttpBatchRequestsHandler("localhost:61234", flush_interval=2.0)
-        handler.session = session
+        handler = HttpBatchRequestsHandler("localhost:61234", flush_interval=1.0)
+        mock_adapter = MockAdapter()
+        handler.session.mount("http://", mock_adapter)
         exit_stack.callback(handler.stop)
 
         logger = get_logger(handler)
 
         def log_func(end_time):
             while time.time() < end_time:
+                logger.info("A" * random.randint(50, 1000))
+                logger.info("A" * random.randint(50, 2000))
                 logger.info("A" * random.randint(50, 4000))
-                logger.info("A" * random.randint(50, 4000))
-                logger.info("A" * random.randint(50, 4000))
+                time.sleep(random.uniform(0, 0.1))
 
-        end_time = time.time() + 20.0
+        end_time = time.time() + 10.0
         threads = [
             Thread(target=log_func, name="Log thread 1", args=(end_time,)),
             Thread(target=log_func, name="Log thread 2", args=(end_time,)),
@@ -283,6 +308,6 @@ def test_multiple_threads():
         for t in threads:
             t.join()
 
-        assert session.posts > 5
-        assert session.successes == session.posts
-        assert session.errors == 0
+        assert mock_adapter.sends > 5
+        assert mock_adapter.successes == mock_adapter.sends
+        assert mock_adapter.errors == 0
