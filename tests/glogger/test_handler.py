@@ -179,14 +179,13 @@ def test_json_fields():
         logs_server = LogsServer(("localhost", 0), ReqHandler)
         exit_stack.callback(logs_server.server_close)
 
-        handler = HttpBatchRequestsHandler(logs_server.authority, max_total_length=10000)
+        handler = HttpBatchRequestsHandler(logs_server.authority, max_total_length=4000, flush_threshold=0.7)
         exit_stack.callback(handler.stop)
 
         logger = get_logger(handler)
         logger.info("A" * 1000)
-        logger.info("B" * 2000)
-        logger.info("C" * 3000)
-        logger.info("D" * 4000)
+        logger.info("B" * 1000)
+        logger.info("C" * 1000)
         logs_server.handle_request()
         assert logs_server.processed > 0
 

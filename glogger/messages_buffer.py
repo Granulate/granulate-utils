@@ -2,10 +2,7 @@
 # Copyright (c) Granulate. All rights reserved.
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
-import logging
 from typing import List
-
-logger = logging.getLogger(__name__)
 
 
 class MessagesBuffer:
@@ -50,7 +47,6 @@ class MessagesBuffer:
     def handle_overflow(self) -> None:
         if self.total_length >= self.max_total_length:
             dropped = self.drop(max(1, int(self.overflow_drop_factor * self.count)))
-            logger.warning(f"Maximum total length ({self.max_total_length}) exceeded. Dropped {dropped} messages.")
             self.dropped += dropped
 
     def drop(self, n: int) -> int:

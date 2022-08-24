@@ -88,7 +88,11 @@ class BatchRequestsHandler(Handler):
 
     def emit(self, record: LogRecord) -> None:
         # Called while lock is acquired
+        prev_dropped = self.messages_buffer.dropped
         self.messages_buffer.append(self.format(record))
+        new_dropped = self.messages_buffer.dropped - prev_dropped
+        if new_dropped:
+            self.warn_dropped(new_dropped)
 
     def format(self, record: LogRecord) -> str:
         super().format(record)
@@ -120,6 +124,21 @@ class BatchRequestsHandler(Handler):
         for k, v in long_items:
             d[k] = v[:max_field_length]
         d["truncated"] = True
+
+    def warn_dropped(self, dropped: int) -> None:
+        # If we use logging, we risk getting here more than once. No can do.
+        self.messages_buffer.append(
+            self.jsonify(
+                {
+                    "serial_no": self.messages_buffer.next_serial_no,
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "logger_name": "glogger",
+                    "severity": logging.WARNING,
+                    "message": f"Maximum total length ({self.messages_buffer.max_total_length}) exceeded. "
+                    f"Dropped {dropped} messages.",
+                }
+            )
+        )
 
     def _flush_loop(self) -> None:
         self.last_flush_time = self.time_fn()
