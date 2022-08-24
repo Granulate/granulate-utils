@@ -109,7 +109,7 @@ def test_max_buffer_size_lost_many():
         assert last_message["message"] == "Maximum total length (10000) exceeded. Dropped 5 messages."
 
 
-def test_content_type_json():
+def test_json_fields():
     """Test handler sends valid JSON."""
 
     class ReqHandler(GzipRequestHandler):
@@ -117,7 +117,7 @@ def test_content_type_json():
             assert self.headers["Content-Type"] == "application/json"
             json_data = json.loads(self.body)
             assert isinstance(json_data, dict)
-            assert set(json_data.keys()) == {"batch_id", "metadata", "logs"}
+            assert set(json_data.keys()) == {"batch_id", "metadata", "logs", "lost"}
             logs = json_data["logs"]
             assert isinstance(logs, list)
             for log_item in logs:
