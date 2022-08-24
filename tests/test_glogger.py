@@ -41,7 +41,7 @@ class LogsServer(HTTPServer):
 
 def get_logger(handler):
     logger = logging.getLogger(random.randbytes(8).hex())
-    logger.setLevel(0)
+    logger.setLevel(10)
     logger.addHandler(handler)
     return logger
 
