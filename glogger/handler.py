@@ -16,7 +16,7 @@ import backoff
 import requests
 from requests import RequestException
 
-from granulate_utils.glogger.messages_buffer import MessagesBuffer
+from glogger.messages_buffer import MessagesBuffer
 
 SERVER_SEND_ERROR_MESSAGE = "Error posting to server"
 

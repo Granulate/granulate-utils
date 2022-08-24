@@ -16,7 +16,7 @@ from requests.adapters import HTTPAdapter
 from requests.models import PreparedRequest, Response
 from requests.structures import CaseInsensitiveDict
 
-from granulate_utils.glogger.handler import SERVER_SEND_ERROR_MESSAGE, BatchRequestsHandler
+from glogger.handler import SERVER_SEND_ERROR_MESSAGE, BatchRequestsHandler
 
 
 class HttpBatchRequestsHandler(BatchRequestsHandler):
