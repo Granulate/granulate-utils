@@ -9,6 +9,7 @@ import threading
 import time
 import uuid
 from datetime import datetime
+from json import JSONEncoder
 from logging import Handler, LogRecord
 from typing import List, NamedTuple, Tuple, Union
 
@@ -66,6 +67,7 @@ class BatchRequestsHandler(Handler):
         self.messages_buffer = MessagesBuffer(max_total_length, overflow_drop_factor)
         self.stop_event = threading.Event()
         self.time_fn = time.time
+        self.jsonify = JSONEncoder(separators=(",", ":")).encode  # compact, no whitespace
         self.uri = f"{self.scheme}://{server_address}/api/v1/logs"
         self.session = requests.Session()
         self.session.headers.update(
@@ -84,43 +86,48 @@ class BatchRequestsHandler(Handler):
 
     def emit(self, record: LogRecord) -> None:
         # Called while lock is acquired
-        item = self.dump_record_locked(record)
-        self.messages_buffer.append(item)
-
-    def dump_record_locked(self, record: LogRecord) -> str:
-        # `format` is required to fill in some record members such as `message` and `asctime`.
-        self.format(record)
-        record_dict = self.dictify_record(record)
-        if record.truncated:  # type: ignore
-            record_dict["truncated"] = True
-        record_dict["serial_no"] = self.messages_buffer.next_serial_no
-        return json.dumps(record_dict)
+        self.messages_buffer.append(self.format(record))
 
     def format(self, record: LogRecord) -> str:
-        """Override to customize record fields."""
-        s = super().format(record)
-        if len(record.message) > self.max_message_size:
-            record.message = record.message[: self.max_message_size]
-            record.truncated = True  # type: ignore
-        else:
-            record.truncated = False  # type: ignore
-        return s
-
-    def dictify_record(self, record):
+        super().format(record)
         formatted_timestamp = datetime.utcfromtimestamp(record.created).isoformat()
-        return {
+        d = {
+            **self.get_extra_fields(record),
+            "message": record.message,
+            "serial_no": self.messages_buffer.next_serial_no,
             "severity": record.levelno,
             "timestamp": formatted_timestamp,
             "logger_name": record.name,
-            "message": record.message,
         }
+        s = self.jsonify(d)
+        if len(s) > self.max_message_size:
+            self.truncate(d)
+            s = self.jsonify(d)
+            assert len(s) <= self.max_message_size, "did not truncate enough!"
+        return s
+
+    def get_extra_fields(self, record: LogRecord) -> dict:
+        """Override to add extra fields to formatted record."""
+        return {}
+
+    def truncate(self, d):
+        minimum = 80
+        long_items = [(k, v) for k, v in d.items() if isinstance(v, str) and len(v) > minimum]
+        # Leave a KB buffer for all the short items + any overhead:
+        max_field_length = max(minimum, (self.max_message_size - 1024) // len(long_items))
+        for k, v in long_items:
+            d[k] = v[:max_field_length]
+        d["truncated"] = True
 
     def _flush_loop(self) -> None:
         self.last_flush_time = self.time_fn()
         while not self.stop_event.is_set():
             if self.should_flush():
-                self.flush()
+                self._flush()
             self.stop_event.wait(0.5)
+        # Flush all remaining messages before terminating:
+        if self.messages_buffer.count > 0:
+            self._flush()
 
     @property
     def time_since_last_flush(self) -> float:
@@ -163,9 +170,8 @@ class BatchRequestsHandler(Handler):
             "lost": batch.lost,
             "logs": "<LOGS_JSON>",
         }
-        # batch.logs is a list of json.dump()ed strings so ",".join() it into the final json string instead of json-ing
-        # the list.
-        data = json.dumps(batch_data).replace('"<LOGS_JSON>"', f"[{','.join(batch.logs)}]").encode("utf-8")
+        # batch.logs is a list of json strings so ",".join() it into the final json string instead of json-ing the list.
+        data = self.jsonify(batch_data).replace('"<LOGS_JSON>"', f"[{','.join(batch.logs)}]").encode("utf-8")
         data = gzip.compress(data, compresslevel=6)
         response = self.session.post(
             self.uri,

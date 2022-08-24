@@ -17,9 +17,10 @@ from granulate_utils.glogger import SERVER_SEND_ERROR_MESSAGE, BatchRequestsHand
 
 class HttpBatchRequestsHandler(BatchRequestsHandler):
     scheme = "http"
+    request_timeout = 0.2
 
     def __init__(self, *args, **kwargs):
-        super().__init__("app", "token", *args, **kwargs)
+        super().__init__("app", "token", *args, max_send_tries=1, **kwargs)
 
 
 class GzipRequestHandler(BaseHTTPRequestHandler):
@@ -123,7 +124,7 @@ def test_max_buffer_size_lost_one():
         logger.info("A" * 1500)
         logger.info("A" * 1500)
         # Check that one message was dropped, and an additional warning message was added
-        assert_buffer_attributes(handler, lost=1)
+        assert_buffer_attributes(handler, dropped=1)
         last_message = json.loads(handler.messages_buffer.buffer[-1])
         assert last_message["severity"] == WARNING
         assert last_message["message"] == "Maximum total length (4000) exceeded. Dropped 1 messages."
@@ -147,7 +148,7 @@ def test_max_buffer_size_lost_many():
         logger.info("7" * 1000)
         logger.info("8" * 1000)
         # Check that four messages were dropped, and an additional warning message was added
-        assert_buffer_attributes(handler, lost=4)
+        assert_buffer_attributes(handler, dropped=4)
         last_message = json.loads(handler.messages_buffer.buffer[-1])
         assert last_message["severity"] == WARNING
         assert last_message["message"] == "Maximum total length (10000) exceeded. Dropped 4 messages."
