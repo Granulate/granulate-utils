@@ -149,16 +149,7 @@ class BatchRequestsHandler(Handler):
         except Exception:
             logger.exception(SERVER_SEND_ERROR_MESSAGE)
         else:
-            self.drop_sent_batch(batch)
-
-    def drop_sent_batch(self, sent_batch: Batch) -> None:
-        # we don't override createLock(), so lock is not None
-        with self.lock:  # type: ignore
-            dropped = self.messages_buffer.head_serial_no - sent_batch.head_serial_no
-            n = len(sent_batch.logs) - dropped
-            if n > 0:
-                self.messages_buffer.drop(n)
-            self.messages_buffer.lost -= sent_batch.lost
+            self._drop_sent_batch(batch)
 
     def _send_logs(self) -> Tuple[Batch, requests.Response]:
         """
@@ -187,6 +178,25 @@ class BatchRequestsHandler(Handler):
         )
         return batch, response
 
+    def _drop_sent_batch(self, sent_batch: Batch) -> None:
+        # we don't override createLock(), so lock is not None
+        with self.lock:  # type: ignore
+            # The previous lost count has been accounted by the server:
+            self.messages_buffer.dropped -= sent_batch.lost
+            # Number of messages dropped while we were busy flushing:
+            dropped_inadvertently = self.messages_buffer.head_serial_no - sent_batch.head_serial_no
+            remaining = len(sent_batch.logs) - dropped_inadvertently
+            if remaining > 0:
+                # Account for all the messages in the batch that were considered dropped:
+                self.messages_buffer.dropped -= dropped_inadvertently
+                # Drop the remainder:
+                self.messages_buffer.drop(remaining)
+            elif remaining < 0:
+                # Account for all the messages in the batch that were considered dropped:
+                self.messages_buffer.dropped -= len(sent_batch.logs)
+                # Uh oh! We lost some messages. The dropped count now should match -remaining.
+                # It will be reported to the server at the next flush.
+
     def get_metadata(self) -> dict:
         """Called to get metadata per batch."""
         return {}
@@ -199,7 +209,9 @@ class BatchRequestsHandler(Handler):
                 self.messages_buffer.buffer[:],
                 self.messages_buffer.total_length,
                 self.messages_buffer.head_serial_no,
-                self.messages_buffer.lost,
+                # The current dropped counter indicates lost messages. Any messages dropped from now on will also be
+                # considered dropped until proven to have been flushed successfully.
+                self.messages_buffer.dropped,
             )
 
     def stop(self, timeout: float = 10) -> bool:
