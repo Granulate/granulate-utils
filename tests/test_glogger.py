@@ -57,7 +57,7 @@ def assert_serial_nos_ok(serial_nos):
     assert len(set(serial_nos)) == len(serial_nos), "have duplicates!"
 
 
-def test_max_buffer_size():
+def test_max_buffer_size_lost_one():
     """Test total length limit works by checking that a record is dropped from the buffer when limit is reached."""
     with ExitStack() as exit_stack:
         # we don't need a real port for this one
@@ -73,6 +73,31 @@ def test_max_buffer_size():
         last_message = json.loads(handler.messages_buffer.buffer[-1])
         assert last_message["severity"] == WARNING
         assert last_message["message"] == "Maximum total length (4000) exceeded. Dropped 1 messages."
+
+
+def test_max_buffer_size_lost_many():
+    """Test total length limit works by checking that a record is dropped from the buffer when limit is reached."""
+    with ExitStack() as exit_stack:
+        # we don't need a real port for this one
+        handler = HttpBatchRequestsHandler("localhost:61234", max_total_length=10000, overflow_drop_factor=0.5)
+        exit_stack.callback(handler.stop)
+
+        logger = get_logger(handler)
+        logger.info("0" * 1000)
+        logger.info("1" * 1000)
+        logger.info("2" * 1000)
+        logger.info("3" * 1000)
+        logger.info("4" * 1000)
+        logger.info("5" * 1000)
+        logger.info("6" * 1000)
+        logger.info("7" * 1000)
+        logger.info("8" * 1000)
+        logger.info("9" * 1000)
+        # Check that five messages were dropped, and an additional warning message was added
+        assert_buffer_attributes(handler, lost=5)
+        last_message = json.loads(handler.messages_buffer.buffer[-1])
+        assert last_message["severity"] == WARNING
+        assert last_message["message"] == "Maximum total length (10000) exceeded. Dropped 5 messages."
 
 
 def test_content_type_json():
