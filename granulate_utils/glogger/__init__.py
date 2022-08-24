@@ -200,7 +200,7 @@ class BatchRequestsHandler(Handler):
                 self.messages_buffer.lost,
             )
 
-    def stop(self, timeout: float = 60) -> bool:
+    def stop(self, timeout: float = 10) -> bool:
         """
         Signals to stop flushing messages asynchronously.
         Blocks until current flushing operation has finished or `stop_timeout` seconds passed.
@@ -209,3 +209,7 @@ class BatchRequestsHandler(Handler):
         self.stop_event.set()
         self.flush_thread.join(timeout)
         return not self.flush_thread.is_alive()
+
+    def close(self) -> None:
+        self.stop()
+        super().close()
