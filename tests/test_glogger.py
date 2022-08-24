@@ -50,10 +50,13 @@ class LogsServer(HTTPServer):
 
 def get_logger(handler):
     # use granulate_utils logger as parent so we also capture logs from within in the same handler.
-    utils_logger = logging.getLogger('granulate_utils')
+    utils_logger = logging.getLogger("granulate_utils")
+    for h in utils_logger.handlers[:]:
+        utils_logger.removeHandler(h)
+        h.close()
+    utils_logger.addHandler(handler)
+    utils_logger.setLevel(10)
     logger = utils_logger.getChild(random.randbytes(8).hex())
-    logger.setLevel(10)
-    logger.addHandler(handler)
     return logger
 
 
@@ -72,14 +75,15 @@ def test_max_buffer_size_lost_one():
     """Test total length limit works by checking that a record is dropped from the buffer when limit is reached."""
     with ExitStack() as exit_stack:
         # we don't need a real port for this one
-        handler = HttpBatchRequestsHandler("localhost:61234", max_total_length=6000, flush_interval=9999,
-                                           flush_threshold=0.95)
+        handler = HttpBatchRequestsHandler(
+            "localhost:61234", max_total_length=4000, flush_interval=9999, flush_threshold=0.95
+        )
         exit_stack.callback(handler.stop)
 
         logger = get_logger(handler)
-        logger.info("A" * 2000)
-        logger.info("A" * 2000)
-        logger.info("A" * 2000)
+        logger.info("A" * 1500)
+        logger.info("A" * 1500)
+        logger.info("A" * 1500)
         # Check that one message was dropped, and an additional warning message was added
         assert_buffer_attributes(handler, lost=1)
         last_message = json.loads(handler.messages_buffer.buffer[-1])
