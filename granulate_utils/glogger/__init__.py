@@ -2,6 +2,7 @@
 # Copyright (c) Granulate. All rights reserved.
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
+import gzip
 import json
 import logging
 import threading
@@ -44,6 +45,7 @@ class BatchRequestsHandler(Handler):
 
     def __init__(
         self,
+        application_name: str,
         server_address: str,
         max_message_size=1 * 1024 * 1024,  # 1mb
         max_total_length=5 * 1024 * 1024,  # 5mb
@@ -53,6 +55,7 @@ class BatchRequestsHandler(Handler):
         max_send_tries=5,
     ):
         super().__init__(logging.DEBUG)
+        self.application_name = application_name
         self.max_message_size = max_message_size  # maximum message size
         self.flush_interval = flush_interval  # maximum amount of seconds between flushes
         self.flush_threshold = flush_threshold  # force flush if buffer size reaches this percentage of capacity
@@ -151,18 +154,23 @@ class BatchRequestsHandler(Handler):
         """
         # Upon every retry we will remake the batch, in case we are able to batch more messages together.
         batch = self.make_batch()
-        data = {
+        batch_data = {
             "batch_id": uuid.uuid4().hex,
             "metadata": self.get_metadata(),
             "logs": "<LOGS_JSON>",
         }
         # batch.logs is a list of json.dump()ed strings so ",".join() it into the final json string instead of json-ing
         # the list.
-        body = json.dumps(data).replace('"<LOGS_JSON>"', f"[{','.join(batch.logs)}]")
+        data = json.dumps(batch_data).replace('"<LOGS_JSON>"', f"[{','.join(batch.logs)}]").encode("utf-8")
+        data = gzip.compress(data, compresslevel=6)
         response = self.session.post(
             f"{self.scheme}://{self.server_address}/api/v1/logs",
-            data=body.encode("utf-8"),
-            headers={"Content-Type": "application/json"},
+            data=data,
+            headers={
+                "Content-Encoding": "gzip",
+                "Content-Type": "application/json",
+                "X-Application-Name": self.application_name,
+            },
             timeout=self.request_timeout,
         )
         return batch, response
