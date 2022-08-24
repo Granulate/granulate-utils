@@ -108,12 +108,11 @@ def test_max_buffer_size_lost_many():
         logger.info("6" * 1000)
         logger.info("7" * 1000)
         logger.info("8" * 1000)
-        logger.info("9" * 1000)
-        # Check that five messages were dropped, and an additional warning message was added
-        assert_buffer_attributes(handler, lost=5)
+        # Check that four messages were dropped, and an additional warning message was added
+        assert_buffer_attributes(handler, lost=4)
         last_message = json.loads(handler.messages_buffer.buffer[-1])
         assert last_message["severity"] == WARNING
-        assert last_message["message"] == "Maximum total length (10000) exceeded. Dropped 5 messages."
+        assert last_message["message"] == "Maximum total length (10000) exceeded. Dropped 4 messages."
 
 
 def test_json_fields():
