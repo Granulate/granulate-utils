@@ -10,11 +10,11 @@ from granulate_utils.linux.cgroups_client.exceptions import MissingController
 class MemoryCgroup(BaseCgroup):
     HIERARCHY = "memory"
 
-    def get_memory_limit(self) -> float:
-        return float(self.read_from_controller("memory.limit_in_bytes"))
+    def get_memory_limit(self) -> int:
+        return int(self.read_from_controller("memory.limit_in_bytes"))
 
-    def get_max_memory(self) -> float:
-        return float(self.read_from_controller("memory.max_usage_in_bytes"))
+    def get_max_memory(self) -> int:
+        return int(self.read_from_controller("memory.max_usage_in_bytes"))
 
     def set_memory_limit(self, limit: int) -> None:
 
