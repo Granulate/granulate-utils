@@ -24,9 +24,11 @@ logger = logging.getLogger(__name__)
 class Batch(NamedTuple):
     """A collection of messages sent to the server."""
 
+    ident: str
     logs: List[str]
     size: int
     head_serial_no: int
+    lost: int
 
 
 class BatchRequestsHandler(Handler):
@@ -146,6 +148,7 @@ class BatchRequestsHandler(Handler):
             n = len(sent_batch.logs) - dropped
             if n > 0:
                 self.messages_buffer.drop(n)
+            self.messages_buffer.lost -= sent_batch.lost
 
     def _send_logs(self) -> Tuple[Batch, requests.Response]:
         """
@@ -154,8 +157,9 @@ class BatchRequestsHandler(Handler):
         # Upon every retry we will remake the batch, in case we are able to batch more messages together.
         batch = self.make_batch()
         batch_data = {
-            "batch_id": uuid.uuid4().hex,
+            "batch_id": batch.ident,
             "metadata": self.get_metadata(),
+            "lost": batch.lost,
             "logs": "<LOGS_JSON>",
         }
         # batch.logs is a list of json.dump()ed strings so ",".join() it into the final json string instead of json-ing
@@ -182,7 +186,11 @@ class BatchRequestsHandler(Handler):
         # we don't override createLock(), so lock is not None
         with self.lock:  # type: ignore
             return Batch(
-                self.messages_buffer.buffer[:], self.messages_buffer.total_length, self.messages_buffer.head_serial_no
+                uuid.uuid4().hex,
+                self.messages_buffer.buffer[:],
+                self.messages_buffer.total_length,
+                self.messages_buffer.head_serial_no,
+                self.messages_buffer.lost,
             )
 
     def stop(self, timeout: float = 60) -> bool:

@@ -19,6 +19,7 @@ class MessagesBuffer:
         self.buffer: List[str] = []
         self.lengths: List[int] = []
         self.head_serial_no = 0
+        self.lost = 0
 
     @property
     def count(self) -> int:
@@ -46,6 +47,7 @@ class MessagesBuffer:
         if self.total_length >= self.max_total_length:
             dropped = self.drop(max(1, int(self.overflow_drop_factor * self.count)))
             logger.warning(f"Maximum total length ({self.max_total_length}) exceeded. Dropped {dropped} messages.")
+            self.lost += dropped
 
     def drop(self, n: int) -> int:
         """
