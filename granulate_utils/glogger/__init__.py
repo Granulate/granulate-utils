@@ -66,7 +66,7 @@ class BatchRequestsHandler(Handler):
         self.messages_buffer = MessagesBuffer(max_total_length, overflow_drop_factor)
         self.stop_event = threading.Event()
         self.time_fn = time.time
-        self.server_address = server_address
+        self.uri = f"{self.scheme}://{server_address}/api/v1/logs"
         self.session = requests.Session()
         self.session.headers.update(
             {
@@ -175,7 +175,7 @@ class BatchRequestsHandler(Handler):
         data = json.dumps(batch_data).replace('"<LOGS_JSON>"', f"[{','.join(batch.logs)}]").encode("utf-8")
         data = gzip.compress(data, compresslevel=6)
         response = self.session.post(
-            f"{self.scheme}://{self.server_address}/api/v1/logs",
+            self.uri,
             data=data,
             headers={
                 "Content-Encoding": "gzip",
