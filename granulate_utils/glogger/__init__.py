@@ -133,7 +133,9 @@ class BatchRequestsHandler(Handler):
             or (self.time_since_last_flush >= self.flush_interval)
         )
 
-    def flush(self) -> None:
+    # This is deliberately not "flush", because logging.shutdown() calls flush() and we don't want
+    # any flushing to happen from multiple threads.
+    def _flush(self) -> None:
         # Allow configuring max_tries via class member. Alternatively we could decorate _send_logs in __init__ but that
         # would be easier to miss and less flexible.
         send = backoff.on_exception(backoff.expo, exception=RequestException, max_tries=self.max_send_tries)(
