@@ -36,8 +36,10 @@ class Batch(NamedTuple):
 class BatchRequestsHandler(Handler):
     """
     logging.Handler that accumulates logs in a buffer and flushes them periodically or when
-    threshold is reached. The logs are transformed into dicts. Requests to the server are serialized
-    in a dedicated thread to reduce congestion on the server.
+    threshold is reached. The logs are transformed into dicts which are sent as JSON to the server.
+    Requests to the server are serialized in a dedicated thread to reduce congestion.
+    Once a handler is created, it immediately starts flushing any log messages asynchronously.
+    The handler can be stopped using `stop()`. Once stopped, it cannot be restarted.
     """
 
     scheme = "https"
