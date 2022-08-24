@@ -4,6 +4,7 @@ import random
 import time
 from contextlib import ExitStack
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from logging import ERROR, WARNING
 from threading import Thread
 
 from granulate_utils.glogger import BatchRequestsHandler
@@ -11,6 +12,9 @@ from granulate_utils.glogger import BatchRequestsHandler
 
 class HttpBatchRequestsHandler(BatchRequestsHandler):
     scheme = "http"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__("app", *args, **kwargs)
 
 
 class HTTP11RequestHandler(BaseHTTPRequestHandler):
@@ -35,6 +39,13 @@ class LogsServer(HTTPServer):
         return f"{addr[0]}:{addr[1]}"
 
 
+def get_logger(handler):
+    logger = logging.getLogger(random.randbytes(8).hex())
+    logger.setLevel(0)
+    logger.addHandler(handler)
+    return logger
+
+
 def assert_buffer_attributes(handler, **kwargs):
     mb = handler.messages_buffer
     for k in kwargs:
@@ -53,18 +64,18 @@ def test_max_buffer_size():
         handler = HttpBatchRequestsHandler("localhost:61234", max_total_length=4000, flush_threshold=0.9)
         exit_stack.callback(handler.stop)
 
-        logging.basicConfig(force=True, handlers=[handler], level=0)
-        logging.info("A" * 1500)
+        logger = get_logger(handler)
+        logger.info("A" * 1500)
         assert_buffer_attributes(handler, count=1, head_serial_no=0, next_serial_no=1)
         assert handler.messages_buffer.total_length > 1500
-        logging.info("A" * 1500)
+        logger.info("A" * 1500)
         assert_buffer_attributes(handler, count=2, head_serial_no=0, next_serial_no=2)
         assert handler.messages_buffer.total_length > 3000
-        logging.info("A" * 1500)
+        logger.info("A" * 1500)
         # Check that one message was dropped, and an additional warning message was added
         assert_buffer_attributes(handler, count=3, head_serial_no=1, next_serial_no=4)
         last_message = json.loads(handler.messages_buffer.buffer[-1])
-        assert last_message["severity"] == logging.WARNING
+        assert last_message["severity"] == WARNING
         assert last_message["message"] == "Maximum total length (4000) exceeded. Dropped 1 messages."
 
 
@@ -92,11 +103,11 @@ def test_content_type_json():
         handler = HttpBatchRequestsHandler(logs_server.authority, max_total_length=10000)
         exit_stack.callback(handler.stop)
 
-        logging.basicConfig(force=True, handlers=[handler], level=0)
-        logging.info("A" * 1000)
-        logging.info("B" * 2000)
-        logging.info("C" * 3000)
-        logging.info("D" * 4000)
+        logger = get_logger(handler)
+        logger.info("A" * 1000)
+        logger.info("B" * 2000)
+        logger.info("C" * 3000)
+        logger.info("D" * 4000)
         logs_server.handle_request()
         assert logs_server.processed > 0
 
@@ -115,16 +126,16 @@ def test_error_flushing():
         handler = HttpBatchRequestsHandler(logs_server.authority, max_total_length=10000)
         exit_stack.callback(handler.stop)
 
-        logging.basicConfig(force=True, handlers=[handler], level=30)
-        logging.warning("A" * 3000)
-        logging.warning("B" * 3000)
-        logging.warning("C" * 3000)
+        logger = get_logger(handler)
+        logger.warning("A" * 3000)
+        logger.warning("B" * 3000)
+        logger.warning("C" * 3000)
         logs_server.handle_request()
         assert logs_server.processed > 0
         # wait for the flush thread to log the error:
         time.sleep(0.5)
         last_message = json.loads(handler.messages_buffer.buffer[-1])
-        assert last_message["severity"] == logging.ERROR
+        assert last_message["severity"] == ERROR
         assert last_message["message"] == "Error posting to server"
 
 
@@ -135,8 +146,8 @@ def test_truncate_long_message():
         handler = HttpBatchRequestsHandler("localhost:61234", max_message_size=1000)
         exit_stack.callback(handler.stop)
 
-        logging.basicConfig(force=True, handlers=[handler], level=0)
-        logging.info("A" * 2000)
+        logger = get_logger(handler)
+        logger.info("A" * 2000)
         assert_buffer_attributes(handler, count=1)
         s = handler.messages_buffer.buffer[0]
         m = json.loads(s)
@@ -151,9 +162,9 @@ def test_identifiers():
         handler = HttpBatchRequestsHandler("localhost:61234", max_total_length=10000)
         exit_stack.callback(handler.stop)
 
-        logging.basicConfig(force=True, handlers=[handler], level=0)
+        logger = get_logger(handler)
         for i in range(1000):
-            logging.info("A" * random.randint(50, 600))
+            logger.info("A" * random.randint(50, 600))
             if i % 7 == 0:
                 logs = handler.make_batch().logs
                 serial_nos = [json.loads(log)["serial_no"] for log in logs]
@@ -179,11 +190,11 @@ def test_flush_when_length_threshold_reached():
         handler = HttpBatchRequestsHandler(logs_server.authority, max_total_length=10000, flush_interval=999999.0)
         exit_stack.callback(handler.stop)
 
-        logging.basicConfig(force=True, handlers=[handler], level=0)
-        logging.info("A" * 1000)
-        logging.info("B" * 2000)
-        logging.info("C" * 3000)
-        logging.info("D" * 4000)
+        logger = get_logger(handler)
+        logger.info("A" * 1000)
+        logger.info("B" * 2000)
+        logger.info("C" * 3000)
+        logger.info("D" * 4000)
         logs_server.handle_request()
         assert logs_server.processed > 0
 
@@ -212,13 +223,13 @@ def test_multiple_threads():
         handler.session = session
         exit_stack.callback(handler.stop)
 
-        logging.basicConfig(force=True, handlers=[handler], level=0)
+        logger = get_logger(handler)
 
         def log_func(end_time):
             while time.time() < end_time:
-                logging.info("A" * random.randint(50, 4000))
-                logging.info("A" * random.randint(50, 4000))
-                logging.info("A" * random.randint(50, 4000))
+                logger.info("A" * random.randint(50, 4000))
+                logger.info("A" * random.randint(50, 4000))
+                logger.info("A" * random.randint(50, 4000))
 
         end_time = time.time() + 20.0
         threads = [
