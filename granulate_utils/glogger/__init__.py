@@ -41,7 +41,6 @@ class BatchRequestsHandler(Handler):
     # If Tuple[float, float], then the first value is connection-timeout and the second read-timeout.
     # See https://requests.readthedocs.io/en/latest/user/advanced/#timeouts
     request_timeout: Union[float, Tuple[float, float]] = 1.5
-    stop_timeout: float = 60.0
 
     def __init__(
         self,
@@ -186,12 +185,12 @@ class BatchRequestsHandler(Handler):
                 self.messages_buffer.buffer[:], self.messages_buffer.total_length, self.messages_buffer.head_serial_no
             )
 
-    def stop(self) -> bool:
+    def stop(self, timeout: float = 60) -> bool:
         """
         Signals to stop flushing messages asynchronously.
         Blocks until current flushing operation has finished or `stop_timeout` seconds passed.
         :return: Whether timeout has been reached.
         """
         self.stop_event.set()
-        self.flush_thread.join(self.stop_timeout)
+        self.flush_thread.join(timeout)
         return not self.flush_thread.is_alive()
