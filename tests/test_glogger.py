@@ -66,14 +66,10 @@ def test_max_buffer_size():
 
         logger = get_logger(handler)
         logger.info("A" * 1500)
-        assert_buffer_attributes(handler, count=1, head_serial_no=0, next_serial_no=1)
-        assert handler.messages_buffer.total_length > 1500
         logger.info("A" * 1500)
-        assert_buffer_attributes(handler, count=2, head_serial_no=0, next_serial_no=2)
-        assert handler.messages_buffer.total_length > 3000
         logger.info("A" * 1500)
         # Check that one message was dropped, and an additional warning message was added
-        assert_buffer_attributes(handler, count=3, head_serial_no=1, next_serial_no=4)
+        assert_buffer_attributes(handler, lost=1)
         last_message = json.loads(handler.messages_buffer.buffer[-1])
         assert last_message["severity"] == WARNING
         assert last_message["message"] == "Maximum total length (4000) exceeded. Dropped 1 messages."
