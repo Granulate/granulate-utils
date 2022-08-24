@@ -93,7 +93,7 @@ class MockAdapter(HTTPAdapter):
 
 def get_logger(handler):
     # use granulate_utils logger as parent so we also capture logs from within in the same handler.
-    utils_logger = logging.getLogger("granulate_utils")
+    utils_logger = logging.getLogger("glogger")
     for h in utils_logger.handlers[:]:
         utils_logger.removeHandler(h)
         h.close()
