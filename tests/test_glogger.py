@@ -1,3 +1,7 @@
+#
+# Copyright (c) Granulate. All rights reserved.
+# Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
+#
 import gzip
 import json
 import logging
@@ -12,7 +16,7 @@ from requests.adapters import HTTPAdapter
 from requests.models import PreparedRequest, Response
 from requests.structures import CaseInsensitiveDict
 
-from granulate_utils.glogger import SERVER_SEND_ERROR_MESSAGE, BatchRequestsHandler
+from granulate_utils.glogger.handler import SERVER_SEND_ERROR_MESSAGE, BatchRequestsHandler
 
 
 class HttpBatchRequestsHandler(BatchRequestsHandler):
