@@ -18,6 +18,8 @@ from requests import RequestException
 
 from granulate_utils.glogger.messages_buffer import MessagesBuffer
 
+SERVER_SEND_ERROR_MESSAGE = "Error posting to server"
+
 logger = logging.getLogger(__name__)
 
 
@@ -137,7 +139,7 @@ class BatchRequestsHandler(Handler):
             batch, response = send()
             response.raise_for_status()
         except Exception:
-            logger.exception("Error posting to server")
+            logger.exception(SERVER_SEND_ERROR_MESSAGE)
         else:
             self.drop_sent_batch(batch)
 

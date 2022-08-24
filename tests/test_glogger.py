@@ -7,7 +7,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from logging import ERROR, WARNING
 from threading import Thread
 
-from granulate_utils.glogger import BatchRequestsHandler
+from granulate_utils.glogger import SERVER_SEND_ERROR_MESSAGE, BatchRequestsHandler
 
 
 class HttpBatchRequestsHandler(BatchRequestsHandler):
@@ -157,7 +157,7 @@ def test_error_flushing():
         time.sleep(0.5)
         last_message = json.loads(handler.messages_buffer.buffer[-1])
         assert last_message["severity"] == ERROR
-        assert last_message["message"] == "Error posting to server"
+        assert last_message["message"] == SERVER_SEND_ERROR_MESSAGE
 
 
 def test_truncate_long_message():
@@ -171,8 +171,11 @@ def test_truncate_long_message():
         logger.info("A" * 2000)
         assert_buffer_attributes(handler, count=1)
         s = handler.messages_buffer.buffer[0]
+        # Check that the json is within the limit
+        assert len(s) <= 1000
+        # Check that it's still valid
         m = json.loads(s)
-        assert len(m["message"]) <= 1000
+        # Check that it's marked accordingly
         assert m["truncated"] is True
 
 
