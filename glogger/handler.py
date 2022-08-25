@@ -53,19 +53,36 @@ class BatchRequestsHandler(Handler):
         application_name: str,
         auth_token: str,
         server_address: str,
-        max_message_size=1 * 1024 * 1024,  # 1mb
-        max_total_length=5 * 1024 * 1024,  # 5mb
-        flush_interval=10.0,
-        flush_threshold=0.8,
-        overflow_drop_factor=0.25,
-        max_send_tries=5,
+        *,
+        continue_from: int = 0,
+        max_message_size: int = 1 * 1024 * 1024,  # 1mb
+        max_total_length: int = 5 * 1024 * 1024,  # 5mb
+        flush_interval: float = 10.0,
+        flush_threshold: float = 0.8,
+        overflow_drop_factor: float = 0.25,
+        max_send_tries: int = 5,
     ):
+        """
+        Create a new BatchRequestsHandler and start flushing messages in the background.
+
+        :param application_name: Unique identifier requests coming from this handler.
+        :param auth_token: Token for authenticating requests to the server.
+        :param server_address: Address of server where to send messages.
+        :param continue_from: Will be used as starting serial number.
+        :param max_message_size: Upper limit on length of single message in bytes.
+        :param max_total_length: Upper limit on total length of all buffered messages in bytes.
+        :param flush_interval: Seconds between sending batches.
+        :param flush_threshold: Force send when buffer utilization reaches this percentage.
+        :param overflow_drop_factor: Percentage of messages to be dropped when buffer becomes full.
+        :param max_send_tries: Number of times to retry sending a batch if sending fails.
+        """
         super().__init__(logging.DEBUG)
         self.max_message_size = max_message_size  # maximum message size
         self.flush_interval = flush_interval  # maximum amount of seconds between flushes
         self.flush_threshold = flush_threshold  # force flush if buffer size reaches this percentage of capacity
         self.max_send_tries = max_send_tries  # maximum number of times to retry sending logs if request fails
         self.messages_buffer = MessagesBuffer(max_total_length, overflow_drop_factor)
+        self.messages_buffer.head_serial_no = continue_from
         self.stop_event = threading.Event()
         self.time_fn = time.time
         self.jsonify = JSONEncoder(separators=(",", ":")).encode  # compact, no whitespace
