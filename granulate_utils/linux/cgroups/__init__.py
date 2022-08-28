@@ -10,8 +10,6 @@ from psutil import NoSuchProcess
 from .cpu_cgroup import CpuCgroup
 from .memory_cgroup import MemoryCgroup
 
-__all__ = ["CpuCgroup", "MemoryCgroup"]
-
 
 def get_cgroups(pid: int) -> List[Tuple[str, List[str], str]]:
     """
