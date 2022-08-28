@@ -30,7 +30,7 @@ class Batch(NamedTuple):
     logs: List[str]
     size: int
     head_serial_no: int
-    lost: int
+    lost_logs_count: int
 
 
 class BatchRequestsHandler(Handler):
@@ -188,7 +188,7 @@ class BatchRequestsHandler(Handler):
         batch_data = {
             "batch_id": batch.ident,
             "metadata": self.get_metadata(),
-            "lost": batch.lost,
+            "lost_logs_count": batch.lost_logs_count,
             "logs": "<LOGS_JSON>",
         }
         # batch.logs is a list of json strings so ",".join() it into the final json string instead of json-ing the list.
@@ -210,20 +210,15 @@ class BatchRequestsHandler(Handler):
         assert self.lock is not None
         with self.lock:
             # The previous lost count has been accounted by the server:
-            self.messages_buffer.dropped -= sent_batch.lost
+            self.messages_buffer.dropped -= sent_batch.lost_logs_count
             # Number of messages dropped while we were busy flushing:
             dropped_inadvertently = self.messages_buffer.head_serial_no - sent_batch.head_serial_no
             remaining = len(sent_batch.logs) - dropped_inadvertently
             if remaining > 0:
-                # Account for all the messages in the batch that were considered dropped:
-                self.messages_buffer.dropped -= dropped_inadvertently
                 # Drop the remainder:
                 self.messages_buffer.drop(remaining)
-            elif remaining < 0:
-                # Account for all the messages in the batch that were considered dropped:
-                self.messages_buffer.dropped -= len(sent_batch.logs)
-                # Uh oh! We lost some messages. The dropped count now should match -remaining.
-                # It will be reported to the server at the next flush.
+            # Account for all the messages in the batch that were considered dropped:
+            self.messages_buffer.dropped -= len(sent_batch.logs)
 
     def get_metadata(self) -> dict:
         """Called to get metadata per batch."""

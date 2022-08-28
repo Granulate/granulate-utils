@@ -46,8 +46,7 @@ class MessagesBuffer:
 
     def handle_overflow(self) -> None:
         if self.total_length >= self.max_total_length:
-            dropped = self.drop(max(1, int(self.overflow_drop_factor * self.count)))
-            self.dropped += dropped
+            self.drop(max(1, int(self.overflow_drop_factor * self.count)))
 
     def drop(self, n: int) -> int:
         """
@@ -60,6 +59,7 @@ class MessagesBuffer:
         if n > self.count:
             n = self.count
         self.head_serial_no += n
+        self.dropped += n
         self.total_length -= sum(self.lengths[:n])
         del self.lengths[:n]
         del self.buffer[:n]
