@@ -113,14 +113,15 @@ class BatchRequestsHandler(Handler):
 
     def format(self, record: LogRecord) -> str:
         super().format(record)
-        formatted_timestamp = datetime.utcfromtimestamp(record.created).isoformat()
         d = {
-            **self.get_extra_fields(record),
-            "message": record.message,
-            "serial_no": self.messages_buffer.next_serial_no,
-            "severity": record.levelno,
-            "timestamp": formatted_timestamp,
-            "logger_name": record.name,
+            "severity": record.levelno // 10,
+            "timestamp": datetime.utcfromtimestamp(record.created).timestamp() * 1000,
+            "text": {
+                **self.get_extra_fields(record),
+                "message": record.message,
+                "serial_no": self.messages_buffer.next_serial_no,
+                "logger_name": record.name,
+            },
         }
         s = self.jsonify(d)
         if len(s) > self.max_message_size:
@@ -147,12 +148,14 @@ class BatchRequestsHandler(Handler):
         self.messages_buffer.append(
             self.jsonify(
                 {
-                    "serial_no": self.messages_buffer.next_serial_no,
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "logger_name": "glogger",
-                    "severity": logging.WARNING,
-                    "message": f"Maximum total length ({self.messages_buffer.max_total_length}) exceeded. "
-                    f"Dropped {dropped} messages.",
+                    "severity": logging.WARNING // 10,
+                    "timestamp": datetime.utcnow().timestamp() * 1000,
+                    "text": {
+                        "serial_no": self.messages_buffer.next_serial_no,
+                        "logger_name": "glogger",
+                        "message": f"Maximum total length ({self.messages_buffer.max_total_length}) exceeded. "
+                        f"Dropped {dropped} messages.",
+                    },
                 }
             )
         )
@@ -172,10 +175,9 @@ class BatchRequestsHandler(Handler):
         return self.time_fn() - self.last_flush_time
 
     def should_flush(self) -> bool:
-        return (
-            self.messages_buffer.count > 0
-            and ((self.messages_buffer.utilized >= self.flush_threshold)
-                 or (self.time_since_last_flush >= self.flush_interval))
+        return self.messages_buffer.count > 0 and (
+            (self.messages_buffer.utilized >= self.flush_threshold)
+            or (self.time_since_last_flush >= self.flush_interval)
         )
 
     # This is deliberately not "flush", because logging.shutdown() calls flush() and we don't want
@@ -192,7 +194,7 @@ class BatchRequestsHandler(Handler):
             batch, response = send()
             response.raise_for_status()
         except HTTPError as e:
-            logger.error(SERVER_SEND_ERROR_MESSAGE + ' %s', e.response.text)
+            logger.error(SERVER_SEND_ERROR_MESSAGE + " %s", e.response.text)
         except Exception:
             logger.exception(SERVER_SEND_ERROR_MESSAGE)
         else:
