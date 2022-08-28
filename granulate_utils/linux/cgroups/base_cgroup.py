@@ -8,7 +8,7 @@ from enum import Enum
 from pathlib import Path
 from typing import List
 
-from granulate_utils.linux.cgroups_client.exceptions import (
+from exceptions import (
     MissingCgroup,
     MissingController,
     SkippedCgroup,
@@ -17,9 +17,6 @@ from granulate_utils.linux.cgroups_client.exceptions import (
 
 PID_CGROUPS = Path("/proc/self/cgroup")
 CGROUP_PARENT_PATH = Path("/sys/fs/cgroup")
-
-IGNORE_LIST = ["kubepods", "docker", "ecs"]
-
 
 class HIERARCHIES(Enum):
     memory = "memory"
@@ -40,7 +37,8 @@ class CgroupVerifications:
 
     @staticmethod
     def ignored_cgroup(cgroup: str, cgroup_name: str) -> None:
-        if any(x in IGNORE_LIST for x in cgroup.split("/")):
+        ignore_list = ["kubepods", "docker", "ecs"]
+        if any(x in ignore_list for x in cgroup.split("/")):
             raise SkippedCgroup(cgroup, cgroup_name)
 
     @staticmethod

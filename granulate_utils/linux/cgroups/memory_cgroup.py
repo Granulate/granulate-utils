@@ -3,8 +3,8 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 
-from granulate_utils.linux.cgroups_client.base_cgroup import BaseCgroup
-from granulate_utils.linux.cgroups_client.exceptions import MissingController
+from base_cgroup import BaseCgroup
+from exceptions import MissingController
 
 
 class MemoryCgroup(BaseCgroup):
@@ -17,7 +17,6 @@ class MemoryCgroup(BaseCgroup):
         return int(self.read_from_controller("memory.max_usage_in_bytes"))
 
     def set_memory_limit(self, limit: int) -> None:
-
         self.write_to_controller("memory.limit_in_bytes", f"{limit}")
         try:
             self.write_to_controller("memory.memsw.limit_in_bytes", f"{limit}")
