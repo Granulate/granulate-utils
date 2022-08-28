@@ -14,7 +14,7 @@ from typing import List, NamedTuple, Tuple, Union
 
 import backoff
 import requests
-from requests import RequestException
+from requests import HTTPError, RequestException
 
 from glogger.messages_buffer import MessagesBuffer
 
@@ -174,8 +174,8 @@ class BatchRequestsHandler(Handler):
     def should_flush(self) -> bool:
         return (
             self.messages_buffer.count > 0
-            and (self.messages_buffer.utilized >= self.flush_threshold)
-            or (self.time_since_last_flush >= self.flush_interval)
+            and ((self.messages_buffer.utilized >= self.flush_threshold)
+                 or (self.time_since_last_flush >= self.flush_interval))
         )
 
     # This is deliberately not "flush", because logging.shutdown() calls flush() and we don't want
@@ -191,6 +191,8 @@ class BatchRequestsHandler(Handler):
         try:
             batch, response = send()
             response.raise_for_status()
+        except HTTPError as e:
+            logger.error(SERVER_SEND_ERROR_MESSAGE + ' %s', e.response.text)
         except Exception:
             logger.exception(SERVER_SEND_ERROR_MESSAGE)
         else:
