@@ -207,8 +207,8 @@ class BatchRequestsHandler(Handler):
         return batch, response
 
     def _drop_sent_batch(self, sent_batch: Batch) -> None:
-        # we don't override createLock(), so lock is not None
-        with self.lock:  # type: ignore
+        assert self.lock is not None
+        with self.lock:
             # The previous lost count has been accounted by the server:
             self.messages_buffer.dropped -= sent_batch.lost
             # Number of messages dropped while we were busy flushing:
@@ -230,8 +230,8 @@ class BatchRequestsHandler(Handler):
         return {}
 
     def make_batch(self) -> Batch:
-        # we don't override createLock(), so lock is not None
-        with self.lock:  # type: ignore
+        assert self.lock is not None
+        with self.lock:
             return Batch(
                 uuid.uuid4().hex,
                 self.messages_buffer.buffer[:],
