@@ -8,12 +8,7 @@ from enum import Enum
 from pathlib import Path
 from typing import List
 
-from exceptions import (
-    MissingCgroup,
-    MissingController,
-    SkippedCgroup,
-    UnsupportedCgroup,
-)
+from exceptions import MissingCgroup, MissingController, SkippedCgroup, UnsupportedCgroup
 
 PID_CGROUPS = Path("/proc/self/cgroup")
 CGROUP_PARENT_PATH = Path("/sys/fs/cgroup")
