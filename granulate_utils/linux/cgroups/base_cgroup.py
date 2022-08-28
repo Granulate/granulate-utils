@@ -13,6 +13,7 @@ from exceptions import MissingCgroup, MissingController, SkippedCgroup, Unsuppor
 PID_CGROUPS = Path("/proc/self/cgroup")
 CGROUP_PARENT_PATH = Path("/sys/fs/cgroup")
 
+
 class HIERARCHIES(Enum):
     memory = "memory"
     cpu = "cpu,cpuacct"
