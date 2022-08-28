@@ -210,6 +210,7 @@ class BatchRequestsHandler(Handler):
         }
         # batch.logs is a list of json strings so ",".join() it into the final json string instead of json-ing the list.
         data = self.jsonify(batch_data).replace('"<LOGS_JSON>"', f"[{','.join(batch.logs)}]").encode("utf-8")
+        # Default compression level (9) is slowest. Level 6 trades a bit of compression for speed.
         data = gzip.compress(data, compresslevel=6)
         response = self.session.post(
             self.uri,
