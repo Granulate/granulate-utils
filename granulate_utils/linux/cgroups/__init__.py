@@ -7,8 +7,8 @@ from typing import List, Tuple
 
 from psutil import NoSuchProcess
 
-from .cpu_cgroup import CpuCgroup
-from .memory_cgroup import MemoryCgroup
+from .cpu_cgroup import CpuCgroup  # noqa: F401
+from .memory_cgroup import MemoryCgroup  # noqa: F401
 
 
 def get_cgroups(pid: int) -> List[Tuple[str, List[str], str]]:
