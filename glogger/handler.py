@@ -125,7 +125,7 @@ class BatchRequestsHandler(Handler):
         }
         s = self.jsonify(d)
         if len(s) > self.max_message_size:
-            self.truncate(d)
+            self.truncate(d["text"])
             s = self.jsonify(d)
             assert len(s) <= self.max_message_size, "did not truncate enough!"
         return s
