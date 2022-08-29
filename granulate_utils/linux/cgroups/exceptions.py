@@ -7,18 +7,20 @@ from pathlib import Path
 
 
 class SkippedCgroup(Exception):
-    def __init__(self, current_cgroup: str, new_cgroup_name: str) -> None:
-        super().__init__(f"Skipping creating new {new_cgroup_name} cgroup since current cgroup is: {current_cgroup}")
+    def __init__(self, current_cgroup: str, custom_cgroup: str) -> None:
+        super().__init__(
+            f"Skipping the creation of new {custom_cgroup!r} cgroup since the current cgroup is {current_cgroup!r}"
+        )
 
 
 class UnsupportedCgroup(Exception):
     def __init__(self, cgroup_type: str) -> None:
-        super().__init__(f"cgroup {cgroup_type} is unsupported in current release")
+        super().__init__(f"cgroup {cgroup_type!r} is unsupported")
 
 
 class MissingCgroup(Exception):
-    def __init__(self, cgroup_type: str, pid_cgroup_file: str) -> None:
-        super().__init__(f"{cgroup_type} cgroup is missing from {pid_cgroup_file}")
+    def __init__(self, cgroup_type: str, pid_cgroup_file: Path) -> None:
+        super().__init__(f"{cgroup_type!r} cgroup is missing from {pid_cgroup_file.as_posix()!r}")
 
 
 class MissingController(Exception):
