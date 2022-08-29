@@ -175,7 +175,7 @@ def parse_jvm_version(version_string: str) -> JvmVersion:
         assert "+" in build_str, f"Did not find expected build number prefix in new-style java version: {build_str!r}"
         # The goal of the regex here is to read the build number until a non-digit character is encountered,
         # since additional information can be appended after it, such as the platform name
-        matched = re.match(r"\d+", build_str[build_str.find("+") + 1:])
+        matched = re.match(r"\d+", build_str[build_str.find("+") + 1 :])
         assert matched, f"Unexpected build number format in new-style java version: {build_str!r}"
         build = int(matched[0])
 
