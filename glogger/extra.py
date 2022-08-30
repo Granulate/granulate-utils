@@ -1,17 +1,44 @@
 import logging
-from typing import Any, MutableMapping, Tuple
+from typing import Any, Mapping, MutableMapping, Tuple
 
 
 class ExtraAdapter(logging.LoggerAdapter):
     """
-    Logging adapter that adds an attribute named `_extra` containing a dict of all extra fields of a record.
-    This allows referring to the extras dict in a Formatter, when the extra field names differ among records.
+    This adapter:
+    1. Allows enriching messages with static and dynamic extra attributes, and
+    2. Adds an attribute named "extra" to each record that contains all the extra attributes.
     """
 
+    logging_kwargs = {"exc_info", "stack_info", "stacklevel", "extra"}
+
+    def __init__(self, logger: logging.Logger, extra: Mapping[str, object] = None):
+        # If default extra not provided, use empty dict:
+        super().__init__(logger, extra=extra or {})
+
+    def get_extra(self, **kwargs) -> Mapping[str, Any]:
+        """
+        Get extra attributes for a message. kwargs contains all the kwargs passed to the logging call, with any
+        non-standard kwargs available under an "extra" key. Default implementation merges existing attributes with
+        default ones provided at initialization.
+        """
+        return self.extra | kwargs.get("extra", {})
+
     def process(self, msg: Any, kwargs: MutableMapping[str, Any]) -> Tuple[Any, MutableMapping[str, Any]]:
-        if kwargs.get("extra") is not None:
-            kwargs["extra"].update(self.extra)
-        else:
-            kwargs["extra"] = dict(self.extra)
-        kwargs["extra"]["_extra"] = dict(kwargs["extra"])  # such that logging.Formatter will accept `_extra`
+        # Partition the kwargs into logging kwargs and extra kwargs:
+        logging_kwargs = {}
+        other_kwargs = {}
+        for k, v in kwargs.items():
+            if k in self.logging_kwargs:
+                logging_kwargs[k] = v
+            else:
+                other_kwargs[k] = v
+
+        # Merge other kwargs into extra:
+        extra = logging_kwargs.get("extra", {}) | other_kwargs
+        if extra:
+            logging_kwargs["extra"] = extra
+
+        extra = self.get_extra(**logging_kwargs)
+        # Retain all extras as attributes on the record, and add "extra" attribute that contains all the extras:
+        kwargs = logging_kwargs | {"extra": extra | {"extra": extra}}
         return msg, kwargs

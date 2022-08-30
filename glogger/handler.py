@@ -127,8 +127,11 @@ class BatchRequestsHandler(Handler):
         return s
 
     def get_extra_fields(self, record: LogRecord) -> dict:
-        """Override to add extra fields to formatted record."""
-        return {}
+        """
+        Override to add extra fields to formatted record.
+        Default implementation returns `record.extra` if present.
+        """
+        return record.__dict__.get("extra", {})
 
     def truncate(self, d):
         minimum = 80
