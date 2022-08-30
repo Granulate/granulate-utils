@@ -5,13 +5,14 @@ asynchronously.
 
 ## Usage
 
-The most trivial way to use gLogger is like so: 
+The most trivial way to use gLogger is like so:
 
 ```python
 import logging
 from glogger.handler import BatchRequestsHandler
+from glogger.sender import Sender
 
-handler = BatchRequestsHandler("my_app", AUTH_TOKEN, "logs.example.com")
+handler = BatchRequestsHandler(Sender("my_app", AUTH_TOKEN, "logs.example.com"))
 logging.basicConfig(handlers=[handler])
 ```
 

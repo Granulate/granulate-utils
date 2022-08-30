@@ -8,23 +8,47 @@ import logging
 import random
 import time
 from contextlib import ExitStack
+from copy import deepcopy
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from logging import ERROR, WARNING
 from threading import Thread
 
 from requests.adapters import HTTPAdapter
 from requests.models import PreparedRequest, Response
 from requests.structures import CaseInsensitiveDict
 
-from glogger.handler import SERVER_SEND_ERROR_MESSAGE, BatchRequestsHandler
+from glogger.handler import BatchRequestsHandler
+from glogger.sender import SERVER_SEND_ERROR_MESSAGE, Sender
+
+
+class MockBatchRequestsHandler(BatchRequestsHandler):
+    class MockSender(Sender):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
+        def _send_once_to_server(self, data: str) -> None:
+            return
+
+    def __init__(self, *args, max_total_length=100000, max_message_size=10000, overflow_drop_factor=0.25, **kwargs):
+        super().__init__(
+            self.MockSender("app", "token", *args, scheme="http", max_send_tries=1, **kwargs),
+            max_total_length=max_total_length,
+            max_message_size=max_message_size,
+            overflow_drop_factor=overflow_drop_factor,
+        )
 
 
 class HttpBatchRequestsHandler(BatchRequestsHandler):
-    scheme = "http"
-    request_timeout = 0.2
+    class HttpSender(Sender):
+        request_timeout = 0.2
 
-    def __init__(self, *args, **kwargs):
-        super().__init__("app", "token", *args, max_send_tries=1, **kwargs)
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
+    def __init__(self, *args, send_interval=0.2, **kwargs):
+        super().__init__(
+            self.HttpSender("app", "token", *args, scheme="http", send_interval=send_interval, max_send_tries=1),
+            **kwargs,
+        )
 
 
 class GzipRequestHandler(BaseHTTPRequestHandler):
@@ -78,7 +102,7 @@ class MockAdapter(HTTPAdapter):
         try:
             assert isinstance(request.body, bytes)
             json_data = json.loads(gzip.decompress(request.body))
-            assert_serial_nos_ok([log["serial_no"] for log in json_data["logs"]])
+            assert_serial_nos_ok([log["text"]["serial_no"] for log in json_data["logs"]])
         except Exception as e:
             response.status_code = 400
             response.reason = str(e)
@@ -117,11 +141,10 @@ def assert_serial_nos_ok(serial_nos):
 def test_max_buffer_size_lost_one():
     """Test total length limit works by checking that a record is dropped from the buffer when limit is reached."""
     with ExitStack() as exit_stack:
-        # we don't need a real port for this one
-        handler = HttpBatchRequestsHandler(
-            "localhost:61234", max_total_length=4000, flush_interval=9999, flush_threshold=0.95
+        handler = MockBatchRequestsHandler(
+            "localhost:61234", max_total_length=4000, send_interval=9999, send_threshold=0.95
         )
-        exit_stack.callback(handler.stop)
+        exit_stack.callback(handler.close)
 
         logger = get_logger(handler)
         logger.info("A" * 1500)
@@ -129,17 +152,15 @@ def test_max_buffer_size_lost_one():
         logger.info("A" * 1500)
         # Check that one message was dropped, and an additional warning message was added
         assert_buffer_attributes(handler, dropped=1)
-        last_message = json.loads(handler.messages_buffer.buffer[-1])
-        assert last_message["severity"] == WARNING
-        assert last_message["message"] == "Maximum total length (4000) exceeded. Dropped 1 messages."
+        assert len(handler.messages_buffer.buffer) == 2
 
 
 def test_max_buffer_size_lost_many():
     """Test total length limit works by checking that a record is dropped from the buffer when limit is reached."""
     with ExitStack() as exit_stack:
         # we don't need a real port for this one
-        handler = HttpBatchRequestsHandler("localhost:61234", max_total_length=10000, overflow_drop_factor=0.5)
-        exit_stack.callback(handler.stop)
+        handler = MockBatchRequestsHandler("localhost:61234", max_total_length=10000, overflow_drop_factor=0.5)
+        exit_stack.callback(handler.close)
 
         logger = get_logger(handler)
         logger.info("0" * 1000)
@@ -153,9 +174,7 @@ def test_max_buffer_size_lost_many():
         logger.info("8" * 1000)
         # Check that four messages were dropped, and an additional warning message was added
         assert_buffer_attributes(handler, dropped=4)
-        last_message = json.loads(handler.messages_buffer.buffer[-1])
-        assert last_message["severity"] == WARNING
-        assert last_message["message"] == "Maximum total length (10000) exceeded. Dropped 4 messages."
+        assert len(handler.messages_buffer.buffer) == 5
 
 
 def test_json_fields():
@@ -166,12 +185,15 @@ def test_json_fields():
             assert self.headers["Content-Type"] == "application/json"
             json_data = json.loads(self.body)
             assert isinstance(json_data, dict)
-            assert set(json_data.keys()) == {"batch_id", "metadata", "logs", "lost"}
+            assert set(json_data.keys()) == {"batch_id", "metadata", "logs", "lost_logs_count"}
             logs = json_data["logs"]
             assert isinstance(logs, list)
             for log_item in logs:
                 assert isinstance(log_item, dict)
-                assert set(log_item.keys()) == {"serial_no", "severity", "timestamp", "logger_name", "message"}
+                for key in {"severity", "timestamp", "text"}:
+                    assert key in log_item
+                for key in {"serial_no", "logger_name", "message"}:
+                    assert key in log_item["text"]
             self.send_response(200, "OK")
             self.end_headers()
 
@@ -179,8 +201,8 @@ def test_json_fields():
         logs_server = LogsServer(("localhost", 0), ReqHandler)
         exit_stack.callback(logs_server.server_close)
 
-        handler = HttpBatchRequestsHandler(logs_server.authority, max_total_length=4000, flush_threshold=0.7)
-        exit_stack.callback(handler.stop)
+        handler = HttpBatchRequestsHandler(logs_server.authority)
+        exit_stack.callback(handler.close)
 
         logger = get_logger(handler)
         logger.info("A" * 1000)
@@ -190,19 +212,24 @@ def test_json_fields():
         assert logs_server.processed > 0
 
 
-def test_error_flushing():
+def test_error_sending(caplog):
     """Test handler logs a message when it get an error response from server."""
 
     class ErrorRequestHandler(GzipRequestHandler):
         def do_POST(self):
             self.send_error(403, "Forbidden")
 
+    caplog.set_level(logging.ERROR)
     with ExitStack() as exit_stack:
         logs_server = LogsServer(("localhost", 0), ErrorRequestHandler)
         exit_stack.callback(logs_server.server_close)
 
         handler = HttpBatchRequestsHandler(logs_server.authority, max_total_length=10000)
-        exit_stack.callback(handler.stop)
+        exit_stack.callback(handler.close)
+
+        # Had to add because we intentionally set propagate to False
+        # so need to add caplog handler directly
+        handler.sender.stdout_logger.addHandler(caplog.handler)
 
         logger = get_logger(handler)
         logger.warning("A" * 3000)
@@ -212,17 +239,15 @@ def test_error_flushing():
         assert logs_server.processed > 0
         # wait for the flush thread to log the error:
         time.sleep(0.5)
-        last_message = json.loads(handler.messages_buffer.buffer[-1])
-        assert last_message["severity"] == ERROR
-        assert last_message["message"] == SERVER_SEND_ERROR_MESSAGE
+        assert caplog.records[-1].message == SERVER_SEND_ERROR_MESSAGE
 
 
 def test_truncate_long_message():
     """Test message is truncated and marked accordingly if it's longer than max message size."""
     with ExitStack() as exit_stack:
         # we don't need a real port for this one
-        handler = HttpBatchRequestsHandler("localhost:61234", max_message_size=1000)
-        exit_stack.callback(handler.stop)
+        handler = MockBatchRequestsHandler("localhost:61234", max_message_size=1000)
+        exit_stack.callback(handler.close)
 
         logger = get_logger(handler)
         logger.info("A" * 2000)
@@ -233,22 +258,104 @@ def test_truncate_long_message():
         # Check that it's still valid
         m = json.loads(s)
         # Check that it's marked accordingly
-        assert m["truncated"] is True
+        assert m[handler.TEXT_KEY][handler.TRUNCATED_KEY] is True
+
+
+def test_truncate_dict_logic():
+    with ExitStack() as exit_stack:
+        # we don't need a real port for this one
+        handler = MockBatchRequestsHandler("localhost:61234", max_message_size=1000)
+        exit_stack.callback(handler.close)
+
+        short_str = "a" * 20
+        long_str = "a" * 1000
+        else_key = "else"
+        original_test_dict = {
+            handler.TEXT_KEY: {
+                handler.MESSAGE_KEY: short_str,
+                handler.EXCEPTION_KEY: short_str,
+                handler.EXTRA_KEY: {else_key: short_str},
+                handler.TRUNCATED_KEY: False,
+                handler.SERIAL_NO_KEY: 5,
+                else_key: short_str,
+            }
+        }
+
+        # Test ok message
+        test_dict = deepcopy(original_test_dict)
+        result = json.loads(handler._truncate_dict(test_dict))
+        assert result == original_test_dict
+
+        # Test large exception
+        test_dict = deepcopy(original_test_dict)
+        test_dict[handler.TEXT_KEY][handler.EXCEPTION_KEY] = long_str
+        result = json.loads(handler._truncate_dict(test_dict))
+        assert handler.EXCEPTION_KEY not in result[handler.TEXT_KEY]
+        assert result[handler.TEXT_KEY][handler.TRUNCATED_KEY]
+        assert (
+            result[handler.TEXT_KEY][handler.MESSAGE_KEY] == original_test_dict[handler.TEXT_KEY][handler.MESSAGE_KEY]
+        )
+        assert result[handler.TEXT_KEY][handler.EXTRA_KEY] == original_test_dict[handler.TEXT_KEY][handler.EXTRA_KEY]
+        assert result[handler.TEXT_KEY][else_key] == original_test_dict[handler.TEXT_KEY][else_key]
+
+        # Test large extra
+        test_dict = deepcopy(original_test_dict)
+        test_dict[handler.TEXT_KEY][handler.EXTRA_KEY] = {else_key: long_str}
+        result = json.loads(handler._truncate_dict(test_dict))
+        assert handler.EXTRA_KEY not in result[handler.TEXT_KEY]
+        assert handler.EXCEPTION_KEY not in result[handler.TEXT_KEY]
+        assert result[handler.TEXT_KEY][handler.TRUNCATED_KEY]
+        assert (
+            result[handler.TEXT_KEY][handler.MESSAGE_KEY] == original_test_dict[handler.TEXT_KEY][handler.MESSAGE_KEY]
+        )
+        assert result[handler.TEXT_KEY][else_key] == original_test_dict[handler.TEXT_KEY][else_key]
+
+        # Test large message
+        test_dict = deepcopy(original_test_dict)
+        test_dict[handler.TEXT_KEY][handler.MESSAGE_KEY] = long_str
+        result = json.loads(handler._truncate_dict(test_dict))
+        assert handler.MESSAGE_KEY not in result[handler.TEXT_KEY]
+        assert handler.EXCEPTION_KEY not in result[handler.TEXT_KEY]
+        assert handler.EXTRA_KEY not in result[handler.TEXT_KEY]
+        assert result[handler.TEXT_KEY][handler.TRUNCATED_KEY]
+        assert result[handler.TEXT_KEY][else_key] == original_test_dict[handler.TEXT_KEY][else_key]
+
+        # Test combination of them all
+        test_dict = deepcopy(original_test_dict)
+        test_dict[handler.TEXT_KEY][handler.MESSAGE_KEY] = long_str
+        test_dict[handler.TEXT_KEY][handler.EXTRA_KEY] = {else_key: long_str}
+        test_dict[handler.TEXT_KEY][handler.EXCEPTION_KEY] = long_str
+        result = json.loads(handler._truncate_dict(test_dict))
+        assert handler.MESSAGE_KEY not in result[handler.TEXT_KEY]
+        assert handler.EXCEPTION_KEY not in result[handler.TEXT_KEY]
+        assert handler.EXTRA_KEY not in result[handler.TEXT_KEY]
+        assert result[handler.TEXT_KEY][handler.TRUNCATED_KEY]
+        assert result[handler.TEXT_KEY][else_key] == original_test_dict[handler.TEXT_KEY][else_key]
+
+        # Test large something else
+        test_dict = deepcopy(original_test_dict)
+        test_dict[handler.TEXT_KEY][else_key] = long_str
+        result = json.loads(handler._truncate_dict(test_dict))
+        assert handler.MESSAGE_KEY not in result[handler.TEXT_KEY]
+        assert handler.EXCEPTION_KEY not in result[handler.TEXT_KEY]
+        assert handler.EXTRA_KEY not in result[handler.TEXT_KEY]
+        assert else_key not in result[handler.TEXT_KEY]
+        assert result[handler.TEXT_KEY][handler.TRUNCATED_KEY]
+        assert handler.SERIAL_NO_KEY in result[handler.TEXT_KEY]
 
 
 def test_identifiers():
     """Test message serial numbers are always consecutive and do not repeat."""
     with ExitStack() as exit_stack:
-        # we don't need a real port for this one
-        handler = HttpBatchRequestsHandler("localhost:61234", max_total_length=10000)
-        exit_stack.callback(handler.stop)
+        handler = MockBatchRequestsHandler("localhost:61234", max_total_length=10000)
+        exit_stack.callback(handler.close)
 
         logger = get_logger(handler)
         for i in range(1000):
             logger.info("A" * random.randint(50, 600))
             if i % 7 == 0:
-                logs = handler.make_batch().logs
-                serial_nos = [json.loads(log)["serial_no"] for log in logs]
+                logs = handler.sender._make_batch().logs
+                serial_nos = [json.loads(log)[handler.TEXT_KEY][handler.SERIAL_NO_KEY] for log in logs]
                 assert_serial_nos_ok(serial_nos)
 
 
@@ -268,8 +375,8 @@ def test_flush_when_length_threshold_reached():
         exit_stack.callback(logs_server.server_close)
 
         # set the interval very high because we want flush to only happen on length trigger
-        handler = HttpBatchRequestsHandler(logs_server.authority, max_total_length=10000, flush_interval=999999.0)
-        exit_stack.callback(handler.stop)
+        handler = HttpBatchRequestsHandler(logs_server.authority, max_total_length=10000, send_interval=999999.0)
+        exit_stack.callback(handler.close)
 
         logger = get_logger(handler)
         logger.info("A" * 1000)
@@ -281,14 +388,13 @@ def test_flush_when_length_threshold_reached():
 
 
 def test_multiple_threads():
-
     """Test that multiple threads writing simultaneously do not corrupt the buffer."""
 
     with ExitStack() as exit_stack:
-        handler = HttpBatchRequestsHandler("localhost:61234", flush_interval=1.0)
+        handler = HttpBatchRequestsHandler("localhost:61234", send_interval=1.0)
         mock_adapter = MockAdapter()
-        handler.session.mount("http://", mock_adapter)
-        exit_stack.callback(handler.stop)
+        handler.sender.session.mount("http://", mock_adapter)
+        exit_stack.callback(handler.close)
 
         logger = get_logger(handler)
 

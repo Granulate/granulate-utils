@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Mapping, MutableMapping, Tuple
+from typing import Any, Dict, Mapping, MutableMapping, Tuple
 
 
 class ExtraAdapter(logging.LoggerAdapter):
@@ -25,7 +25,7 @@ class ExtraAdapter(logging.LoggerAdapter):
 
     def process(self, msg: Any, kwargs: MutableMapping[str, Any]) -> Tuple[Any, MutableMapping[str, Any]]:
         # Partition the kwargs into logging kwargs and extra kwargs:
-        logging_kwargs = {}
+        logging_kwargs: Dict[str, Any] = {}
         other_kwargs = {}
         for k, v in kwargs.items():
             if k in self.logging_kwargs:
