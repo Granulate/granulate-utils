@@ -1,7 +1,7 @@
 import logging
 from typing import Any, Mapping
 
-from glogger.extra import ExtraAdapter
+from glogger.extra_adapter import ExtraAdapter
 
 
 class CustomGetExtraAdapter(ExtraAdapter):

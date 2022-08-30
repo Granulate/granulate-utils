@@ -42,7 +42,7 @@ message attributes:
 
 ```python
 import logging
-from glogger.extra import ExtraAdapter
+from glogger.extra_adapter import ExtraAdapter
 
 adapter = ExtraAdapter(logging.getLogger(__name__))
 adapter.info('Cogito, ergo sum', author='René Descartes')
@@ -56,7 +56,8 @@ You can also provide custom dynamic attributes by overriding the `ExtraAdapter.g
 
 ```python
 import logging
-from glogger.extra import ExtraAdapter
+from glogger.extra_adapter import ExtraAdapter
+
 
 class CustomExtraAdapter(ExtraAdapter):
     def get_extra(self, **kwargs):
