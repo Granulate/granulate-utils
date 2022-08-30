@@ -5,6 +5,7 @@
 
 import errno
 import socket
+import fcntl
 from typing import Dict
 
 from granulate_utils.exceptions import CouldNotAcquireMutex
@@ -31,6 +32,9 @@ def try_acquire_mutex(name: str) -> None:
             raise
         raise CouldNotAcquireMutex(name) from None
     else:
+        # don't let child programs we execute inherit it.
+        fcntl.fcntl(s, fcntl.F_SETFD, fcntl.fcntl(s, fcntl.F_GETFD) | fcntl.FD_CLOEXEC)
+
         _mutexes[name] = sock
 
 
