@@ -4,25 +4,27 @@
 #
 
 from granulate_utils.linux.cgroups.base_cgroup import BaseCgroup
-from granulate_utils.linux.cgroups.exceptions import MissingController
 
 
 class MemoryCgroup(BaseCgroup):
-    controller = "memory"
+    subsystem = "memory"
+    limit_in_bytes = "memory.limit_in_bytes"
+    memsw_limit_in_bytes = "memory.memsw.limit_in_bytes"
+    max_usage_in_bytes = "memory.max_usage_in_bytes"
 
     def get_memory_limit(self) -> int:
-        return int(self.read_from_controller("memory.limit_in_bytes"))
+        return int(self.read_from_control_file(self.limit_in_bytes))
 
     def get_max_usage_in_bytes(self) -> int:
-        return int(self.read_from_controller("memory.max_usage_in_bytes"))
+        return int(self.read_from_control_file(self.max_usage_in_bytes))
 
     def set_limit_in_bytes(self, limit: int) -> None:
-        self.write_to_controller("memory.limit_in_bytes", str(limit))
+        self.write_to_control_file(self.limit_in_bytes, str(limit))
         try:
-            self.write_to_controller("memory.memsw.limit_in_bytes", str(limit))
-        except MissingController:
+            self.write_to_control_file(self.memsw_limit_in_bytes, str(limit))
+        except FileNotFoundError:
             # if swap extension is not enabled (CONFIG_MEMCG_SWAP) this file doesn't exist
             pass
 
     def reset_memory_limit(self) -> None:
-        self.write_to_controller("memory.limit_in_bytes", "-1")
+        self.write_to_control_file(self.limit_in_bytes, "-1")
