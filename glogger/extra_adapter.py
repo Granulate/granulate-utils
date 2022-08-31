@@ -40,5 +40,5 @@ class ExtraAdapter(logging.LoggerAdapter):
 
         extra = self.get_extra(**logging_kwargs)
         # Retain all extras as attributes on the record, and add "extra" attribute that contains all the extras:
-        kwargs = logging_kwargs | {"extra": extra | {"extra": extra}}
-        return msg, kwargs
+        logging_kwargs.update({"extra": extra | {"extra": extra}})
+        return msg, logging_kwargs

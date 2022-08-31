@@ -25,7 +25,7 @@ class MockBatchRequestsHandler(BatchRequestsHandler):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
 
-        def _send_once_to_server(self, data: str) -> None:
+        def _send_once_to_server(self, data: bytes) -> None:
             return
 
     def __init__(self, *args, max_total_length=100000, max_message_size=10000, overflow_drop_factor=0.25, **kwargs):

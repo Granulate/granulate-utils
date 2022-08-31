@@ -7,7 +7,9 @@ from glogger.extra_adapter import ExtraAdapter
 class CustomGetExtraAdapter(ExtraAdapter):
     def get_extra(self, **kwargs) -> Mapping[str, Any]:
         extra = super().get_extra(**kwargs)
-        return extra | {"neo": "keanu reeves"}
+        assert type(extra) is dict
+        extra.update({"neo": "keanu reeves"})
+        return extra
 
 
 def test_other_kwargs_in_extra(caplog):
