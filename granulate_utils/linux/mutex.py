@@ -31,6 +31,8 @@ def try_acquire_mutex(name: str) -> None:
             raise
         raise CouldNotAcquireMutex(name) from None
     else:
+        # Python sockets are not inheritable by default (no need to mark with CLOEXEC to avoid our childs
+        # from inheriting the mutex)
         _mutexes[name] = sock
 
 
