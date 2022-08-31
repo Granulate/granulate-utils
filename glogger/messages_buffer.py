@@ -51,9 +51,9 @@ class MessagesBuffer:
             self.buffer.append(item)
             self.lengths.append(len(item))
             self.total_length += len(item)
-            self._handle_overflow_unlocked()
+            self._handle_overflow_locked()
 
-    def _handle_overflow_unlocked(self) -> None:
+    def _handle_overflow_locked(self) -> None:
         if self.total_length >= self.max_total_length:
             self.drop(max(1, int(self.overflow_drop_factor * self.count)))
 
@@ -63,9 +63,9 @@ class MessagesBuffer:
         :return: How many messages were actually dropped.
         """
         with self.lock:
-            return self._drop_unlocked(n)
+            return self._drop_locked(n)
 
-    def _drop_unlocked(self, n: int) -> int:
+    def _drop_locked(self, n: int) -> int:
         assert n > 0, "n must be positive!"
         if self.count == 0:
             return 0

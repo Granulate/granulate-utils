@@ -29,7 +29,7 @@ class SendBatch(NamedTuple):
 class Sender:
     # If Tuple[float, float], then the first value is connection-timeout and the second read-timeout.
     # See https://requests.readthedocs.io/en/latest/user/advanced/#timeouts
-    request_timeout: Union[float, Tuple[float, float]] = 1.5
+    request_timeout: Union[float, Tuple[float, float]] = (1.5, 10)
 
     def __init__(
         self,

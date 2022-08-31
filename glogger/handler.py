@@ -3,7 +3,6 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 import logging
-import time
 import traceback
 from datetime import datetime
 from json import JSONEncoder
@@ -69,21 +68,17 @@ class BatchRequestsHandler(Handler):
         self.sender.stop()
         super().close()
 
-    def __del__(self) -> None:
-        self.close()
-
     def get_metadata(self) -> Dict:
         """Called to get metadata per batch."""
         return {}
 
     def _format_record(self, record: LogRecord) -> str:
         extra = self.get_extra_fields(record)
-        with self.messages_buffer.lock:
-            next_serial_no = self.messages_buffer.next_serial_no
+        next_serial_no = self.messages_buffer.next_serial_no
 
         dict = {
             "severity": self._levelno_to_severity(record.levelno),
-            "timestamp": time.time() * 1000,  # pass in milleseconds
+            "timestamp": record.created * 1000,  # pass in milleseconds
             self.TEXT_KEY: {
                 "logger_name": record.name,
                 self.SERIAL_NO_KEY: next_serial_no,
