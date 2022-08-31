@@ -38,7 +38,7 @@ class BatchRequestsHandler(Handler):
         *,
         continue_from: int = 0,
         max_message_size: int = 1 * 1024 * 1024,  # 1mb
-        max_total_length: int = 5 * 1024 * 1024,  # 5mb,
+        max_total_length: int = 4 * 1024 * 1024,  # 4mb,
         overflow_drop_factor: float = 0.25,
     ):
         """

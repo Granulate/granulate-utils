@@ -39,9 +39,10 @@ class Sender:
         server_address: str,
         *,
         scheme: str = "https",
-        send_interval: float = 10.0,
+        send_interval: float = 30.0,
         send_threshold: float = 0.8,
-        max_send_tries: int = 5,
+        send_min_interval: float = 10.0,
+        max_send_tries: int = 3,
     ):
         """
         Create a new Sender and start flushing log messages in a background thread.
@@ -52,6 +53,7 @@ class Sender:
         :param scheme: The scheme to use as string ('http' or 'https')
         :param send_interval: Seconds between sending batches.
         :param send_threshold: Force send when buffer utilization reaches this percentage.
+        :param send_min_interval: The minimal interval between each sends.
         :param max_send_tries: Number of times to retry sending a batch if sending fails.
         """
 
@@ -60,6 +62,7 @@ class Sender:
         self.server_address = server_address
         self.send_interval = send_interval
         self.send_threshold = send_threshold
+        self.send_min_interval = send_min_interval
         self.max_send_tries = max_send_tries
 
         self.stdout_logger = get_stdout_logger()
@@ -98,13 +101,13 @@ class Sender:
         self.last_send_time = time.time()
         while not self.stop_event.is_set():
             if self._should_send():
-                self.send_with_retry()
-            self.stop_event.wait(0.5)
+                self.send()
+            self.stop_event.wait(self.send_min_interval)
 
         # send all remaining messages before terminating:
         # Not thread-safe but we're fine with it as read only
         if self.messages_buffer.count > 0:
-            self.send_with_retry()
+            self.send()
 
     def _should_send(self) -> bool:
         assert self.messages_buffer is not None
@@ -114,28 +117,15 @@ class Sender:
             (self.messages_buffer.utilized >= self.send_threshold) or (time_since_last_send >= self.send_interval)
         )
 
-    def send_with_retry(self) -> None:
-        # No need to retry if the request is malformed
-        def _is_fatal_code(e: Exception):
-            if type(e) is RequestException:
-                return 400 <= e.response.status_code < 500
-            return False
-
-        # Allow configuring max_tries via class member. Alternatively we could decorate _send_logs in __init__ but that
-        # would be easier to miss and less flexible.
-        send_with_retry = backoff.on_exception(
-            backoff.expo, exception=RequestException, giveup=_is_fatal_code, max_tries=self.max_send_tries
-        )(self._send_once)
-
+    def send(self) -> None:
         self.last_send_time = time.time()
         try:
-            batch = send_with_retry()
+            batch = self._send_once()
+            self._drop_sent_batch(batch)
         except HTTPError:
             self.stdout_logger.error(SERVER_SEND_ERROR_MESSAGE)
         except Exception:
             self.stdout_logger.exception(SERVER_SEND_ERROR_MESSAGE)
-        else:
-            self._drop_sent_batch(batch)
 
     def _drop_sent_batch(self, batch: SendBatch) -> None:
         assert self.messages_buffer is not None
