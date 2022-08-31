@@ -24,7 +24,6 @@ class MemoryCgroup(BaseCgroup):
             self.write_to_control_file(self.memsw_limit_in_bytes, str(limit))
         except PermissionError:
             # if swap extension is not enabled (CONFIG_MEMCG_SWAP) this file doesn't exist
-            # and PermissionError is thrown (since it can't be created)
             pass
 
     def reset_memory_limit(self) -> None:

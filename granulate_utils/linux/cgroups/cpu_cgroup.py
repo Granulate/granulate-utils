@@ -13,7 +13,7 @@ class CpuCgroup(BaseCgroup):
 
     def set_cpu_limit_cores(self, cores: float) -> None:
         period = int(self.read_from_control_file(self.cfs_period_us))
-        self.write_to_control_file(self.cfs_quota_us, str(period * cores))
+        self.write_to_control_file(self.cfs_quota_us, str(int(period * cores)))
 
     def get_cpu_limit_cores(self) -> float:
         period = int(self.read_from_control_file(self.cfs_period_us))
