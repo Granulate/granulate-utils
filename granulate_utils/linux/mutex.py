@@ -4,7 +4,6 @@
 #
 
 import errno
-import fcntl
 import socket
 from typing import Dict
 
@@ -32,9 +31,8 @@ def try_acquire_mutex(name: str) -> None:
             raise
         raise CouldNotAcquireMutex(name) from None
     else:
-        # don't let child programs we execute inherit it.
-        fcntl.fcntl(sock, fcntl.F_SETFD, fcntl.fcntl(sock, fcntl.F_GETFD) | fcntl.FD_CLOEXEC)
-
+        # Python sockets are not inheritable by default (no need to mark with CLOEXEC to avoid our childs
+        # from inheriting the mutex)
         _mutexes[name] = sock
 
 
