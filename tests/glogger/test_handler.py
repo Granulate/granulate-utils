@@ -46,7 +46,15 @@ class HttpBatchRequestsHandler(BatchRequestsHandler):
 
     def __init__(self, *args, send_interval=0.2, **kwargs):
         super().__init__(
-            self.HttpSender("app", "token", *args, scheme="http", send_interval=send_interval, send_min_interval=0.2, max_send_tries=1),
+            self.HttpSender(
+                "app",
+                "token",
+                *args,
+                scheme="http",
+                send_interval=send_interval,
+                send_min_interval=0.2,
+                max_send_tries=1,
+            ),
             **kwargs,
         )
 

@@ -9,8 +9,7 @@ import uuid
 from json import JSONEncoder
 from typing import Callable, Dict, List, NamedTuple, Optional, Tuple, Union
 
-import backoff
-from requests import HTTPError, RequestException, Session
+from requests import HTTPError, Session
 
 from glogger.messages_buffer import MessagesBuffer
 
