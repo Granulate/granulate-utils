@@ -73,6 +73,8 @@ class BatchRequestsHandler(Handler):
         return {}
 
     def _format_record(self, record: LogRecord) -> str:
+        super().format(record)
+
         extra = self.get_extra_fields(record)
         next_serial_no = self.messages_buffer.next_serial_no
 
