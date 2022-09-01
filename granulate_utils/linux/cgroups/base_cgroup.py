@@ -9,7 +9,6 @@ from typing import List
 
 from granulate_utils.linux.cgroups import get_cgroups
 
-PID_CGROUPS = Path("/proc/self/cgroup")
 CGROUPFS = Path("/sys/fs/cgroup")
 SUBSYSTEMS = {"memory", "cpu"}
 
@@ -31,7 +30,7 @@ class BaseCgroup:
         # "/proc/$PID/cgroup" lists a process's cgroup membership.  If legacy
         # cgroup is in use in the system, this file may contain multiple lines, one for each hierarchy.
         # The entry for cgroup v2 is always in the format "0::$PATH"::
-        if len(PID_CGROUPS.read_text().split("\n")) == 2:
+        if len(get_cgroups(os.getpid())) == 1:
             raise Exception("cgroup V2 is unsupported")
 
     @property
@@ -45,14 +44,6 @@ class BaseCgroup:
                 return line[2]
         raise Exception(f"{self.subsystem!r} not found")
 
-    def move_to_cgroup(self, custom_cgroup: str, tid: int = 0) -> None:
-        # move to a new cgroup inside the current cgroup
-        # by setting tid=0 we move current tid to the custom cgroup
-        if any(x in self.predefined_cgroups for x in self.cgroup.split("/")):
-            raise AlreadyInCgroup(self.subsystem, self.cgroup)
-        Path(self.cgroup_mount_path / custom_cgroup).mkdir(exist_ok=True)
-        Path(self.cgroup_mount_path / custom_cgroup / "tasks").write_text(str(tid))
-
     @property
     def cgroup(self) -> str:
         return self._get_cgroup()
@@ -60,6 +51,14 @@ class BaseCgroup:
     @property
     def cgroup_mount_path(self) -> Path:
         return Path(CGROUPFS / self.subsystem / self.cgroup[1:])
+
+    def move_to_cgroup(self, custom_cgroup: str, tid: int = 0) -> None:
+        # move to a new cgroup inside the current cgroup
+        # by setting tid=0 we move current tid to the custom cgroup
+        if any(x in self.predefined_cgroups for x in self.cgroup.split("/")):
+            raise AlreadyInCgroup(self.subsystem, self.cgroup)
+        Path(self.cgroup_mount_path / custom_cgroup).mkdir(exist_ok=True)
+        Path(self.cgroup_mount_path / custom_cgroup / "tasks").write_text(str(tid))
 
     def read_from_control_file(self, file_name: str) -> str:
         controller_path = Path(self.cgroup_mount_path / file_name)
