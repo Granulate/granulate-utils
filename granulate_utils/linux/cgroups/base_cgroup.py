@@ -5,9 +5,9 @@
 
 import os
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
-from granulate_utils.linux.cgroups import get_cgroups
+from psutil import NoSuchProcess
 
 CGROUPFS = Path("/sys/fs/cgroup")
 SUBSYSTEMS = {"memory", "cpu"}
@@ -16,6 +16,23 @@ SUBSYSTEMS = {"memory", "cpu"}
 class AlreadyInCgroup(Exception):
     def __init__(self, subsystem: str, cgroup: str) -> None:
         super().__init__(f"{subsystem!r} subsytem is already in a predefined cgroup: {cgroup!r}")
+
+
+def get_cgroups(pid: int) -> List[Tuple[str, List[str], str]]:
+    """
+    Get the cgroups of a process in [(hier id., controllers, path)] parsed form.
+    """
+
+    def parse_line(line: str) -> Tuple[str, List[str], str]:
+        hier_id, controller_list, cgroup_path = line.split(":", maxsplit=2)
+        return hier_id, controller_list.split(","), cgroup_path
+
+    try:
+        text = Path(f"/proc/{pid}/cgroup").read_text()
+    except FileNotFoundError:
+        raise NoSuchProcess(pid)
+    else:
+        return [parse_line(line) for line in text.splitlines()]
 
 
 class BaseCgroup:
