@@ -3,17 +3,20 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 
-from enum import Enum
+import os
 from pathlib import Path
 from typing import List
 
+from granulate_utils.linux.cgroups import get_cgroups
+
 PID_CGROUPS = Path("/proc/self/cgroup")
 CGROUPFS = Path("/sys/fs/cgroup")
+SUBSYSTEMS = {"memory", "cpu"}
 
 
-class SUBSYSTEMS(Enum):
-    memory = "memory"
-    cpu = "cpu,cpuacct"
+class AlreadyInCgroup(Exception):
+    def __init__(self, subsystem: str, cgroup: str) -> None:
+        super().__init__(f"{subsystem!r} subsytem is already in a predefined cgroup: {cgroup!r}")
 
 
 class BaseCgroup:
@@ -23,7 +26,7 @@ class BaseCgroup:
         self._verify_preconditions()
 
     def _verify_preconditions(self) -> None:
-        assert self.subsystem in SUBSYSTEMS.__members__, f"{self.subsystem!r} is not supported"
+        assert self.subsystem in SUBSYSTEMS, f"{self.subsystem!r} is not supported"
 
         # "/proc/$PID/cgroup" lists a process's cgroup membership.  If legacy
         # cgroup is in use in the system, this file may contain multiple lines, one for each hierarchy.
@@ -33,20 +36,22 @@ class BaseCgroup:
 
     @property
     def subsystem(self) -> str:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def _get_cgroup(self) -> str:
-        for line in PID_CGROUPS.read_text().split("\n"):
-            hierarchy = line.strip().split(":")
-            if SUBSYSTEMS[self.subsystem].value == hierarchy[1]:
-                return hierarchy[2]
-        raise Exception(f"{self.subsystem!r} is not in found")
+        hierarchy_details = get_cgroups(os.getpid())
+        for line in hierarchy_details:
+            if self.subsystem in line[1]:
+                return line[2]
+        raise Exception(f"{self.subsystem!r} not found")
 
-    def move_to_cgroup(self, custom_cgroup: str, pid: int = 0) -> None:
+    def move_to_cgroup(self, custom_cgroup: str, tid: int = 0) -> None:
+        # move to a new cgroup inside the current cgroup
+        # by setting tid=0 we move current tid to the custom cgroup
         if any(x in self.predefined_cgroups for x in self.cgroup.split("/")):
-            raise Exception(f"{self.subsystem!r} subsytem is already in a predefined cgroup: {self.cgroup!r}")
+            raise AlreadyInCgroup(self.subsystem, self.cgroup)
         Path(self.cgroup_mount_path / custom_cgroup).mkdir(exist_ok=True)
-        Path(self.cgroup_mount_path / custom_cgroup / "tasks").write_text(str(pid))
+        Path(self.cgroup_mount_path / custom_cgroup / "tasks").write_text(str(tid))
 
     @property
     def cgroup(self) -> str:
