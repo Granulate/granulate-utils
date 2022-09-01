@@ -11,9 +11,9 @@ if [[ "$1" = "--ci" ]]; then
 fi
 
 # see also isort --skip and flake8 config.
-EXCLUDE_RE='venv/bin/|build|granulate_utils/generated'
+EXCLUDE_RE='venv|build|granulate_utils/generated'
 
-isort --settings-path .isort.cfg --skip granulate_utils/generated .
+isort --settings-path .isort.cfg --skip granulate_utils/generated --skip venv --skip build .
 black --line-length 120 $check_arg --exclude $EXCLUDE_RE .
-flake8 --config .flake8  .
+flake8 --config .flake8  --exclude $(echo $EXCLUDE_RE | tr '|' ',') .
 mypy --exclude $EXCLUDE_RE .

@@ -33,7 +33,7 @@ setuptools.setup(
         "Programming Language :: Python :: 3",
     ],
     packages=setuptools.find_packages(),
-    package_data={"granulate_utils": ["py.typed"]},
+    package_data={"granulate_utils": ["py.typed"], "glogger": ["py.typed"]},
     include_package_data=True,
     install_requires=read_requirements("requirements.txt"),
     python_requires=">=3.6",
