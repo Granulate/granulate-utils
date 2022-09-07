@@ -39,3 +39,8 @@ class MissingExePath(Exception):
     def __init__(self, process: Process):
         self.process = process
         super(MissingExePath, self).__init__(f"No exe path was found for {process}, threads: {process.threads()}")
+
+
+class AlreadyInCgroup(Exception):
+    def __init__(self, subsystem: str, cgroup: str) -> None:
+        super().__init__(f"{subsystem!r} subsytem is already in a predefined cgroup: {cgroup!r}")

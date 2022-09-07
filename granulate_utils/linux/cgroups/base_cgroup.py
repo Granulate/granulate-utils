@@ -8,14 +8,12 @@ from pathlib import Path
 from typing import List, Tuple
 
 from psutil import NoSuchProcess
+from granulate_utils.exceptions import AlreadyInCgroup
 
 CGROUPFS = Path("/sys/fs/cgroup")
 SUBSYSTEMS = {"memory", "cpu"}
 
 
-class AlreadyInCgroup(Exception):
-    def __init__(self, subsystem: str, cgroup: str) -> None:
-        super().__init__(f"{subsystem!r} subsytem is already in a predefined cgroup: {cgroup!r}")
 
 
 def get_cgroups(pid: int) -> List[Tuple[str, List[str], str]]:
