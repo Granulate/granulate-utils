@@ -43,9 +43,10 @@ class BaseCgroup:
 
     @property
     def cgroup_mount_path(self) -> Path:
-        return Path(self.get_cgroup_fs() / self.cgroup[1:])
+        return Path(self.cgroup_fs / self.cgroup[1:])
 
-    def get_cgroup_fs(self) -> Path:
+    @property
+    def cgroup_fs(self) -> Path:
         v1_hierarchies = find_v1_hierarchies()
         return Path(v1_hierarchies[self.subsystem])
 
