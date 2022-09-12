@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import List
 
 from granulate_utils.exceptions import AlreadyInCgroup
-from granulate_utils.linux.cgroups.cgroup import CGROUPFS, SUBSYSTEMS, find_v1_hierarchies, get_cgroups
+from granulate_utils.linux.cgroups.cgroup import SUBSYSTEMS, find_v1_hierarchies, get_cgroups
 
 
 class BaseCgroup:
