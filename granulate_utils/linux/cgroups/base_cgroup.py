@@ -4,7 +4,6 @@
 #
 
 import os
-from functools import cached_property
 from pathlib import Path
 from typing import List
 
@@ -14,6 +13,7 @@ from granulate_utils.linux.cgroups.cgroup import SUBSYSTEMS, find_v1_hierarchies
 
 class BaseCgroup:
     predefined_cgroups = ["kubepods", "docker", "ecs"]
+    v1_hierarchies = find_v1_hierarchies()
 
     def __init__(self) -> None:
         self._verify_preconditions()
@@ -46,10 +46,9 @@ class BaseCgroup:
     def cgroup_mount_path(self) -> Path:
         return Path(self.cgroup_path / self.cgroup[1:])
 
-    @cached_property
+    @property
     def cgroup_path(self) -> Path:
-        v1_hierarchies = find_v1_hierarchies()
-        return Path(v1_hierarchies[self.subsystem])
+        return Path(self.v1_hierarchies[self.subsystem])
 
     def move_to_cgroup(self, custom_cgroup: str, tid: int = 0) -> None:
         # move to a new cgroup inside the current cgroup
