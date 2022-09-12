@@ -14,7 +14,6 @@ from typing import Callable, List, Optional, TypeVar, Union
 from psutil import NoSuchProcess, Process, process_iter
 
 from granulate_utils.exceptions import UnsupportedNamespaceError
-from granulate_utils.linux.containers import get_process_container_id
 
 T = TypeVar("T")
 
@@ -315,6 +314,8 @@ def resolve_host_path(process: Process, ns_path: str, from_ancestor: bool = True
 
 
 def get_host_pid(nspid: int, container_id: str) -> Optional[int]:
+    from granulate_utils.linux.containers import get_process_container_id
+
     assert len(container_id) == 64, f"Invalid container id {container_id!r}"
 
     pid_namespace = ""
