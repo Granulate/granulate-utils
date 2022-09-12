@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import List
 
 from granulate_utils.exceptions import AlreadyInCgroup
-from granulate_utils.linux.cgroups.cgroup import CGROUPFS, SUBSYSTEMS, get_cgroups
+from granulate_utils.linux.cgroups.cgroup import CGROUPFS, SUBSYSTEMS, find_v1_hierarchies, get_cgroups
 
 
 class BaseCgroup:
@@ -43,7 +43,11 @@ class BaseCgroup:
 
     @property
     def cgroup_mount_path(self) -> Path:
-        return Path(CGROUPFS / self.subsystem / self.cgroup[1:])
+        return Path(self.get_cgroup_fs() / self.cgroup[1:])
+
+    def get_cgroup_fs(self) -> Path:
+        v1_hierarchies = find_v1_hierarchies()
+        return Path(v1_hierarchies[self.subsystem])
 
     def move_to_cgroup(self, custom_cgroup: str, tid: int = 0) -> None:
         # move to a new cgroup inside the current cgroup

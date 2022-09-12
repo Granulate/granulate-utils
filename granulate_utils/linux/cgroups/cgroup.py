@@ -27,9 +27,6 @@ SUBSYSTEMS = {
     "rdma",
 }
 
-# TODO: This is not always correct. For example, on Amazon Linux 1 this should be /cgroup.
-CGROUPFS = Path("/sys/fs/cgroup")
-
 
 def get_cgroups(pid: int) -> List[Tuple[str, List[str], str]]:
     """
