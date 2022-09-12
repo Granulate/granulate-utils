@@ -4,6 +4,7 @@
 #
 
 import os
+from functools import cached_property
 from pathlib import Path
 from typing import List
 
@@ -43,10 +44,10 @@ class BaseCgroup:
 
     @property
     def cgroup_mount_path(self) -> Path:
-        return Path(self.cgroup_fs / self.cgroup[1:])
+        return Path(self.cgroup_path / self.cgroup[1:])
 
-    @property
-    def cgroup_fs(self) -> Path:
+    @cached_property
+    def cgroup_path(self) -> Path:
         v1_hierarchies = find_v1_hierarchies()
         return Path(v1_hierarchies[self.subsystem])
 

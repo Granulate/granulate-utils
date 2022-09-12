@@ -13,8 +13,8 @@ from typing import Callable, List, Optional, TypeVar, Union
 
 from psutil import NoSuchProcess, Process, process_iter
 
-import granulate_utils.linux.containers as containers
 from granulate_utils.exceptions import UnsupportedNamespaceError
+from granulate_utils.linux import containers
 
 T = TypeVar("T")
 

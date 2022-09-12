@@ -8,7 +8,7 @@ from typing import Optional, Union
 
 from psutil import Process
 
-import granulate_utils.linux.cgroups as cgroups
+from granulate_utils.linux import cgroups
 
 # ECS uses /ecs/uuid/container-id
 # standard Docker uses /docker/container-id
