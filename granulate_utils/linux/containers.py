@@ -8,7 +8,7 @@ from typing import Optional, Union
 
 from psutil import Process
 
-from granulate_utils.linux.cgroups import get_cgroups
+from granulate_utils.linux import cgroups
 
 # ECS uses /ecs/uuid/container-id
 # standard Docker uses /docker/container-id
@@ -24,7 +24,7 @@ def get_process_container_id(process: Union[int, Process]) -> Optional[str]:
     :raises NoSuchProcess: If the process doesn't or no longer exists
     """
     pid = process if isinstance(process, int) else process.pid
-    for _, _, cgpath in get_cgroups(pid):
+    for _, _, cgpath in cgroups.get_cgroups(pid):
         found = CONTAINER_ID_PATTERN.findall(cgpath)
         if found:
             return found[-1]
