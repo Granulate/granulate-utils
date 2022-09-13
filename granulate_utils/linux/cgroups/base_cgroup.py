@@ -13,7 +13,7 @@ from granulate_utils.linux.cgroups.cgroup import SUBSYSTEMS, find_v1_hierarchies
 
 class BaseCgroup:
     predefined_cgroups = ["kubepods", "docker", "ecs"]
-    _v1_hierarchies: Mapping[str, str]
+    _v1_hierarchies = None
 
     def __init__(self) -> None:
         self._verify_preconditions()
