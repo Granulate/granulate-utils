@@ -5,7 +5,7 @@
 
 import os
 from pathlib import Path
-from typing import List, Mapping
+from typing import List, Mapping, Optional
 
 from granulate_utils.exceptions import AlreadyInCgroup
 from granulate_utils.linux.cgroups.cgroup import SUBSYSTEMS, find_v1_hierarchies, get_cgroups
@@ -13,16 +13,16 @@ from granulate_utils.linux.cgroups.cgroup import SUBSYSTEMS, find_v1_hierarchies
 
 class BaseCgroup:
     predefined_cgroups = ["kubepods", "docker", "ecs"]
-    _v1_hierarchies = None
+    _v1_hierarchies: Optional[Mapping[str, str]] = None
 
     def __init__(self) -> None:
         self._verify_preconditions()
 
-    @classmethod
-    def get_cgroup_hierarchies(cls) -> Mapping[str, str]:
-        if cls._v1_hierarchies is None:
-            cls._v1_hierarchies = find_v1_hierarchies()
-        return cls._v1_hierarchies
+    @staticmethod
+    def get_cgroup_hierarchies() -> Mapping[str, str]:
+        if BaseCgroup._v1_hierarchies is None:
+            BaseCgroup._v1_hierarchies = find_v1_hierarchies()
+        return BaseCgroup._v1_hierarchies
 
     def _verify_preconditions(self) -> None:
         assert self.subsystem in SUBSYSTEMS, f"{self.subsystem!r} is not supported"
