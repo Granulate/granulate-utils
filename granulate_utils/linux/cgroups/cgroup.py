@@ -9,7 +9,7 @@ from typing import List, Mapping, Optional, Tuple
 from psutil import NoSuchProcess
 
 from granulate_utils.linux.mountinfo import iter_mountinfo
-from granulate_utils.linux.ns import resolve_host_root_links
+from granulate_utils.linux import ns
 
 SUBSYSTEMS = {
     "blkio",
@@ -57,7 +57,7 @@ def find_v1_hierarchies() -> Mapping[str, str]:
             continue
         controllers = set(mount.super_options) & SUBSYSTEMS
         if controllers:
-            hierarchy = resolve_host_root_links(mount.mount_point)
+            hierarchy = ns.resolve_host_root_links(mount.mount_point)
             for controller in controllers:
                 hierarchies[controller] = hierarchy
     return hierarchies
@@ -72,4 +72,4 @@ def find_v2_hierarchy() -> Optional[str]:
         return None
     if len(cgroup2_mounts) > 1:
         raise Exception("More than one cgroup2 mount found!")
-    return resolve_host_root_links(cgroup2_mounts[0].mount_point)
+    return ns.resolve_host_root_links(cgroup2_mounts[0].mount_point)
