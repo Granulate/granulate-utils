@@ -61,9 +61,22 @@ class AzureInstanceMetadata(InstanceMetadataBase):
 
 
 def get_aws_metadata() -> Optional[AwsInstanceMetadata]:
-    # Documentation: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-categories.html
-    metadata_response = send_request("http://169.254.169.254/latest/dynamic/instance-identity/document")
-    life_cycle_response = send_request("http://169.254.169.254/latest/meta-data/instance-life-cycle")
+    # Documentation:
+    # on the format: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-categories.html
+    # on the protocol: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html
+    token_resp = send_request(
+        "http://169.254.169.254/latest/api/token", method="put", headers={"X-aws-ec2-metadata-token-ttl-seconds": "120"}
+    )
+    if token_resp is None:
+        return None
+
+    token = token_resp.text
+    metadata_response = send_request(
+        "http://169.254.169.254/latest/dynamic/instance-identity/document", headers={"X-aws-ec2-metadata-token": token}
+    )
+    life_cycle_response = send_request(
+        "http://169.254.169.254/latest/meta-data/instance-life-cycle", headers={"X-aws-ec2-metadata-token": token}
+    )
     if life_cycle_response is None or metadata_response is None:
         return None
     instance = metadata_response.json()
@@ -91,7 +104,10 @@ def get_gcp_metadata() -> Optional[GcpInstanceMetadata]:
     return GcpInstanceMetadata(
         provider="gcp",
         zone=instance["zone"],
-        instance_type=instance["machineType"],
+        # From https://cloud.google.com/compute/docs/metadata/default-metadata-values: "The machine type for this VM.
+        # This value has the following format: projects/PROJECT_NUM/machineTypes/MACHINE_TYPE"
+        # Therefore keep only the last part:
+        instance_type=instance["machineType"].split("/")[-1],
         preemptible=instance["scheduling"]["preemptible"] == "TRUE",
         preempted=instance["preempted"] == "TRUE",
         instance_id=str(instance["id"]),
@@ -135,8 +151,8 @@ def get_azure_metadata() -> Optional[AzureInstanceMetadata]:
     )
 
 
-def send_request(url: str, headers: Dict[str, str] = None) -> Optional[Response]:
-    response = requests.get(url, headers=headers or {}, timeout=METADATA_REQUEST_TIMEOUT)
+def send_request(url: str, headers: Dict[str, str] = None, method: str = "get") -> Optional[Response]:
+    response = requests.request(method, url, headers=headers or {}, timeout=METADATA_REQUEST_TIMEOUT)
     if response.status_code == NOT_FOUND:
         # It's most likely the wrong cloud provider
         return None

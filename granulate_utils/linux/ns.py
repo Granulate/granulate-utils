@@ -14,7 +14,7 @@ from typing import Callable, List, Optional, TypeVar, Union
 from psutil import NoSuchProcess, Process, process_iter
 
 from granulate_utils.exceptions import UnsupportedNamespaceError
-from granulate_utils.linux.containers import get_process_container_id
+from granulate_utils.linux import containers
 
 T = TypeVar("T")
 
@@ -36,6 +36,13 @@ class NsType(enum.IntFlag):
     cgroup = 0x02000000  # CLONE_NEWCGROUP
     ipc = 0x08000000  # CLONE_NEWIPC
     user = 0x10000000  # CLONE_NEWUSER
+
+
+# note: keep in sync with the above NsType, duh.
+
+
+def assert_ns_str(ns: str) -> None:
+    assert ns in NsType.__members__, f"{ns} is not a valid namespace!"
 
 
 libc: Optional[ctypes.CDLL] = None
@@ -104,6 +111,10 @@ def _get_process_nspid_by_status_file(process: Process) -> Optional[int]:
                 raise NoSuchProcess(process.pid)
 
             for line in f:
+                if not line.strip():
+                    # https://bugs.launchpad.net/ubuntu/+source/linux/+bug/1772671
+                    continue
+
                 fields = line.split()
                 if fields[0] == "NSpid:":
                     return int(fields[-1])  # The last pid in the list is the innermost pid, according to `man 5 proc`
@@ -174,6 +185,7 @@ def is_same_ns(process: Union[Process, int], nstype: str, process2: Union[Proces
 
 
 def _get_process_ns_inode(process: Process, nstype: str):
+    assert_ns_str(nstype)
     try:
         ns_inode = os.stat(f"/proc/{process.pid}/ns/{nstype}").st_ino
     except FileNotFoundError as e:
@@ -190,7 +202,10 @@ def _get_process_ns_inode(process: Process, nstype: str):
 
 
 def run_in_ns(
-    nstypes: List[str], callback: Callable[[], T], target_pid: int = 1, passthrough_exception: bool = False
+    nstypes: List[str],
+    callback: Callable[[], T],
+    target_pid: int = 1,
+    passthrough_exception: bool = False,
 ) -> T:
     """
     Runs a callback in a new thread, switching to a set of the namespaces of a target process before
@@ -205,6 +220,8 @@ def run_in_ns(
     By default, run stuff in init NS. You can pass 'target_pid' to run in the namespace of that process.
     """
 
+    for ns in nstypes:
+        assert_ns_str(ns)
     # make sure "mnt" is last, once we change it our /proc is gone
     nstypes = sorted(nstypes, key=lambda ns: 1 if ns == "mnt" else 0)
 
@@ -306,7 +323,7 @@ def get_host_pid(nspid: int, container_id: str) -> Optional[int]:
     # Get the pid namespace of the given container
     for process in running_processes:
         try:
-            if container_id == get_process_container_id(process):
+            if container_id == containers.get_process_container_id(process):
                 pid_namespace = os.readlink(f"/proc/{process.pid}/ns/pid")
                 break
         except (FileNotFoundError, NoSuchProcess):
