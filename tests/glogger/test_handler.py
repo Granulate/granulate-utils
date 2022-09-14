@@ -2,6 +2,7 @@
 # Copyright (c) Granulate. All rights reserved.
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
+import dataclasses
 import gzip
 import json
 import logging
@@ -16,6 +17,7 @@ from requests.adapters import HTTPAdapter
 from requests.models import PreparedRequest, Response
 from requests.structures import CaseInsensitiveDict
 
+from glogger.extra_adapter import ExtraAdapter
 from glogger.handler import BatchRequestsHandler
 from glogger.sender import SERVER_SEND_ERROR_MESSAGE, Sender
 
@@ -267,6 +269,26 @@ def test_truncate_long_message():
         m = json.loads(s)
         # Check that it's marked accordingly
         assert m[handler.TEXT_KEY][handler.TRUNCATED_KEY] is True
+
+
+def test_unserializable_in_extra():
+    @dataclasses.dataclass
+    class Foo:
+        bar: str
+    with ExitStack() as exit_stack:
+        # we don't need a real port for this one
+        handler = MockBatchRequestsHandler("localhost:61234", max_message_size=1000)
+        exit_stack.callback(handler.close)
+
+        logger = ExtraAdapter(get_logger(handler))
+        logger.info("FooBar", extra=dict(foo=Foo("bar")))
+        assert_buffer_attributes(handler, count=1)
+        s = handler.messages_buffer.buffer[0]
+        # Check that it's still valid
+        m = json.loads(s)
+        # Check that it was serialized with repr
+        assert m[handler.TEXT_KEY][handler.MESSAGE_KEY] == "FooBar"
+        assert m[handler.TEXT_KEY][handler.EXTRA_KEY]['foo'] == repr(Foo("bar"))
 
 
 def test_truncate_dict_logic():
