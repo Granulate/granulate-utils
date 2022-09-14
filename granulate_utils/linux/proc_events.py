@@ -23,7 +23,7 @@ import struct
 import threading
 from typing import Callable, List, Optional
 
-from granulate_utils.linux.ns import run_in_ns
+from granulate_utils.linux import ns
 
 
 def _raise_if_not_running(func: Callable):
@@ -258,7 +258,7 @@ def _ensure_thread_started(func: Callable):
             if _proc_events_listener is None:
                 try:
                     # needs to run in init net NS - see netlink_kernel_create() call on init_net in cn_init().
-                    _proc_events_listener = run_in_ns(["net"], _start_listener)
+                    _proc_events_listener = ns.run_in_ns(["net"], _start_listener)
                 except Exception:
                     # TODO: We leak the pipe FDs here...
                     _proc_events_listener = None

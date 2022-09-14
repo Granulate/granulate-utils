@@ -11,7 +11,7 @@ from granulate_utils.containers.container import Container, ContainersClientInte
 from granulate_utils.exceptions import ContainerNotFound, CriNotAvailableError
 from granulate_utils.generated.containers.cri import api_pb2 as api_pb2  # type: ignore
 from granulate_utils.generated.containers.cri.api_pb2_grpc import RuntimeServiceStub  # type: ignore
-from granulate_utils.linux.ns import resolve_host_root_links
+from granulate_utils.linux import ns
 
 RUNTIMES = (
     ("containerd", "/run/containerd/containerd.sock"),
@@ -38,7 +38,7 @@ class CriClient(ContainersClientInterface):
     def __init__(self) -> None:
         self._runtimes = {}
         for rt, path in RUNTIMES:
-            path = "unix://" + resolve_host_root_links(path)
+            path = "unix://" + ns.resolve_host_root_links(path)
             if self._is_cri_available(path):
                 self._runtimes[rt] = path
 
