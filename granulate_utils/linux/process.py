@@ -2,8 +2,9 @@
 # Copyright (c) Granulate. All rights reserved.
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
-
+import os
 import struct
+from contextlib import contextmanager
 from typing import Optional
 
 import psutil
@@ -63,12 +64,21 @@ def get_mapped_dso_elf_id(process: psutil.Process, dso_part: str) -> Optional[st
         return None
 
 
+def read_proc_file(process: psutil.Process, name: str) -> bytes:
+    with _translate_errors(process):
+        with open(f"/proc/{process.pid}/{name}", "rb") as f:
+            return f.read()
+
+
+def read_process_execfn(process: psutil.Process) -> str:
+    # reads process AT_EXECFN
+    addr = _read_process_auxv(process, AT_EXECFN)
+    fn = _read_process_memory(process, addr, PATH_MAX)
+    return fn[: fn.index(b"\0")].decode()
+
+
 def _read_process_auxv(process: psutil.Process, auxv_id: int) -> int:
-    try:
-        with open(f"/proc/{process.pid}/auxv", "rb") as f:
-            auxv = f.read()
-    except FileNotFoundError:
-        raise psutil.NoSuchProcess(process.pid)
+    auxv = read_proc_file(process, "auxv")
 
     for i in range(0, len(auxv), _AUXV_ENTRY.size):
         entry = auxv[i : i + _AUXV_ENTRY.size]
@@ -82,16 +92,21 @@ def _read_process_auxv(process: psutil.Process, auxv_id: int) -> int:
 
 
 def _read_process_memory(process: psutil.Process, addr: int, size: int) -> bytes:
-    try:
+    with _translate_errors(process):
         with open(f"/proc/{process.pid}/mem", "rb", buffering=0) as mem:
             mem.seek(addr)
             return mem.read(size)
-    except FileNotFoundError:
+
+
+@contextmanager
+def _translate_errors(process: psutil.Process):
+    try:
+        yield
+    except PermissionError:
+        raise psutil.AccessDenied(process.pid)
+    except ProcessLookupError:
         raise psutil.NoSuchProcess(process.pid)
-
-
-def read_process_execfn(process: psutil.Process) -> str:
-    # reads process AT_EXECFN
-    addr = _read_process_auxv(process, AT_EXECFN)
-    fn = _read_process_memory(process, addr, PATH_MAX)
-    return fn[: fn.index(b"\0")].decode()
+    except FileNotFoundError:
+        if not os.path.exists(f"/proc/{process.pid}"):
+            raise psutil.NoSuchProcess(process.pid)
+        raise
