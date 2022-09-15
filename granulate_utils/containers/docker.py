@@ -11,17 +11,17 @@ import docker.models.containers
 
 from granulate_utils.containers.container import Container, ContainersClientInterface
 from granulate_utils.exceptions import ContainerNotFound
-from granulate_utils.linux.ns import resolve_host_root_links
+from granulate_utils.linux import ns
 
 DOCKER_SOCK = "/var/run/docker.sock"
 
 
 class DockerClient(ContainersClientInterface):
     def __init__(self) -> None:
-        self._docker = docker.DockerClient(base_url="unix://" + resolve_host_root_links(DOCKER_SOCK))
+        self._docker = docker.DockerClient(base_url="unix://" + ns.resolve_host_root_links(DOCKER_SOCK))
 
     def list_containers(self, all_info: bool) -> List[Container]:
-        containers = self._docker.containers.list()
+        containers = self._docker.containers.list(ignore_removed=True)  # ignore_removed to avoid races, see my commit
         return list(map(self._create_container, containers))
 
     def get_container(self, container_id: str, all_info: bool) -> Container:
