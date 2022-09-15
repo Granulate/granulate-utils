@@ -5,7 +5,7 @@
 import os
 import struct
 from contextlib import contextmanager
-from typing import Optional
+from typing import Generator, Optional
 
 import psutil
 
@@ -99,7 +99,7 @@ def _read_process_memory(process: psutil.Process, addr: int, size: int) -> bytes
 
 
 @contextmanager
-def _translate_errors(process: psutil.Process):
+def _translate_errors(process: psutil.Process) -> Generator[None, None, None]:
     try:
         yield
     except PermissionError:
