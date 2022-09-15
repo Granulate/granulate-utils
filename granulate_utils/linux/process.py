@@ -2,8 +2,10 @@
 # Copyright (c) Granulate. All rights reserved.
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
-
+import os
+import re
 import struct
+from functools import lru_cache
 from typing import Optional
 
 import psutil
@@ -95,3 +97,16 @@ def read_process_execfn(process: psutil.Process) -> str:
     addr = _read_process_auxv(process, AT_EXECFN)
     fn = _read_process_memory(process, addr, PATH_MAX)
     return fn[: fn.index(b"\0")].decode()
+
+
+@lru_cache(maxsize=512)
+def is_process_basename_matching(process: psutil.Process, basename_pattern: str) -> bool:
+    if re.match(basename_pattern, os.path.basename(process_exe(process))):
+        return True
+
+    # process was executed AS basename (but has different exe name)
+    cmd = process.cmdline()
+    if len(cmd) > 0 and re.match(basename_pattern, cmd[0]):
+        return True
+
+    return False

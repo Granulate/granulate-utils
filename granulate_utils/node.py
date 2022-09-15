@@ -7,8 +7,8 @@ import os
 
 from psutil import Process
 
-from granulate_utils.linux.process import process_exe
+from granulate_utils.linux.process import is_process_basename_matching
 
 
 def is_node_process(process: Process) -> bool:
-    return os.path.basename(process_exe(process)) == "node"
+    return is_process_basename_matching(process, r"^node$")
