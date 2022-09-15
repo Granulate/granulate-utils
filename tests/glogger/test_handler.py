@@ -275,6 +275,7 @@ def test_unserializable_in_extra():
     @dataclasses.dataclass
     class Foo:
         bar: str
+
     with ExitStack() as exit_stack:
         # we don't need a real port for this one
         handler = MockBatchRequestsHandler("localhost:61234", max_message_size=1000)
@@ -288,7 +289,7 @@ def test_unserializable_in_extra():
         m = json.loads(s)
         # Check that it was serialized with repr
         assert m[handler.TEXT_KEY][handler.MESSAGE_KEY] == "FooBar"
-        assert m[handler.TEXT_KEY][handler.EXTRA_KEY]['foo'] == repr(Foo("bar"))
+        assert m[handler.TEXT_KEY][handler.EXTRA_KEY]["foo"] == repr(Foo("bar"))
 
 
 def test_truncate_dict_logic():
