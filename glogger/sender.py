@@ -66,7 +66,7 @@ class Sender:
 
         self.stdout_logger = get_stdout_logger()
         self.server_uri = f"{scheme}://{server_address}/api/v1/logs"
-        self.jsonify = JSONEncoder(separators=(",", ":")).encode  # compact, no whitespace
+        self.jsonify = JSONEncoder(separators=(",", ":"), default=repr).encode  # compact, no whitespace
         self.session = Session()
         self.messages_buffer: Optional[MessagesBuffer] = None
         self.metadata_callback: Callable[[], Dict] = lambda: {}

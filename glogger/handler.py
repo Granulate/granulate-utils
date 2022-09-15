@@ -55,7 +55,7 @@ class BatchRequestsHandler(Handler):
         self.max_message_size = max_message_size  # maximum message size
 
         self.stdout_logger = get_stdout_logger()
-        self.jsonify = JSONEncoder(separators=(",", ":")).encode  # compact, no whitespace
+        self.jsonify = JSONEncoder(separators=(",", ":"), default=repr).encode  # compact, no whitespace
         self.messages_buffer = MessagesBuffer(max_total_length, overflow_drop_factor)
         self.messages_buffer.head_serial_no = continue_from
 
