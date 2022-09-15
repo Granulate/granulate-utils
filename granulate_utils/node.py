@@ -3,8 +3,6 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 
-import os
-
 from psutil import Process
 
 from granulate_utils.linux.process import is_process_basename_matching
