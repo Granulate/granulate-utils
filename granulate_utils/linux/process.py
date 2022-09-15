@@ -102,6 +102,9 @@ def _read_process_memory(process: psutil.Process, addr: int, size: int) -> bytes
 def _translate_errors(process: psutil.Process) -> Generator[None, None, None]:
     try:
         yield
+        # Don't use the result if PID has been reused
+        if not process.is_running():
+            raise psutil.NoSuchProcess(process.pid)
     except PermissionError:
         raise psutil.AccessDenied(process.pid)
     except ProcessLookupError:
