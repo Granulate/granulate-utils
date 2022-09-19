@@ -3,9 +3,11 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 import os
+import re
 import struct
 from contextlib import contextmanager
 from typing import Generator, Optional
+from functools import lru_cache
 
 import psutil
 
@@ -113,3 +115,16 @@ def _translate_errors(process: psutil.Process) -> Generator[None, None, None]:
         if not os.path.exists(f"/proc/{process.pid}"):
             raise psutil.NoSuchProcess(process.pid)
         raise
+
+
+@lru_cache(maxsize=512)
+def is_process_basename_matching(process: psutil.Process, basename_pattern: str) -> bool:
+    if re.match(basename_pattern, os.path.basename(process_exe(process))):
+        return True
+
+    # process was executed AS basename (but has different exe name)
+    cmd = process.cmdline()
+    if len(cmd) > 0 and re.match(basename_pattern, cmd[0]):
+        return True
+
+    return False
