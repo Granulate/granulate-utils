@@ -27,12 +27,13 @@ class MemoryCgroup(BaseCgroup):
             pass
 
     def set_limit_in_bytes(self, limit: int) -> None:
-        # in case memsw_limit_in_bytes file exists we need to reset it in order to
-        # change limit_in_bytes in case it's smaller than memsw_limit_in_bytes
+        # in case memsw.limit_in_bytes file exists we need to reset it in order to
+        # change limit_in_bytes in case it's smaller than memsw.limit_in_bytes
         self._set_memsw_limit_in_bytes(-1)
         self.write_to_control_file(self.limit_in_bytes, str(limit))
+
+        # memsw.limit_in_bytes is already set to -1
         if limit != -1:
-            # memsw_limit_in_bytes already happend for -1
             self._set_memsw_limit_in_bytes(limit)
 
     def reset_memory_limit(self) -> None:
