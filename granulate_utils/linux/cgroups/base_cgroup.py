@@ -61,7 +61,7 @@ class BaseCgroup:
         # by setting tid=0 we move current tid to the custom cgroup
         if any(x in self.predefined_cgroups for x in self.cgroup.split("/")):
             raise AlreadyInCgroup(self.subsystem, self.cgroup)
-        Path(self.cgroup_mount_path / custom_cgroup).mkdir(exist_ok=True)
+        Path(self.cgroup_mount_path / custom_cgroup).mkdir()
         Path(self.cgroup_mount_path / custom_cgroup / "tasks").write_text(str(tid))
 
     def read_from_control_file(self, file_name: str) -> str:
