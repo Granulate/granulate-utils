@@ -60,6 +60,21 @@ class AzureInstanceMetadata(InstanceMetadataBase):
     image_info: Optional[Dict[str, str]]
 
 
+@dataclass
+class OracleCloudInstanceMetadata(InstanceMetadataBase):
+    provider: str
+    instance_type: str
+    zone: str
+    region: str
+    memory: str
+    subscription_id: str
+    resource_group_name: str
+    resource_id: str
+    instance_id: str
+    name: str
+    image: str
+
+
 def get_aws_metadata() -> Optional[AwsInstanceMetadata]:
     # Documentation:
     # on the format: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-categories.html
@@ -151,6 +166,25 @@ def get_azure_metadata() -> Optional[AzureInstanceMetadata]:
     )
 
 
+def get_oracle_cloud_metadata() -> Optional[OracleCloudInstanceMetadata]:
+    # Documentation: https://docs.oracle.com/en-us/iaas/Content/Compute/Tasks/gettingmetadata.htm
+    response = send_request(
+        "http://169.254.169.254/opc/v2/instance/", headers={"Authorization": "Bearer Oracle"}
+    )
+    if response is None:
+        return None
+    instance = response.json()
+
+    return OracleCloudInstanceMetadata(
+        provider="oracle",
+        instance_type=instance["shape"],
+        region=instance["canonicalRegionName"],
+        memory=instance["shapeConfig"]["memoryInGBs"],
+        name=instance["hostname"],
+        image=instance["image"]
+    )
+
+
 def send_request(url: str, headers: Dict[str, str] = None, method: str = "get") -> Optional[Response]:
     response = requests.request(method, url, headers=headers or {}, timeout=METADATA_REQUEST_TIMEOUT)
     if response.status_code == NOT_FOUND:
@@ -162,7 +196,7 @@ def send_request(url: str, headers: Dict[str, str] = None, method: str = "get") 
 
 
 def get_static_cloud_instance_metadata(logger: Union[logging.LoggerAdapter, logging.Logger]) -> Optional[Metadata]:
-    cloud_metadata_fetchers = [get_aws_metadata, get_gcp_metadata, get_azure_metadata]
+    cloud_metadata_fetchers = [get_aws_metadata, get_gcp_metadata, get_azure_metadata, get_oracle_cloud_metadata]
     raised_exceptions: List[Exception] = []
     for fetcher in cloud_metadata_fetchers:
         try:
