@@ -12,7 +12,7 @@ from elftools.elf.sections import NoteSection  # type: ignore
 
 def get_elf_arch(path: str) -> str:
     """
-    Gets the file architacture embedded in an ELF file section
+    Gets the file architecture embedded in an ELF file section
     """
     with open(path, "rb") as f:
         elf = ELFFile(f)
