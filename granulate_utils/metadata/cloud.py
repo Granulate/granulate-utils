@@ -64,13 +64,8 @@ class AzureInstanceMetadata(InstanceMetadataBase):
 class OracleCloudInstanceMetadata(InstanceMetadataBase):
     provider: str
     instance_type: str
-    zone: str
     region: str
     memory: str
-    subscription_id: str
-    resource_group_name: str
-    resource_id: str
-    instance_id: str
     name: str
     image: str
 
