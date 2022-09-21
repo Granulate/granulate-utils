@@ -10,6 +10,15 @@ from elftools.elf.elffile import ELFFile  # type: ignore
 from elftools.elf.sections import NoteSection  # type: ignore
 
 
+def get_elf_arch(path: str) -> str:
+    """
+    Gets the file architecture embedded in an ELF file section
+    """
+    with open(path, "rb") as f:
+        elf = ELFFile(f)
+        return elf.get_machine_arch()
+
+
 def get_elf_buildid(path: str) -> Optional[str]:
     """
     Gets the build ID embedded in an ELF file section as a hex string,
