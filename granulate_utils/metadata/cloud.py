@@ -163,9 +163,7 @@ def get_azure_metadata() -> Optional[AzureInstanceMetadata]:
 
 def get_oracle_cloud_metadata() -> Optional[OracleCloudInstanceMetadata]:
     # Documentation: https://docs.oracle.com/en-us/iaas/Content/Compute/Tasks/gettingmetadata.htm
-    response = send_request(
-        "http://169.254.169.254/opc/v2/instance/", headers={"Authorization": "Bearer Oracle"}
-    )
+    response = send_request("http://169.254.169.254/opc/v2/instance/", headers={"Authorization": "Bearer Oracle"})
     if response is None:
         return None
     instance = response.json()
@@ -176,7 +174,7 @@ def get_oracle_cloud_metadata() -> Optional[OracleCloudInstanceMetadata]:
         region=instance["canonicalRegionName"],
         memory=instance["shapeConfig"]["memoryInGBs"],
         name=instance["hostname"],
-        image=instance["image"]
+        image=instance["image"],
     )
 
 
