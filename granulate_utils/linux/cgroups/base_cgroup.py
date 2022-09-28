@@ -30,7 +30,8 @@ class BaseCgroup:
         # "/proc/$PID/cgroup" lists a process's cgroup membership.  If legacy
         # cgroup is in use in the system, this file may contain multiple lines, one for each hierarchy.
         # The entry for cgroup v2 is always in the format "0::$PATH"::
-        if len(get_cgroups(os.getpid())) == 1:
+        cgroups = get_cgroups(os.getpid())
+        if len(cgroups) > 1 or (len(cgroups) == 1 and cgroups[0][0] != '0'):
             raise Exception("cgroup V2 is unsupported")
 
     @property
