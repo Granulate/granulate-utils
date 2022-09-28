@@ -8,8 +8,8 @@ from typing import List, Mapping, Optional, Tuple
 
 from psutil import NoSuchProcess
 
-from granulate_utils.linux.mountinfo import iter_mountinfo
 from granulate_utils.linux import ns
+from granulate_utils.linux.mountinfo import iter_mountinfo
 
 SUBSYSTEMS = {
     "blkio",

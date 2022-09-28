@@ -6,8 +6,8 @@ import os
 import re
 import struct
 from contextlib import contextmanager
-from typing import Generator, Optional
 from functools import lru_cache
+from typing import Generator, Optional
 
 import psutil
 

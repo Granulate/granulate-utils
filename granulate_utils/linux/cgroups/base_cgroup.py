@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 from typing import List, Mapping, Optional
 
-from granulate_utils.exceptions import AlreadyInCgroup
+from granulate_utils.exceptions import AlreadyInCgroup, UnsupportedCGroupV2
 from granulate_utils.linux.cgroups.cgroup import SUBSYSTEMS, find_v1_hierarchies, get_cgroups
 
 
@@ -31,7 +31,7 @@ class BaseCgroup:
         # cgroup is in use in the system, this file may contain multiple lines, one for each hierarchy.
         # The entry for cgroup v2 is always in the format "0::$PATH"::
         if len(get_cgroups(os.getpid())) == 1:
-            raise Exception("cgroup V2 is unsupported")
+            raise UnsupportedCGroupV2()
 
     @property
     def subsystem(self) -> str:

@@ -12,6 +12,11 @@ class UnsupportedNamespaceError(Exception):
         self.nstype = nstype
 
 
+class UnsupportedCGroupV2(Exception):
+    def __init__(self):
+        super().__init__("cgroup v2 is not supported by granulate-utils")
+
+
 class CouldNotAcquireMutex(Exception):
     def __init__(self, name) -> None:
         super().__init__(f"Could not acquire mutex {name!r}. Another process might be holding it.")
