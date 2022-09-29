@@ -9,7 +9,7 @@ import uuid
 from json import JSONEncoder
 from typing import Callable, Dict, List, NamedTuple, Optional, Tuple, Union
 
-from requests import HTTPError, Session
+from requests import Session
 
 from glogger.messages_buffer import MessagesBuffer
 
@@ -121,8 +121,6 @@ class Sender:
         try:
             batch = self._send_once()
             self._drop_sent_batch(batch)
-        except HTTPError:
-            self.stdout_logger.error(SERVER_SEND_ERROR_MESSAGE)
         except Exception:
             self.stdout_logger.exception(SERVER_SEND_ERROR_MESSAGE)
 
