@@ -6,7 +6,7 @@
 import hashlib
 from typing import Optional, cast
 
-from elftools.elf.elffile import ELFFile  # type: ignore
+from elftools.elf.elffile import ELFFile, ELFError  # type: ignore
 from elftools.elf.sections import NoteSection  # type: ignore
 
 
