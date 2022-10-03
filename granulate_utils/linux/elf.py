@@ -10,6 +10,9 @@ from elftools.elf.elffile import ELFError, ELFFile  # type: ignore
 from elftools.elf.sections import NoteSection  # type: ignore
 
 
+__all__ = ["ELFError"]
+
+
 def get_elf_arch(path: str) -> str:
     """
     Gets the file architecture embedded in the ELF file section
@@ -87,6 +90,3 @@ def is_statically_linked(path: str) -> bool:
             if segment.header.p_type == "PT_DYNAMIC":
                 return False
     return True
-
-
-__all__ = ["ELFError"]
