@@ -88,4 +88,5 @@ def is_statically_linked(path: str) -> bool:
                 return False
     return True
 
+
 __all__ = ["ELFError"]
