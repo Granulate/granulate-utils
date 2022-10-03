@@ -87,3 +87,5 @@ def is_statically_linked(path: str) -> bool:
             if segment.header.p_type == "PT_DYNAMIC":
                 return False
     return True
+
+__all__ = ["ELFError"]
