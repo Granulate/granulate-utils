@@ -9,7 +9,6 @@ from typing import Optional, cast
 from elftools.elf.elffile import ELFError, ELFFile  # type: ignore
 from elftools.elf.sections import NoteSection  # type: ignore
 
-
 __all__ = ["ELFError"]
 
 
