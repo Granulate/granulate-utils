@@ -4,13 +4,21 @@
 #
 
 import hashlib
-from typing import Optional, cast
+from enum import Enum, auto
+from typing import List, Optional, cast
 
 from elftools.elf.elffile import ELFError, ELFFile  # type: ignore
 from elftools.elf.sections import NoteSection  # type: ignore
 
 
 __all__ = ["ELFError"]
+
+
+class LibcType(Enum):
+    DYNAMIC_GLIBC = auto()
+    DYNAMIC_MUSL = auto()
+    STATIC_LIBC = auto()
+    STATIC_NO_LIBC = auto()
 
 
 def get_elf_arch(path: str) -> str:
@@ -90,3 +98,52 @@ def is_statically_linked(path: str) -> bool:
             if segment.header.p_type == "PT_DYNAMIC":
                 return False
     return True
+
+
+def get_symbol_addr(path: str, sym_name: str) -> Optional[int]:
+    with open(path, "rb") as f:
+        elf = ELFFile(f)
+        symtab = elf.get_section_by_name(".symtab")
+        if symtab is None:
+            return None
+        symbols = symtab.get_symbol_by_name(sym_name)
+        if symbols is None or len(symbols) != 1:
+            return None
+        return symbols[0].entry.st_value
+
+
+def get_dt_needed(path: str) -> List[str]:
+    dt_needed: List[str] = []
+    with open(path, "rb") as f:
+        elf = ELFFile(f)
+        dynamic_section = elf.get_section_by_name(".dynamic")
+        if dynamic_section is None:
+            return dt_needed
+        for tag in dynamic_section.iter_tags():
+            if tag.entry.d_tag == "DT_NEEDED":
+                dt_needed.append(tag.needed)
+    return dt_needed
+
+
+def get_libc_type(path: str) -> LibcType:
+    dt_needed = get_dt_needed(path)
+    found_glibc = False
+    found_musl = False
+    for needed in dt_needed:
+        if "libc.so.6" in needed:
+            found_glibc = True
+        if "libc.musl" in needed:
+            found_musl = True
+        if "ld-musl" in needed:
+            found_musl = True
+    if found_glibc and found_musl:
+        raise Exception("Found both musl and glibc in the same binary")
+    if found_musl:
+        return LibcType.DYNAMIC_MUSL
+    if found_glibc:
+        return LibcType.DYNAMIC_GLIBC
+
+    if get_symbol_addr(path, "__libc_start_main") is not None:
+        return LibcType.STATIC_LIBC
+
+    return LibcType.STATIC_NO_LIBC
