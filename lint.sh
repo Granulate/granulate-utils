@@ -15,7 +15,7 @@ fi
 # see also isort --skip and flake8 config.
 EXCLUDE_RE='.venv|venv|build|granulate_utils/generated'
 
-isort --settings-path .isort.cfg --skip granulate_utils/generated --skip venv --skip .venv --skip build .
-black --line-length 120 $check_arg --exclude $EXCLUDE_RE .
-flake8 --config .flake8  --exclude $(echo $EXCLUDE_RE | tr '|' ',') .
-mypy --exclude $EXCLUDE_RE .
+python3 -m isort --settings-path .isort.cfg $check_arg --skip granulate_utils/generated --skip venv --skip .venv --skip build .
+python3 -m black --line-length 120 $check_arg --exclude $EXCLUDE_RE .
+python3 -m flake8 --config .flake8  --exclude $(echo $EXCLUDE_RE | tr '|' ',') .
+python3 -m mypy --exclude $EXCLUDE_RE .
