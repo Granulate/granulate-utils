@@ -4,12 +4,27 @@
 #
 
 import hashlib
+import psutil
 from typing import Optional, cast
 
 from elftools.elf.elffile import ELFError, ELFFile  # type: ignore
 from elftools.elf.sections import NoteSection  # type: ignore
 
 __all__ = ["ELFError"]
+
+
+def catch_filenotfound(func):
+    def wrap(*args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        except FileNotFoundError as e:
+            if ("/proc/" in e.filename):
+                # Take pid from /proc/{pid}/*
+                pid = e.filename.split("/")[2]
+                raise psutil.NoSuchProcess(pid)
+            else:
+                raise e
+    return wrap
 
 
 def get_elf_arch(path: str) -> str:
@@ -39,6 +54,7 @@ def get_elf_buildid(path: str) -> Optional[str]:
             return None
 
 
+@catch_filenotfound
 def get_elf_id(path: str) -> str:
     """
     Gets an identifier for this ELF.
