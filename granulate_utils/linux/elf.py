@@ -18,7 +18,7 @@ def catch_filenotfound(func):
         try:
             func(*args, **kwargs)
         except FileNotFoundError as e:
-            if ("/proc/" in e.filename):
+            if (e.filename.startswith("/proc/")):
                 # Take pid from /proc/{pid}/*
                 pid = e.filename.split("/")[2]
                 raise psutil.NoSuchProcess(pid)
