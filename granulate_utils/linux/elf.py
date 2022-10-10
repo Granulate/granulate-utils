@@ -4,14 +4,13 @@
 #
 
 import hashlib
-import psutil
-
-from typing import Callable, Optional, cast, TypeVar
-from typing_extensions import ParamSpec
 from functools import wraps
+from typing import Callable, Optional, TypeVar, cast
 
+import psutil
 from elftools.elf.elffile import ELFError, ELFFile  # type: ignore
 from elftools.elf.sections import NoteSection  # type: ignore
+from typing_extensions import ParamSpec
 
 __all__ = ["ELFError"]
 
