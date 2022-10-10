@@ -5,26 +5,46 @@
 
 import hashlib
 import psutil
-from typing import Optional, cast
+
+from typing import Callable, Optional, cast, TypeVar
+from typing_extensions import ParamSpec
+from functools import wraps
 
 from elftools.elf.elffile import ELFError, ELFFile  # type: ignore
 from elftools.elf.sections import NoteSection  # type: ignore
 
 __all__ = ["ELFError"]
 
+P = ParamSpec("P")
+R = TypeVar("R")
 
-def catch_filenotfound(func):
-    def wrap(*args, **kwargs):
+
+def raise_nosuchprocess(func: Callable[P, R]) -> Callable[P, R]:
+    @wraps(func)
+    def inner(*args: P.args, **kwargs: P.kwargs):
         try:
-            func(*args, **kwargs)
+            return func(*args, **kwargs)
         except FileNotFoundError as e:
-            if (e.filename.startswith("/proc/")):
-                # Take pid from /proc/{pid}/*
-                pid = e.filename.split("/")[2]
-                raise psutil.NoSuchProcess(pid)
+            # Check if filename is /proc/{pid}/*
+            if e.filename.startswith("/proc/"):
+                if e.filename.split("/")[2].isalnum():
+                    # Take pid from /proc/{pid}/*
+                    pid = int(e.filename.split("/")[2])
+                    with open("/proc/sys/kernel/pid_max") as pid_max_file:
+                        pid_max = int(pid_max_file.read())
+                    if pid <= pid_max:
+                        # Check if pid is running
+                        if psutil.pid_exists(pid):
+                            raise e
+                        else:
+                            raise psutil.NoSuchProcess(pid)
+                    else:
+                        raise e
+                else:
+                    raise e
             else:
                 raise e
-    return wrap
+    return inner
 
 
 def get_elf_arch(path: str) -> str:
@@ -54,7 +74,7 @@ def get_elf_buildid(path: str) -> Optional[str]:
             return None
 
 
-@catch_filenotfound
+@raise_nosuchprocess
 def get_elf_id(path: str) -> str:
     """
     Gets an identifier for this ELF.
