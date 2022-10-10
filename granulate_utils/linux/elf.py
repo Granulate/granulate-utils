@@ -30,20 +30,14 @@ def raise_nosuchprocess(func: Callable[P, R]) -> Callable[P, R]:
                 if e.filename.split("/")[2].isalnum():
                     # Take pid from /proc/{pid}/*
                     pid = int(e.filename.split("/")[2])
+                    # Check if number from /proc/{pid} is actually a pid number
                     with open("/proc/sys/kernel/pid_max") as pid_max_file:
                         pid_max = int(pid_max_file.read())
                     if pid <= pid_max:
                         # Check if pid is running
-                        if psutil.pid_exists(pid):
-                            raise e
-                        else:
+                        if not psutil.pid_exists(pid):
                             raise psutil.NoSuchProcess(pid)
-                    else:
-                        raise e
-                else:
-                    raise e
-            else:
-                raise e
+            raise e
     return inner
 
 
