@@ -3,7 +3,6 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 
-import os
 from pathlib import Path
 from typing import List, Mapping, Optional
 
@@ -30,7 +29,7 @@ class BaseCgroup:
         # "/proc/$PID/cgroup" lists a process's cgroup membership.  If legacy
         # cgroup is in use in the system, this file may contain multiple lines, one for each hierarchy.
         # The entry for cgroup v2 is always in the format "0::$PATH"::
-        if len(get_cgroups(os.getpid())) == 1:
+        if len(get_cgroups()) == 1:
             raise UnsupportedCGroupV2()
 
     @property
@@ -38,7 +37,7 @@ class BaseCgroup:
         raise NotImplementedError
 
     def _get_cgroup(self) -> str:
-        hierarchy_details = get_cgroups(os.getpid())
+        hierarchy_details = get_cgroups()
         for line in hierarchy_details:
             if self.subsystem in line[1]:
                 return line[2]

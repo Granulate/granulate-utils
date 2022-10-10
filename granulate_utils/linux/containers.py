@@ -4,7 +4,7 @@
 #
 
 import re
-from typing import Optional, Union
+from typing import Optional
 
 from psutil import Process
 
@@ -18,13 +18,12 @@ from granulate_utils.linux import cgroups
 CONTAINER_ID_PATTERN = re.compile(r"[a-f0-9]{64}")
 
 
-def get_process_container_id(process: Union[int, Process]) -> Optional[str]:
+def get_process_container_id(process: Process) -> Optional[str]:
     """
     Gets the container ID of a running process, or None if not in a container.
     :raises NoSuchProcess: If the process doesn't or no longer exists
     """
-    pid = process if isinstance(process, int) else process.pid
-    for _, _, cgpath in cgroups.get_cgroups(pid):
+    for _, _, cgpath in cgroups.get_cgroups(process):
         found = CONTAINER_ID_PATTERN.findall(cgpath)
         if found:
             return found[-1]
