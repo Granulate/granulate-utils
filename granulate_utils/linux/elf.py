@@ -37,6 +37,7 @@ def raise_nosuchprocess(func: Callable[P, R]) -> Callable[P, R]:
                         if not psutil.pid_exists(pid):
                             raise psutil.NoSuchProcess(pid)
             raise e
+
     return inner
 
 
