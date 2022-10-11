@@ -142,6 +142,9 @@ def get_libc_type(path: str) -> LibcType:
     if found_glibc:
         return LibcType.DYNAMIC_GLIBC
 
+    # This symbol exists in both musl and glibc, and is even used by musl to recognize a DSO as a libc.
+    # They even comment that it works on both musl and glibc.
+    # https://github.com/bminor/musl/blob/dc9285ad1dc19349c407072cc48ba70dab86de45/ldso/dynlink.c#L1143-L1152
     if get_symbol_addr(path, "__libc_start_main") is not None:
         return LibcType.STATIC_LIBC
 
