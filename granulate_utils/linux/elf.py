@@ -85,8 +85,10 @@ def read_elf_symbol(path: str, sym_name: str, size: int) -> Optional[bytes]:
         if symtab is None:
             return None
         symbols = symtab.get_symbol_by_name(sym_name)
-        if symbols is None or len(symbols) != 1:
+        if symbols is None:
             return None
+        if len(symbols) != 1:
+            raise Exception(f"Multiple symbols match the same name: {sym_name!r}")
         return _read_va_from_elf(elf, symbols[0].entry.st_value, size)
 
 
@@ -106,41 +108,43 @@ def get_symbol_addr(path: str, sym_name: str) -> Optional[int]:
         if symtab is None:
             return None
         symbols = symtab.get_symbol_by_name(sym_name)
-        if symbols is None or len(symbols) != 1:
+        if symbols is None:
             return None
+        if len(symbols) != 1:
+            raise Exception(f"Multiple symbols match the same name: {sym_name!r}")
         return symbols[0].entry.st_value
 
 
-def get_dt_needed(path: str) -> List[str]:
-    dt_needed: List[str] = []
+def get_dt_needed(path: str) -> Optional[List[str]]:
     with open(path, "rb") as f:
         elf = ELFFile(f)
         dynamic_section = elf.get_section_by_name(".dynamic")
         if dynamic_section is None:
-            return dt_needed
-        for tag in dynamic_section.iter_tags():
-            if tag.entry.d_tag == "DT_NEEDED":
-                dt_needed.append(tag.needed)
-    return dt_needed
+            return None
+        return [tag.needed for tag in dynamic_section.iter_tags() if tag.entry.d_tag == "DT_NEEDED"]
 
 
 def get_libc_type(path: str) -> LibcType:
     dt_needed = get_dt_needed(path)
-    found_glibc = False
-    found_musl = False
-    for needed in dt_needed:
-        if "libc.so.6" in needed:
-            found_glibc = True
-        if "libc.musl" in needed:
-            found_musl = True
-        if "ld-musl" in needed:
-            found_musl = True
-    if found_glibc and found_musl:
-        raise Exception("Found both musl and glibc in the same binary")
-    if found_musl:
-        return LibcType.DYNAMIC_MUSL
-    if found_glibc:
-        return LibcType.DYNAMIC_GLIBC
+    if dt_needed is not None:
+        found_glibc = False
+        found_musl = False
+        for needed in dt_needed:
+            if "libc.so.6" in needed:
+                found_glibc = True
+            if "ld-linux" in needed:
+                found_glibc = True
+            if "libc.musl" in needed:
+                found_musl = True
+            if "ld-musl" in needed:
+                found_musl = True
+        if found_glibc and found_musl:
+            raise Exception(f"Found both musl and glibc in the same binary: {path!r}")
+        if found_musl:
+            return LibcType.DYNAMIC_MUSL
+        if found_glibc:
+            return LibcType.DYNAMIC_GLIBC
+        raise Exception(f"Foind a dynamic binary without a libc: {path!r}")
 
     # This symbol exists in both musl and glibc, and is even used by musl to recognize a DSO as a libc.
     # They even comment that it works on both musl and glibc.
