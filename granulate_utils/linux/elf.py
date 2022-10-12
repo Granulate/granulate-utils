@@ -4,12 +4,41 @@
 #
 
 import hashlib
-from typing import Optional, cast
+from functools import wraps
+from typing import Callable, Optional, TypeVar, cast
 
+import psutil
 from elftools.elf.elffile import ELFError, ELFFile  # type: ignore
 from elftools.elf.sections import NoteSection  # type: ignore
+from typing_extensions import ParamSpec
 
 __all__ = ["ELFError"]
+
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
+def raise_nosuchprocess(func: Callable[P, R]) -> Callable[P, R]:
+    @wraps(func)
+    def inner(*args: P.args, **kwargs: P.kwargs):
+        try:
+            return func(*args, **kwargs)
+        except FileNotFoundError as e:
+            # Check if filename is /proc/{pid}/*
+            if e.filename.startswith("/proc/"):
+                if e.filename.split("/")[2].isalnum():
+                    # Take pid from /proc/{pid}/*
+                    pid = int(e.filename.split("/")[2])
+                    # Check if number from /proc/{pid} is actually a pid number
+                    with open("/proc/sys/kernel/pid_max") as pid_max_file:
+                        pid_max = int(pid_max_file.read())
+                    if pid <= pid_max:
+                        # Check if pid is running
+                        if not psutil.pid_exists(pid):
+                            raise psutil.NoSuchProcess(pid)
+            raise e
+
+    return inner
 
 
 def get_elf_arch(path: str) -> str:
@@ -39,6 +68,7 @@ def get_elf_buildid(path: str) -> Optional[str]:
             return None
 
 
+@raise_nosuchprocess
 def get_elf_id(path: str) -> str:
     """
     Gets an identifier for this ELF.
