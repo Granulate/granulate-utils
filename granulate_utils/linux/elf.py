@@ -144,7 +144,7 @@ def get_libc_type(elf: ELFType) -> LibcType:
                 return LibcType.DYNAMIC_MUSL
             if found_glibc:
                 return LibcType.DYNAMIC_GLIBC
-            raise Exception(f"Foind a dynamic binary without a libc: {elf.stream.name!r}")
+            raise Exception(f"Found a dynamic binary without a libc: {elf.stream.name!r}")
 
         # This symbol exists in both musl and glibc, and is even used by musl to recognize a DSO as a libc.
         # They even comment that it works on both musl and glibc.
