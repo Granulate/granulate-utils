@@ -10,7 +10,6 @@ from typing import Optional
 from psutil import NoSuchProcess, Process
 
 from granulate_utils.linux.elf import read_elf_symbol, read_elf_va
-from granulate_utils.linux.process import process_exe
 
 
 def is_golang_process(process: Process) -> bool:
