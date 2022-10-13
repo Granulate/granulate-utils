@@ -94,6 +94,7 @@ def get_aws_metadata() -> Optional[AwsInstanceMetadata]:
 
 def get_gcp_metadata() -> Optional[GcpInstanceMetadata]:
     # Documentation: https://cloud.google.com/compute/docs/storing-retrieving-metadata
+    # https://cloud.google.com/compute/docs/metadata/default-metadata-values
     response = send_request(
         "http://metadata.google.internal/computeMetadata/v1/instance/?recursive=true",
         headers={"Metadata-Flavor": "Google"},
@@ -101,13 +102,13 @@ def get_gcp_metadata() -> Optional[GcpInstanceMetadata]:
     if response is None:
         return None
     instance = response.json()
+    # Keep only the last part for these:
+    #   machineType format is "projects/PROJECT_NUM/machineTypes/MACHINE_TYPE"
+    #   zone format is "projects/PROJECT_NUM/zones/ZONE"
     return GcpInstanceMetadata(
         provider="gcp",
-        zone=instance["zone"],
-        # From https://cloud.google.com/compute/docs/metadata/default-metadata-values: "The machine type for this VM.
-        # This value has the following format: projects/PROJECT_NUM/machineTypes/MACHINE_TYPE"
-        # Therefore keep only the last part:
-        instance_type=instance["machineType"].split("/")[-1],
+        zone=instance["zone"].rpartition("/")[2],
+        instance_type=instance["machineType"].rpartition("/")[2],
         preemptible=instance["scheduling"]["preemptible"] == "TRUE",
         preempted=instance["preempted"] == "TRUE",
         instance_id=str(instance["id"]),
