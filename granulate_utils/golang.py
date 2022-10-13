@@ -19,7 +19,7 @@ def is_golang_process(process: Process) -> bool:
 
 @functools.lru_cache(maxsize=4096)
 def get_process_golang_version(process: Process) -> Optional[str]:
-    elf_path = process_exe(process)
+    elf_path = f"/proc/{process.pid}/exe"
     try:
         symbol_data = read_elf_symbol(elf_path, "runtime.buildVersion", 16)
     except FileNotFoundError:
