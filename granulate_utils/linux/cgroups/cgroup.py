@@ -3,13 +3,13 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 
-from pathlib import Path
 from typing import List, Mapping, Optional, Tuple
 
-from psutil import NoSuchProcess
+import psutil
 
 from granulate_utils.linux import ns
 from granulate_utils.linux.mountinfo import iter_mountinfo
+from granulate_utils.linux.process import read_proc_file
 
 SUBSYSTEMS = {
     "blkio",
@@ -28,21 +28,19 @@ SUBSYSTEMS = {
 }
 
 
-def get_cgroups(pid: int) -> List[Tuple[str, List[str], str]]:
+def get_cgroups(process: Optional[psutil.Process] = None) -> List[Tuple[str, List[str], str]]:
     """
     Get the cgroups of a process in [(hier id., controllers, path)] parsed form.
+    If process is None, gets the cgroups of the current process.
     """
 
     def parse_line(line: str) -> Tuple[str, List[str], str]:
         hier_id, controller_list, cgroup_path = line.split(":", maxsplit=2)
         return hier_id, controller_list.split(","), cgroup_path
 
-    try:
-        text = Path(f"/proc/{pid}/cgroup").read_text()
-    except FileNotFoundError:
-        raise NoSuchProcess(pid)
-    else:
-        return [parse_line(line) for line in text.splitlines()]
+    process = process or psutil.Process()
+    text = read_proc_file(process, "cgroup").decode()
+    return [parse_line(line) for line in text.splitlines()]
 
 
 def find_v1_hierarchies() -> Mapping[str, str]:
