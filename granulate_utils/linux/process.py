@@ -131,4 +131,5 @@ def is_process_basename_matching(process: psutil.Process, basename_pattern: str)
 
 
 def is_kernel_thread(process: psutil.Process) -> bool:
+    # Kernel threads should be child of process with pid 2, or with pid 2.
     return process.pid == 2 or process.ppid() == 2
