@@ -83,7 +83,7 @@ def _read_process_auxv(process: psutil.Process, auxv_id: int) -> int:
     auxv = read_proc_file(process, "auxv")
 
     for i in range(0, len(auxv), _AUXV_ENTRY.size):
-        entry = auxv[i : i + _AUXV_ENTRY.size]
+        entry = auxv[i: i + _AUXV_ENTRY.size]
         id_, val = _AUXV_ENTRY.unpack(entry)
 
         if id_ == auxv_id:
@@ -128,3 +128,7 @@ def is_process_basename_matching(process: psutil.Process, basename_pattern: str)
         return True
 
     return False
+
+
+def is_kernel_thread(process: psutil.Process) -> bool:
+    return process.pid == 2 or process.ppid() == 2
