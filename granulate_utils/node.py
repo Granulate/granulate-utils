@@ -5,7 +5,7 @@
 
 from psutil import Process
 
-from granulate_utils.linux.process import is_process_basename_matching, is_kernel_thread
+from granulate_utils.linux.process import is_kernel_thread, is_process_basename_matching
 
 
 def is_node_process(process: Process) -> bool:
