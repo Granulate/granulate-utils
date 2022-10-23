@@ -9,4 +9,4 @@ from granulate_utils.linux.process import is_kernel_thread, is_process_basename_
 
 
 def is_node_process(process: Process) -> bool:
-    return (not is_kernel_thread(process)) and is_process_basename_matching(process, r"^node$")
+    return not is_kernel_thread(process) and is_process_basename_matching(process, r"^node$")
