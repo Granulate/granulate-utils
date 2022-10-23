@@ -10,10 +10,11 @@ from typing import Optional
 from psutil import NoSuchProcess, Process
 
 from granulate_utils.linux.elf import read_elf_symbol, read_elf_va
+from granulate_utils.linux.process import is_kernel_thread
 
 
 def is_golang_process(process: Process) -> bool:
-    return get_process_golang_version(process) is not None
+    return not is_kernel_thread(process) and get_process_golang_version(process) is not None
 
 
 @functools.lru_cache(maxsize=4096)
