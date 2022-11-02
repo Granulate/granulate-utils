@@ -4,6 +4,7 @@
 #
 
 import re
+from functools import lru_cache
 from typing import Optional
 
 from psutil import Process
@@ -18,6 +19,7 @@ from granulate_utils.linux import cgroups
 CONTAINER_ID_PATTERN = re.compile(r"[a-f0-9]{64}")
 
 
+@lru_cache(4096)
 def get_process_container_id(process: Process) -> Optional[str]:
     """
     Gets the container ID of a running process, or None if not in a container.
