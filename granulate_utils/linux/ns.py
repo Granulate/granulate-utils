@@ -205,7 +205,6 @@ def run_in_ns(
     nstypes: List[str],
     callback: Callable[[], T],
     target_pid: int = 1,
-    passthrough_exception: bool = False,
 ) -> T:
     """
     Runs a callback in a new thread, switching to a set of the namespaces of a target process before
@@ -257,10 +256,7 @@ def run_in_ns(
 
     if isinstance(ret, _Sentinel):
         assert exc is not None
-        if passthrough_exception:
-            raise exc
-        else:
-            raise Exception("run_in_ns execution failed") from exc
+        raise exc
     else:
         assert exc is None
         return ret
