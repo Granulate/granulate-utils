@@ -271,7 +271,7 @@ def test_truncate_long_message():
         assert m[handler.TEXT_KEY][handler.TRUNCATED_KEY] is True
 
 
-def test_unserializable_in_extra():
+def test_unserializable_in_extra() -> None:
     @dataclasses.dataclass
     class Foo:
         bar: str
