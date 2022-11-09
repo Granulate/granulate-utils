@@ -5,9 +5,9 @@
 import errno
 import os
 import time
-from typing import List, Tuple
+from typing import Iterable, List, Tuple
 
-from granulate_utils.linux.kernel_messages import KernelMessagesProvider
+from granulate_utils.linux.kernel_messages import KernelMessage, KernelMessagesProvider
 
 # See linux/printk.h
 CONSOLE_EXT_LOG_MAX = 8192
@@ -27,7 +27,7 @@ class DevKmsgProvider(KernelMessagesProvider):
         # skip all historical messages:
         os.lseek(self.dev_kmsg.fileno(), 0, os.SEEK_END)
 
-    def iter_new_messages(self):
+    def iter_new_messages(self) -> Iterable[KernelMessage]:
         messages: List[Tuple[float, bytes]] = []
         try:
             # Each read() is one message
@@ -44,7 +44,7 @@ class DevKmsgProvider(KernelMessagesProvider):
         yield from self._parse_raw_messages(messages)
 
     @staticmethod
-    def _parse_raw_messages(messages: List[Tuple[float, bytes]]):
+    def _parse_raw_messages(messages: List[Tuple[float, bytes]]) -> Iterable[KernelMessage]:
         for timestamp, message in messages:
             """
             Example messages:

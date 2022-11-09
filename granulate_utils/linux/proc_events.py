@@ -103,7 +103,7 @@ class _ProcEventsListener(threading.Thread):
     # } exec;
     _exec_proc_event = struct.Struct("=2I")
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._socket = socket.socket(socket.AF_NETLINK, socket.SOCK_DGRAM, self._NETLINK_CONNECTOR)
         self._exit_callbacks: List[Callable] = []
         self._exec_callbacks: List[Callable] = []
@@ -116,7 +116,7 @@ class _ProcEventsListener(threading.Thread):
 
         super().__init__(target=self._proc_events_listener, name="Process Events Listener", daemon=True)
 
-    def _register_for_connector_events(self, socket: socket.socket):
+    def _register_for_connector_events(self, socket: socket.socket) -> None:
         """Notify the kernel that we're listening for events on the connector"""
         cn_proc_op = struct.Struct("=I").pack(self._PROC_CN_MCAST_LISTEN)
         cn_msg = self._cn_msg.pack(self._CN_IDX_PROC, self._CN_VAL_PROC, 0, 0, len(cn_proc_op), 0) + cn_proc_op
@@ -124,7 +124,7 @@ class _ProcEventsListener(threading.Thread):
 
         socket.send(nl_msg)
 
-    def _listener_loop(self):
+    def _listener_loop(self) -> None:
         while not self._should_stop:
             events = self._selector.select()
             if self._should_stop:
@@ -135,7 +135,7 @@ class _ProcEventsListener(threading.Thread):
                     # When stressed, reading from the socket can raise
                     #   OSError: [Errno 105] No buffer space available
                     # This seems to be safe to ignore, empirically no events were missed
-                    data = key.fileobj.recv(256)
+                    data = key.fileobj.recv(256)  # type: ignore # it's a pipe
                 except OSError as e:
                     if e.errno == 105:
                         continue
