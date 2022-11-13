@@ -12,4 +12,3 @@ class CpuAcctCgroup(BaseCgroup):
 
     def get_cpu_time_ns(self) -> float:
         return int(self.read_from_control_file(self.cpuacct_usage))
-
