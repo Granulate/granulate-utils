@@ -12,6 +12,7 @@ from granulate_utils.linux.cgroups.cgroup import SUBSYSTEMS, find_v1_hierarchies
 
 class BaseCgroup:
     predefined_cgroups = ["kubepods", "docker", "ecs"]
+    cgroup_procs = 'cgroup.procs'
     _v1_hierarchies: Optional[Mapping[str, str]] = None
 
     def __init__(self) -> None:
@@ -54,6 +55,10 @@ class BaseCgroup:
     @property
     def cgroup_path(self) -> Path:
         return Path(self.get_cgroup_hierarchies()[self.subsystem])
+
+    @property
+    def pids_in_cgroup(self) -> List[int]:
+        return [int(proc) for proc in self.read_from_control_file(self.cgroup_procs).split()]
 
     def move_to_cgroup(self, custom_cgroup: str, tid: int = 0) -> None:
         # move to a new cgroup inside the current cgroup
