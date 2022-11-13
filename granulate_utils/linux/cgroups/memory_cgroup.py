@@ -11,12 +11,16 @@ class MemoryCgroup(BaseCgroup):
     limit_in_bytes = "memory.limit_in_bytes"
     memsw_limit_in_bytes = "memory.memsw.limit_in_bytes"
     max_usage_in_bytes = "memory.max_usage_in_bytes"
+    usage_in_bytes = "memory.usage_in_bytes"
 
     def get_memory_limit(self) -> int:
         return int(self.read_from_control_file(self.limit_in_bytes))
 
     def get_max_usage_in_bytes(self) -> int:
         return int(self.read_from_control_file(self.max_usage_in_bytes))
+
+    def get_usage_in_bytes(self) -> int:
+        return int(self.read_from_control_file(self.usage_in_bytes))
 
     def _set_memsw_limit_in_bytes(self, limit: int) -> None:
         try:
