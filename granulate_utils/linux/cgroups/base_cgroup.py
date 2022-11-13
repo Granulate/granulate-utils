@@ -12,7 +12,7 @@ from granulate_utils.linux.cgroups.cgroup import SUBSYSTEMS, find_v1_hierarchies
 
 class BaseCgroup:
     predefined_cgroups = ["kubepods", "docker", "ecs"]
-    cgroup_procs = 'cgroup.procs'
+    cgroup_procs = "cgroup.procs"
     _v1_hierarchies: Optional[Mapping[str, str]] = None
 
     def __init__(self) -> None:
