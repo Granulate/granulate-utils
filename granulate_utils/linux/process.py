@@ -124,7 +124,7 @@ def is_process_basename_matching(process: psutil.Process, basename_pattern: str)
 
     # process was executed AS basename (but has different exe name)
     cmd = process.cmdline()
-    if len(cmd) > 0 and re.match(basename_pattern, cmd[0]):
+    if len(cmd) > 0 and re.match(basename_pattern, os.path.basename(cmd[0])):
         return True
 
     return False
