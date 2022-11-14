@@ -25,5 +25,5 @@ class CpuCgroup(BaseCgroup):
         self.write_to_control_file(self.cfs_quota_us, "-1")
 
     def get_stat(self) -> Dict[str, int]:
-        stats_text = self.read_from_control_file(self.cpu_stat)
-        return {line.split()[0]: int(line.split()[1]) for line in stats_text.splitlines()}
+        stat_text = self.read_from_control_file(self.cpu_stat)
+        return {line.split()[0]: int(line.split()[1]) for line in stat_text.splitlines()}
