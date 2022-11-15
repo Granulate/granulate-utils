@@ -10,5 +10,5 @@ class CpuAcctCgroup(BaseCgroup):
     subsystem = "cpuacct"
     cpuacct_usage = "cpuacct.usage"
 
-    def get_cpu_time_ns(self) -> float:
+    def get_cpu_time_ns(self) -> int:
         return int(self.read_from_control_file(self.cpuacct_usage))
