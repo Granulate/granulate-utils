@@ -3,6 +3,7 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 
+import os
 from typing import List, Mapping, Optional, Tuple
 
 import psutil
@@ -43,7 +44,7 @@ def get_cgroups(process: Optional[psutil.Process] = None) -> List[Tuple[str, Lis
     return [parse_line(line) for line in text.splitlines()]
 
 
-def find_v1_hierarchies() -> Mapping[str, str]:
+def find_v1_hierarchies(resolve_host_root_links: bool = True) -> Mapping[str, str]:
     """
     Finds all the mounted hierarchies for all currently enabled cgroup v1 controllers.
     :return: A mapping from cgroup subsystem names to their respective hierarchies.
@@ -55,13 +56,15 @@ def find_v1_hierarchies() -> Mapping[str, str]:
             continue
         controllers = set(mount.super_options) & SUBSYSTEMS
         if controllers:
-            hierarchy = ns.resolve_host_root_links(mount.mount_point)
+            hierarchy = mount.mount_point
+            if resolve_host_root_links:
+                hierarchy = ns.resolve_host_root_links(hierarchy)
             for controller in controllers:
                 hierarchies[controller] = hierarchy
     return hierarchies
 
 
-def find_v2_hierarchy() -> Optional[str]:
+def find_v2_hierarchy(resolve_host_root_links: bool = True) -> Optional[str]:
     """
     Finds the mounted unified hierarchy for cgroup v2 controllers.
     """
@@ -70,4 +73,33 @@ def find_v2_hierarchy() -> Optional[str]:
         return None
     if len(cgroup2_mounts) > 1:
         raise Exception("More than one cgroup2 mount found!")
-    return ns.resolve_host_root_links(cgroup2_mounts[0].mount_point)
+    path = cgroup2_mounts[0].mount_point
+    if resolve_host_root_links:
+        path = ns.resolve_host_root_links(path)
+    return path
+
+
+def get_cgroups_root_folder(resolve_host_root_links: bool = True) -> Optional[str]:
+    """
+    For cgroup v1/unified - returns the folder containing all of the cgroup controller mounts
+    For cgroup v2 - returns the mount folder itself
+    With common cgroup mount locations, this function is expected to return /sys/fs/cgroup
+    """
+    v1_paths = find_v1_hierarchies(resolve_host_root_links)
+    v2_path = find_v2_hierarchy(resolve_host_root_links)
+    if v1_paths and v2_path:
+        # Unified (hybrid)
+        if not os.path.basename(v2_path) == "unified":
+            raise Exception("Both v1 and v2 cgroup mounts found in non-unified form")
+        return os.path.dirname(v2_path)
+    if v2_path:
+        # V2
+        return v2_path
+    if v1_paths:
+        # V1
+        parents = set(os.path.dirname(path) for path in v1_paths.values())
+        if len(parents) != 1:
+            raise Exception("Found v1 hierarchies in multiple locations")
+        return parents.pop()
+    # No cgroup mounts
+    return None
