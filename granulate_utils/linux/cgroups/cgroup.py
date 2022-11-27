@@ -3,7 +3,6 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 
-import os
 from typing import List, Mapping, Optional, Tuple
 
 import psutil
@@ -79,27 +78,23 @@ def find_v2_hierarchy(resolve_host_root_links: bool = True) -> Optional[str]:
     return path
 
 
-def get_cgroups_root_folder(resolve_host_root_links: bool = True) -> Optional[str]:
+def get_cgroup_mount(controller: str, resolve_host_root_links: bool = True) -> Optional[str]:
     """
-    For cgroup v1/unified - returns the folder containing all of the cgroup controller mounts
-    For cgroup v2 - returns the mount folder itself
-    With common cgroup mount locations, this function is expected to return /sys/fs/cgroup
+    Returns the folder that the requested controller is mounted to, or None if no such controller mount was found
+    If no v1 mount was found for the requested controller and there is a v2 mount (either unified or hybrid),
+    the v2 mountpoint is returned (as all controllers share the same hierarchy in v2)
     """
     v1_paths = find_v1_hierarchies(resolve_host_root_links)
     v2_path = find_v2_hierarchy(resolve_host_root_links)
-    if v1_paths and v2_path:
-        # Unified (hybrid)
-        if not os.path.basename(v2_path) == "unified":
-            raise Exception("Both v1 and v2 cgroup mounts found in non-unified form")
-        return os.path.dirname(v2_path)
+    if v1_paths and controller in v1_paths:
+        # Either v1 or hybrid with the requested controller bound to a v1 hierarchy
+        return v1_paths[controller]
     if v2_path:
-        # V2
+        # v2 (unified) - all controllers are in a single unified hierarchy
         return v2_path
-    if v1_paths:
-        # V1
-        parents = set(os.path.dirname(path) for path in v1_paths.values())
-        if len(parents) != 1:
-            raise Exception("Found v1 hierarchies in multiple locations")
-        return parents.pop()
-    # No cgroup mounts
+    # No cgroup mount of the requested controller
     return None
+
+
+def is_valid_controller(controller: str) -> bool:
+    return controller in SUBSYSTEMS
