@@ -96,5 +96,5 @@ def get_cgroup_mount(controller: str, resolve_host_root_links: bool = True) -> O
     return None
 
 
-def is_valid_controller(controller: str) -> bool:
+def is_known_controller(controller: str) -> bool:
     return controller in SUBSYSTEMS
