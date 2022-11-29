@@ -58,18 +58,21 @@ class Sender:
 
         self.application_name = application_name
         self.auth_token = auth_token
-        self.server_address = server_address
         self.send_interval = send_interval
         self.send_threshold = send_threshold
         self.send_min_interval = send_min_interval
         self.max_send_tries = max_send_tries
 
         self.stdout_logger = get_stdout_logger()
-        self.server_uri = f"{scheme}://{server_address}/api/v1/logs"
+        self.set_server_uri(scheme, server_address)
         self.jsonify = JSONEncoder(separators=(",", ":"), default=repr).encode  # compact, no whitespace
         self.session = Session()
         self.messages_buffer: Optional[MessagesBuffer] = None
         self.metadata_callback: Callable[[], Dict] = lambda: {}
+
+    def set_server_uri(self, scheme: str, server_address: str) -> None:
+        self.server_address = server_address
+        self.server_uri = f"{scheme}://{server_address}/api/v1/logs"
 
     def start(self, messages_buffer: MessagesBuffer, metadata_callback: Callable[[], Dict]) -> None:
         assert self.messages_buffer is None, "Call start once"
