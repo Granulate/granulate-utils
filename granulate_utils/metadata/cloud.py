@@ -6,13 +6,14 @@
 import logging
 from dataclasses import dataclass
 from http.client import NOT_FOUND
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import requests
 from requests import Response
 from requests.exceptions import ConnectionError
 
 from granulate_utils.exceptions import BadResponseCode
+from granulate_utils.linux.ns import run_in_ns
 from granulate_utils.metadata import Metadata
 
 METADATA_REQUEST_TIMEOUT = 5
@@ -163,17 +164,25 @@ def send_request(url: str, headers: Dict[str, str] = None, method: str = "get") 
 
 
 def get_static_cloud_instance_metadata(logger: Union[logging.LoggerAdapter, logging.Logger]) -> Optional[Metadata]:
-    cloud_metadata_fetchers = [get_aws_metadata, get_gcp_metadata, get_azure_metadata]
-    raised_exceptions: List[Exception] = []
-    for fetcher in cloud_metadata_fetchers:
-        try:
-            response = fetcher()
-            if response is not None:
-                return response.__dict__
-        except (ConnectionError, BadResponseCode):
-            pass
-        except Exception as exception:
-            raised_exceptions.append(exception)
+    def _fetch() -> Tuple[Optional[Metadata], List[Exception]]:
+        cloud_metadata_fetchers = [get_aws_metadata, get_gcp_metadata, get_azure_metadata]
+        raised_exceptions: List[Exception] = []
+        for fetcher in cloud_metadata_fetchers:
+            try:
+                response = fetcher()
+                if response is not None:
+                    return response.__dict__, []
+            except (ConnectionError, BadResponseCode):
+                pass
+            except Exception as exception:
+                raised_exceptions.append(exception)
+
+        return None, raised_exceptions
+
+    metadata, raised_exceptions = run_in_ns(["net"], _fetch)
+    if metadata is not None:
+        return metadata
+
     formatted_exceptions = (
         ", ".join([repr(exception) for exception in raised_exceptions]) if raised_exceptions else "(none)"
     )
