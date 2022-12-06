@@ -19,7 +19,9 @@ class CpuCgroup(BaseCgroup):
 
     def get_cpu_limit_cores(self) -> float:
         period = int(self.read_from_control_file(self.cfs_period_us))
-        return int(self.read_from_control_file(self.cfs_quota_us)) / period
+        quota = int(self.read_from_control_file(self.cfs_quota_us))
+        # if quota is set to -1 it means this cgroup is unlimited
+        return quota / period if quota != -1 else -1.0
 
     def reset_cpu_limit(self) -> None:
         self.write_to_control_file(self.cfs_quota_us, "-1")
