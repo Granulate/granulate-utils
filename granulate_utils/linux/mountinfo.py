@@ -19,7 +19,7 @@ class Mount(NamedTuple):
     super_options: List[str]
 
 
-def iter_mountinfo(pid: Union[int, Literal["self"]] = "self") -> Iterable[Mount]:
+def iter_mountinfo(pid: Union[int, Literal["thread-self"]] = "thread-self") -> Iterable[Mount]:
     """
     Iterate over mounts in mount namespace of pid.
     """
