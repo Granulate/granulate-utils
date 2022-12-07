@@ -97,7 +97,7 @@ class Sender:
     def _send_loop(self) -> None:
         assert self.messages_buffer is not None
 
-        self.last_send_time = time.time()
+        self.last_send_time = time.monotonic()
         while not self.stop_event.is_set():
             if self._should_send():
                 self.send()
@@ -111,13 +111,13 @@ class Sender:
     def _should_send(self) -> bool:
         assert self.messages_buffer is not None
 
-        time_since_last_send = time.time() - self.last_send_time
+        time_since_last_send = time.monotonic() - self.last_send_time
         return self.messages_buffer.count > 0 and (
             (self.messages_buffer.utilized >= self.send_threshold) or (time_since_last_send >= self.send_interval)
         )
 
     def send(self) -> None:
-        self.last_send_time = time.time()
+        self.last_send_time = time.monotonic()
         try:
             batch = self._send_once()
             self._drop_sent_batch(batch)
