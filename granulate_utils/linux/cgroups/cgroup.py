@@ -43,7 +43,7 @@ def get_cgroups(process: Optional[psutil.Process] = None) -> List[Tuple[str, Lis
     return [parse_line(line) for line in text.splitlines()]
 
 
-def find_v1_hierarchies() -> Mapping[str, str]:
+def find_v1_hierarchies(resolve_host_root_links: bool = True) -> Mapping[str, str]:
     """
     Finds all the mounted hierarchies for all currently enabled cgroup v1 controllers.
     :return: A mapping from cgroup subsystem names to their respective hierarchies.
@@ -55,13 +55,15 @@ def find_v1_hierarchies() -> Mapping[str, str]:
             continue
         controllers = set(mount.super_options) & SUBSYSTEMS
         if controllers:
-            hierarchy = ns.resolve_host_root_links(mount.mount_point)
+            hierarchy = mount.mount_point
+            if resolve_host_root_links:
+                hierarchy = ns.resolve_host_root_links(hierarchy)
             for controller in controllers:
                 hierarchies[controller] = hierarchy
     return hierarchies
 
 
-def find_v2_hierarchy() -> Optional[str]:
+def find_v2_hierarchy(resolve_host_root_links: bool = True) -> Optional[str]:
     """
     Finds the mounted unified hierarchy for cgroup v2 controllers.
     """
@@ -70,4 +72,29 @@ def find_v2_hierarchy() -> Optional[str]:
         return None
     if len(cgroup2_mounts) > 1:
         raise Exception("More than one cgroup2 mount found!")
-    return ns.resolve_host_root_links(cgroup2_mounts[0].mount_point)
+    path = cgroup2_mounts[0].mount_point
+    if resolve_host_root_links:
+        path = ns.resolve_host_root_links(path)
+    return path
+
+
+def get_cgroup_mount(controller: str, resolve_host_root_links: bool = True) -> Optional[str]:
+    """
+    Returns the folder that the requested controller is mounted to, or None if no such controller mount was found
+    If no v1 mount was found for the requested controller and there is a v2 mount (either unified or hybrid),
+    the v2 mountpoint is returned (as all controllers share the same hierarchy in v2)
+    """
+    v1_paths = find_v1_hierarchies(resolve_host_root_links)
+    v2_path = find_v2_hierarchy(resolve_host_root_links)
+    if v1_paths and controller in v1_paths:
+        # Either v1 or hybrid with the requested controller bound to a v1 hierarchy
+        return v1_paths[controller]
+    if v2_path:
+        # v2 (unified) - all controllers are in a single unified hierarchy
+        return v2_path
+    # No cgroup mount of the requested controller
+    return None
+
+
+def is_known_controller(controller: str) -> bool:
+    return controller in SUBSYSTEMS
