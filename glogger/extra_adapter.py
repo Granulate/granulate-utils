@@ -34,7 +34,7 @@ class ExtraAdapter(logging.LoggerAdapter):
                 other_kwargs[k] = v
 
         # Merge other kwargs into extra:
-        extra = {**logging_kwargs.get("extra", {}), **other_kwargs}
+        extra: Mapping[str, object] = {**logging_kwargs.get("extra", {}), **other_kwargs}
         if extra:
             logging_kwargs["extra"] = extra
 
