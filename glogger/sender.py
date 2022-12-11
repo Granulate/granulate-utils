@@ -85,7 +85,7 @@ class Sender:
         """
         Signals to stop flushing messages asynchronously.
         Blocks until current flushing operation has finished or `stop_timeout` seconds passed.
-        :return: Whether thread terminated within alloted timeout.
+        :return: Whether thread terminated within allotted timeout.
         """
         if self.stop_event.is_set():
             return True
