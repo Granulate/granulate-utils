@@ -205,7 +205,7 @@ class _ProcEventsListener(threading.Thread):
             os.close(self._select_breaker_reader)
 
     def start(self):
-        # We make these initializations here (and not in the new thread) so if an exception occures it'll be
+        # We make these initializations here (and not in the new thread) so if an exception occurs it'll be
         # visible in the calling thread
         try:
             self._socket.bind((0, self._CN_IDX_PROC))
