@@ -6,9 +6,9 @@
 import os
 import re
 import signal
+from dataclasses import dataclass
 from itertools import dropwhile
 from typing import Iterable, List, Optional, Union
-from dataclasses import dataclass
 
 from packaging.version import Version
 

@@ -1,7 +1,9 @@
-import pytest
-from granulate_utils.java import JvmVersion, parse_jvm_version
 from typing import Union
+
+import pytest
 from packaging.version import Version
+
+from granulate_utils.java import JvmVersion, parse_jvm_version
 
 
 @pytest.mark.parametrize(
@@ -68,7 +70,7 @@ OpenJDK 64-Bit Server VM (build 24.251-b02, mixed mode)""",
         (
             """java version "1.8.0_312"
 Java Runtime Environment (Zing 21.12.0.0-b2-linux64) (build 1.8.0_312-b2)
-Zing 64-Bit Tiered VM (Zing 21.12.0.0-b2-linux64) (build 1.8.0_312-zing_21.12.0.0-b3-product-linux-X86_64, mixed mode)""",
+Zing 64-Bit Tiered VM (Zing 21.12.0.0-b2-linux64) (build 1.8.0_312-zing_21.12.0.0-b3-product-linux-X86_64, mixed mode)""",  # noqa
             JvmVersion(Version("8.312"), 2, "Zing 64-Bit Tiered VM (Zing 21.12.0.0-b2-linux64)"),
         ),
         # zing 22 & java 15
@@ -82,16 +84,15 @@ Zing 64-Bit Tiered VM Zing22.07.1.0+1 (build 15.0.8-zing_22.07.1.0-b1-product-li
         (
             """openjdk version "1.8.0_332"
 IBM Semeru Runtime Open Edition (build 1.8.0_332-b09)
-Eclipse OpenJ9 VM (build openj9-0.32.0, JRE 1.8.0 Linux amd64-64-Bit Compressed References 20220422_370 (JIT enabled, AOT enabled)
-OpenJ9   - 9a84ec34e
+Eclipse OpenJ9 VM (build openj9-0.32.0, JRE 1.8.0 Linux amd64-64-Bit Compressed References 20220422_370 (JIT enabled, AOT enabled)"""  # noqa
+            """OpenJ9   - 9a84ec34e
 OMR      - ab24b6666
 JCL      - 0b8b8af39a based on jdk8u332-b09)
 """,
             JvmVersion(Version("8.332"), 9, "Eclipse OpenJ9 VM"),
         ),
-
         # TODO: add error cases here
-    ]
+    ],
 )
 def test_parse_jvm_version(java_version: str, jvm_version_or_err: Union[JvmVersion, str]) -> None:
     if isinstance(jvm_version_or_err, JvmVersion):
