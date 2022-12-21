@@ -6,6 +6,7 @@
 import os
 import re
 import signal
+from dataclasses import dataclass
 from itertools import dropwhile
 from typing import Iterable, List, Optional, Union
 
@@ -113,14 +114,11 @@ def java_exit_code_to_signo(exit_code: int) -> Optional[int]:
         return None
 
 
+@dataclass
 class JvmVersion:
-    def __init__(self, version: Version, build: int, name: str):
-        self.version = version
-        self.build = build
-        self.name = name
-
-    def __repr__(self) -> str:
-        return f"JvmVersion({self.version}, {self.build!r}, {self.name!r})"
+    version: Version
+    build: int
+    name: str
 
 
 # Parse java version information from "java -version" output
