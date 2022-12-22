@@ -8,7 +8,7 @@ import re
 import signal
 from dataclasses import dataclass
 from itertools import dropwhile
-from typing import Iterable, List, Optional, Union
+from typing import Iterable, List, Literal, Optional, Union
 
 from packaging.version import Version
 
@@ -114,11 +114,16 @@ def java_exit_code_to_signo(exit_code: int) -> Optional[int]:
         return None
 
 
+VmType = Literal["HotSpot", "Zing", "OpenJ9", None]
+
+
 @dataclass
 class JvmVersion:
     version: Version
     build: int
     name: str
+    vm_type: VmType
+    zing_major: Optional[int] = None  # non-None if Zing
 
 
 # Parse java version information from "java -version" output
@@ -142,7 +147,10 @@ def parse_jvm_version(version_string: str) -> JvmVersion:
     assert m is not None, f"did not find build_str in {version_string!r}"
     build_str = m.group(1)
 
-    if any(version_str.endswith(suffix) for suffix in ("-internal", "-ea", "-ojdkbuild")):
+    if (
+        any(version_str.endswith(suffix) for suffix in ("-internal", "-ea", "-ojdkbuild"))
+        or re.search(r"-zing_[\d\.]+$", version_str) is not None
+    ):
         # strip those suffixes to keep the rest of the parsing logic clean
         version_str = version_str.rsplit("-")[0]
 
@@ -152,10 +160,13 @@ def parse_jvm_version(version_string: str) -> JvmVersion:
         # 1.<major>.0_<minor>-b<build_number>
         # For example 1.8.0_242-b12 means 8.242 with build number 12
         assert len(version_list) == 3, f"Unexpected number of elements for old-style java version: {version_list!r}"
-        assert "_" in version_list[-1], f"Did not find expected underscore in old-style java version: {version_list!r}"
         major = version_list[1]
-        minor = version_list[-1].split("_")[-1]
-        version = Version(f"{major}.{minor}")
+        if "_" in version_list[-1]:
+            minor = version_list[-1].split("_")[-1]
+            version = Version(f"{major}.{minor}")
+        else:
+            assert version_list[-1] == "0", f"Unexpected minor? {version_list!r}"
+            version = Version(major)
         # find the -b or -ojdkbuild-
         if "-b" in build_str:
             build_split = build_str.split("-b")
@@ -179,4 +190,28 @@ def parse_jvm_version(version_string: str) -> JvmVersion:
 
     # There is no real format here, just use the entire description string
     vm_name = lines[2].split("(build")[0].strip()
-    return JvmVersion(version, build, vm_name)
+
+    if vm_name.startswith("OpenJDK"):
+        vm_type: VmType = "HotSpot"
+    elif vm_name.startswith("Zing"):
+        vm_type = "Zing"
+    elif vm_name == "Eclipse OpenJ9 VM":
+        vm_type = "OpenJ9"
+    else:
+        # TODO: additional types?
+        vm_type = None
+
+    if vm_type == "Zing":
+        # name is e.g Zing 64-Bit Tiered VM Zing22.04.1.0+1
+        # or (Zing 21.12.0.0-b2-linux64) from the azul/prime:1.8.0-312-2-21.12.0.0 image.
+        m = re.search(r"Zing ?(\d+)\.", vm_name)
+        if m is None:
+            # Zing <= 20 versions have a different format
+            # this matches the "20" out of (build 1.8.0-zing_20.03.0.0-b1).
+            m = re.search(r"\(build[^\)]+zing_(\d+)\.[^\(]+\)", version_string)
+            assert m is not None, f"Missing old format of Zing version? {version_string!r}"
+        zing_major: Optional[int] = int(m.group(1))
+    else:
+        zing_major = None
+
+    return JvmVersion(version, build, vm_name, vm_type, zing_major)
