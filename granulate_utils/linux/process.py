@@ -81,6 +81,13 @@ def read_process_execfn(process: psutil.Process) -> str:
 
 def _read_process_auxv(process: psutil.Process, auxv_id: int) -> int:
     auxv = read_proc_file(process, "auxv")
+    if not auxv:
+        # kernel thread / zombie process yield this result.
+        # we don't expect to be called on kernel threads
+        assert not is_kernel_thread(process)
+        # so it's a zombie
+        assert is_process_zombie(process)
+        raise psutil.ZombieProcess(process.pid)
 
     for i in range(0, len(auxv), _AUXV_ENTRY.size):
         entry = auxv[i : i + _AUXV_ENTRY.size]
