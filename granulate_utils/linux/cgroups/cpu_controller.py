@@ -2,12 +2,13 @@
 # Copyright (c) Granulate. All rights reserved.
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
+
 from typing import Dict
 
-from granulate_utils.linux.cgroups.base_cgroup import BaseCgroup
+from granulate_utils.linux.cgroups.base_controller import BaseController, CgroupUtils
 
 
-class CpuCgroup(BaseCgroup):
+class CpuController(BaseController):
     subsystem = "cpu"
     cfs_period_us = "cpu.cfs_period_us"
     cfs_quota_us = "cpu.cfs_quota_us"
@@ -29,3 +30,7 @@ class CpuCgroup(BaseCgroup):
     def get_stat(self) -> Dict[str, int]:
         stat_text = self.read_from_control_file(self.cpu_stat)
         return {line.split()[0]: int(line.split()[1]) for line in stat_text.splitlines()}
+
+    @classmethod
+    def create_cgroup(cls, cgroup_name: str):
+        return CpuController(CgroupUtils.create_cgroup_under_current(cls.subsystem, cgroup_name))

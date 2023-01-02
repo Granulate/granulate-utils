@@ -3,6 +3,7 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 
+from pathlib import Path
 from typing import List, Mapping, Optional, Tuple
 
 import psutil
@@ -98,3 +99,66 @@ def get_cgroup_mount(controller: str, resolve_host_root_links: bool = True) -> O
 
 def is_known_controller(controller: str) -> bool:
     return controller in SUBSYSTEMS
+
+
+def get_cgroup_relative_path(subsystem: str) -> str:
+    """
+    Get the subsystem cgroup path relative to the cgroup sysfs path
+    :param subsystem: the subsystem
+    :return: the relative path, with a '/' prefix
+    """
+    hierarchy_details = get_cgroups()
+    for line in hierarchy_details:
+        if subsystem in line[1]:
+            return line[2]
+    raise Exception(f"{subsystem!r} not found")
+
+
+class CgroupUtils:
+    _v1_hierarchies: Optional[Mapping[str, str]] = None
+
+    @classmethod
+    def get_cgroup_hierarchies(cls) -> Mapping[str, str]:
+        if cls._v1_hierarchies is None:
+            cls._v1_hierarchies = find_v1_hierarchies()
+        return cls._v1_hierarchies
+
+    @classmethod
+    def get_current_cgroup_path(cls, subsystem: str) -> Path:
+        """
+        Get the full path of the subsystem cgroup
+        :param subsystem: the subsystem
+        :return: full path
+        """
+        cgroup_sysfs_path = cls.get_cgroup_hierarchies()[subsystem]
+        cgroup_relative_path = get_cgroup_relative_path(subsystem)[1:]
+        return Path(cgroup_sysfs_path) / cgroup_relative_path
+
+    @classmethod
+    def is_in_cgroup(cls, subsystem: str, cgroup_name: str) -> bool:
+        """
+        Check if current process has the given cgroup_name in its hierarchy for the subsystem
+        :param subsystem: the subsystem
+        :param cgroup_name: the cgroup name
+        :return: bool indicating if cgroup is in hierarchy
+        """
+        controller_path_parts = cls.get_current_cgroup_path(subsystem).parts
+        return cgroup_name in controller_path_parts
+
+    @classmethod
+    def create_cgroup_under_current(cls, subsystem: str, cgroup_name: str) -> Path:
+        """
+        Create a new CGroup under the Cgroup of the current process.
+        If current process is already in process cgroup hierarchy, return its path.
+        :param subsystem: the subsystem to create the cgroup under
+        :param cgroup_name: new cgroup name
+        :return: The path for the created/found Cgroup
+        """
+        current_cgroup_path = cls.get_current_cgroup_path(subsystem)
+        if cls.is_in_cgroup(subsystem, cgroup_name):
+            subsystem_index = current_cgroup_path.parts.index(cgroup_name)
+            new_cgroup_path = Path(*current_cgroup_path.parts[: subsystem_index + 1])
+        else:
+            new_cgroup_path = current_cgroup_path / cgroup_name
+            new_cgroup_path.mkdir(exist_ok=True)
+        return new_cgroup_path
