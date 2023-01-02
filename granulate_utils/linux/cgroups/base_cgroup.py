@@ -4,9 +4,9 @@
 #
 
 from pathlib import Path
-from typing import List, Mapping, Optional, Set
+from typing import Mapping, Optional, Set
 
-from granulate_utils.exceptions import AlreadyInCgroup, UnsupportedCGroupV2
+from granulate_utils.exceptions import UnsupportedCGroupV2
 from granulate_utils.linux.cgroups.cgroup import SUBSYSTEMS, find_v1_hierarchies, get_cgroups
 
 
@@ -59,22 +59,25 @@ class BaseCgroup:
     def get_pids_in_cgroup(self) -> Set[int]:
         return {int(proc) for proc in self.read_from_control_file(self.cgroup_procs).split()}
 
-    def move_to_cgroup(self, custom_cgroup: str, tid: int = 0) -> None:
+    def move_to_cgroup(self, custom_cgroup: str, pid: int = 0) -> Path:
         # move to a new cgroup inside the current cgroup
-        # by setting tid=0 we move current tid to the custom cgroup
-        if any(x in self.predefined_cgroups for x in self.cgroup.split("/")):
-            raise AlreadyInCgroup(self.subsystem, self.cgroup)
-        Path(self.cgroup_mount_path / custom_cgroup).mkdir(exist_ok=True)
-        Path(self.cgroup_mount_path / custom_cgroup / "tasks").write_text(str(tid))
+        # by setting pid=0 we move current process to the custom cgroup
+        new_cgroup_path = Path(self.cgroup_mount_path / custom_cgroup)
+        self.move_to_cgroup_abs_path(new_cgroup_path, pid)
+        return new_cgroup_path
 
-    def read_from_control_file(self, file_name: str) -> str:
-        controller_path = Path(self.cgroup_mount_path / file_name)
+    @classmethod
+    def move_to_cgroup_abs_path(cls, new_cgroup_path: Path, pid: int = 0) -> None:
+        new_cgroup_path.mkdir(exist_ok=True)
+        cls.write_to_control_file(new_cgroup_path, cls.cgroup_procs, str(pid))
+
+    def read_from_control_file(self, file_name: str, subsystem_path: Optional[Path] = None) -> str:
+        if subsystem_path is None:
+            subsystem_path = self.cgroup_mount_path
+        controller_path = subsystem_path / file_name
         return controller_path.read_text()
 
-    def write_to_control_file(self, file_name: str, data: str) -> None:
-        controller_path = Path(self.cgroup_mount_path / file_name)
+    @staticmethod
+    def write_to_control_file(subsystem_path: Path, file_name: str, data: str) -> None:
+        controller_path = subsystem_path / file_name
         controller_path.write_text(data)
-
-    def get_cgroup_pids(self) -> List[int]:
-        content = Path(self.cgroup_mount_path / "tasks").read_text()
-        return list(map(int, filter(None, content.split("\n"))))
