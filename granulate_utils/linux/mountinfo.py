@@ -1,9 +1,8 @@
 """
 See section 3.5 in https://www.kernel.org/doc/Documentation/filesystems/proc.txt
 """
-from typing import Iterable, List, NamedTuple, Union
-
-from typing_extensions import Literal
+import threading
+from typing import Iterable, List, NamedTuple, Optional
 
 
 class Mount(NamedTuple):
@@ -19,10 +18,13 @@ class Mount(NamedTuple):
     super_options: List[str]
 
 
-def iter_mountinfo(pid: Union[int, Literal["thread-self"]] = "thread-self") -> Iterable[Mount]:
+def iter_mountinfo(pid: Optional[int] = None) -> Iterable[Mount]:
     """
     Iterate over mounts in mount namespace of pid.
     """
+    if pid is None:
+        pid = threading.get_native_id()
+
     with open(f"/proc/{pid}/mountinfo") as f:
         for line in f:
             fields = line.split()
