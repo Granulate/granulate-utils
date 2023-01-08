@@ -135,30 +135,31 @@ class CgroupUtils:
         return Path(cgroup_sysfs_path) / cgroup_relative_path
 
     @classmethod
-    def is_in_cgroup(cls, subsystem: str, cgroup_name: str) -> bool:
-        """
-        Check if current process has the given cgroup_name in its hierarchy for the subsystem
-        :param subsystem: the subsystem
-        :param cgroup_name: the cgroup name
-        :return: bool indicating if cgroup is in hierarchy
-        """
-        controller_path_parts = cls.get_current_cgroup_path(subsystem).parts
-        return cgroup_name in controller_path_parts
+    def is_in_cgroup_hierarchy(cls, cgroup_path: Path, cgroup_name: str) -> bool:
+        return cgroup_name in cgroup_path.parts
 
     @classmethod
-    def create_cgroup_under_current(cls, subsystem: str, cgroup_name: str) -> Path:
+    def is_in_current_cgroup_hierarchy(cls, subsystem: str, cgroup_name: str) -> bool:
         """
-        Create a new CGroup under the Cgroup of the current process.
-        If current process is already in process cgroup hierarchy, return its path.
-        :param subsystem: the subsystem to create the cgroup under
-        :param cgroup_name: new cgroup name
-        :return: The path for the created/found Cgroup
+        Check if current process has the given cgroup_name in its hierarchy for the subsystem
         """
         current_cgroup_path = cls.get_current_cgroup_path(subsystem)
-        if cls.is_in_cgroup(subsystem, cgroup_name):
-            subsystem_index = current_cgroup_path.parts.index(cgroup_name)
-            new_cgroup_path = Path(*current_cgroup_path.parts[: subsystem_index + 1])
+        return cls.is_in_cgroup_hierarchy(current_cgroup_path, cgroup_name)
+
+    @classmethod
+    def create_subcgroup(cls, subsystem: str, cgroup_name: str, parent_cgroup_path: Optional[Path] = None) -> Path:
+        """
+        Create a new sub-CGroup under another Cgroup.
+        If cgroup_name is already in parent_cgroup hierarchy, return its path.
+        :param parent_cgroup_path: If None, use current process cgroup for passed subsystem
+        :return: The path for the created/found Cgroup
+        """
+        if parent_cgroup_path is None:
+            parent_cgroup_path = cls.get_current_cgroup_path(subsystem)
+        if cls.is_in_cgroup_hierarchy(parent_cgroup_path, cgroup_name):
+            subsystem_index = parent_cgroup_path.parts.index(cgroup_name)
+            new_cgroup_path = Path(*parent_cgroup_path.parts[: subsystem_index + 1])
         else:
-            new_cgroup_path = current_cgroup_path / cgroup_name
+            new_cgroup_path = parent_cgroup_path / cgroup_name
             new_cgroup_path.mkdir(exist_ok=True)
         return new_cgroup_path

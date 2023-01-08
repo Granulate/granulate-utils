@@ -3,7 +3,7 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 
-from granulate_utils.linux.cgroups.base_controller import BaseController, CgroupUtils
+from granulate_utils.linux.cgroups.base_controller import BaseController
 
 
 class MemoryController(BaseController):
@@ -42,7 +42,3 @@ class MemoryController(BaseController):
 
     def reset_memory_limit(self) -> None:
         self.set_limit_in_bytes(-1)
-
-    @classmethod
-    def create_cgroup(cls, cgroup_name: str):
-        return MemoryController(CgroupUtils.create_cgroup_under_current(cls.subsystem, cgroup_name))

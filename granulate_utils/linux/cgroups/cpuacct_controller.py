@@ -3,7 +3,7 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 
-from granulate_utils.linux.cgroups.base_controller import BaseController, CgroupUtils
+from granulate_utils.linux.cgroups.base_controller import BaseController
 
 
 class CpuAcctController(BaseController):
@@ -12,7 +12,3 @@ class CpuAcctController(BaseController):
 
     def get_cpu_time_ns(self) -> int:
         return int(self.read_from_control_file(self.cpuacct_usage))
-
-    @classmethod
-    def create_cgroup(cls, cgroup_name: str):
-        return CpuAcctController(CgroupUtils.create_cgroup_under_current(cls.subsystem, cgroup_name))

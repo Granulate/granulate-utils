@@ -2,6 +2,7 @@
 # Copyright (c) Granulate. All rights reserved.
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
+from __future__ import annotations
 
 from pathlib import Path
 from typing import Optional, Set
@@ -12,6 +13,7 @@ from granulate_utils.linux.cgroups.cgroup import CgroupUtils, get_cgroups, is_kn
 
 class BaseController:
     cgroup_procs = "cgroup.procs"
+    subsystem: str
 
     def __init__(self, controller_path: Optional[Path] = None) -> None:
         self._verify_preconditions()
@@ -19,10 +21,6 @@ class BaseController:
             self.controller_path = CgroupUtils.get_current_cgroup_path(self.subsystem)
         else:
             self.controller_path = controller_path
-
-    @property
-    def subsystem(self) -> str:
-        raise NotImplementedError
 
     def _verify_preconditions(self) -> None:
         assert is_known_controller(self.subsystem), f"{self.subsystem!r} is not supported"
@@ -43,7 +41,7 @@ class BaseController:
 
         self.write_to_control_file(self.cgroup_procs, str(pid))
 
-    def get_pids_in_subsystem(self) -> Set[int]:
+    def get_pids_in_cgroup(self) -> Set[int]:
         return {int(proc) for proc in self.read_from_control_file(self.cgroup_procs).split()}
 
     def read_from_control_file(self, file_name: str) -> str:
@@ -53,3 +51,14 @@ class BaseController:
     def write_to_control_file(self, file_name: str, data: str) -> None:
         controller_path = self.controller_path / file_name
         controller_path.write_text(data)
+
+    @classmethod
+    def create_subcgroup(cls, cgroup_name: str, parent_cgroup_path: Optional[Path] = None) -> BaseController:
+        """
+        Create a new sub-CGroup under another Cgroup.
+        :param parent_cgroup_path: If None, use current process cgroup path as parent
+        """
+        sub_cgroup = CgroupUtils.create_subcgroup(
+            cls.subsystem, cgroup_name=cgroup_name, parent_cgroup_path=parent_cgroup_path
+        )
+        return cls(sub_cgroup)
