@@ -7,8 +7,8 @@ from granulate_utils.linux.cgroups.base_controller import BaseController
 
 
 class CpuAcctController(BaseController):
-    subsystem = "cpuacct"
+    controller = "cpuacct"
     cpuacct_usage = "cpuacct.usage"
 
     def get_cpu_time_ns(self) -> int:
-        return int(self.read_from_control_file(self.cpuacct_usage))
+        return int(self.read_from_interface_file(self.cpuacct_usage))

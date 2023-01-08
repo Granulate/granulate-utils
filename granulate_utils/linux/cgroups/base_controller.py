@@ -5,60 +5,49 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional, Set
+from typing import Optional, Set, Union
 
-from granulate_utils.exceptions import UnsupportedCGroupV2
-from granulate_utils.linux.cgroups.cgroup import CgroupUtils, get_cgroups, is_known_controller
+from granulate_utils.linux.cgroups.cgroup import (
+    CgroupCore,
+    create_cgroup_from_path,
+    get_current_process_cgroup,
+    is_known_controller,
+)
 
 
 class BaseController:
-    cgroup_procs = "cgroup.procs"
-    subsystem: str
+    controller: str
 
-    def __init__(self, controller_path: Optional[Path] = None) -> None:
-        self._verify_preconditions()
-        if controller_path is None:
-            self.controller_path = CgroupUtils.get_current_cgroup_path(self.subsystem)
+    def __init__(self, cgroup: Optional[Union[Path, CgroupCore]] = None) -> None:
+        assert is_known_controller(self.controller), f"{self.controller!r} is not supported"
+        if cgroup is None:
+            self.cgroup = get_current_process_cgroup(self.controller)
         else:
-            self.controller_path = controller_path
+            if isinstance(cgroup, Path):
+                self.cgroup = create_cgroup_from_path(self.controller, cgroup)
+            else:
+                self.cgroup = cgroup
 
-    def _verify_preconditions(self) -> None:
-        assert is_known_controller(self.subsystem), f"{self.subsystem!r} is not supported"
+        assert self.cgroup is not None
 
-        # "/proc/$PID/cgroup" lists a process's cgroup membership.  If legacy
-        # cgroup is in use in the system, this file may contain multiple lines, one for each hierarchy.
-        # The entry for cgroup v2 is always in the format "0::$PATH"::
-        if len(get_cgroups()) == 1:
-            raise UnsupportedCGroupV2()
-
-    def assign_to_cgroup(self, pid: int = 0) -> None:
+    def assign_process_to_cgroup(self, pid: int = 0) -> None:
         """
         Assign process to this Cgroup
         :param pid: pid of the process to assign (0 is current)
         """
-        if not self.controller_path.exists():
-            raise FileNotFoundError("Cgroup doesn't exist")
-
-        self.write_to_control_file(self.cgroup_procs, str(pid))
+        self.cgroup.assign_process_to_cgroup(pid)
 
     def get_pids_in_cgroup(self) -> Set[int]:
-        return {int(proc) for proc in self.read_from_control_file(self.cgroup_procs).split()}
+        return self.cgroup.get_pids_in_cgroup()
 
-    def read_from_control_file(self, file_name: str) -> str:
-        controller_path = self.controller_path / file_name
-        return controller_path.read_text()
+    def read_from_interface_file(self, file_name: str) -> str:
+        return self.cgroup.read_from_interface_file(file_name)
 
-    def write_to_control_file(self, file_name: str, data: str) -> None:
-        controller_path = self.controller_path / file_name
-        controller_path.write_text(data)
+    def write_to_interface_file(self, file_name: str, data: str) -> None:
+        self.cgroup.write_to_interface_file(file_name, data)
 
     @classmethod
-    def create_subcgroup(cls, cgroup_name: str, parent_cgroup_path: Optional[Path] = None) -> BaseController:
-        """
-        Create a new sub-CGroup under another Cgroup.
-        :param parent_cgroup_path: If None, use current process cgroup path as parent
-        """
-        sub_cgroup = CgroupUtils.create_subcgroup(
-            cls.subsystem, cgroup_name=cgroup_name, parent_cgroup_path=parent_cgroup_path
-        )
-        return cls(sub_cgroup)
+    def create_subcgroup(cls, cgroup_name: str, parent_cgroup: Optional[Union[Path, CgroupCore]] = None):
+        parent_controller = cls(parent_cgroup)
+        new_cgroup = parent_controller.cgroup.create_subcgroup(cls.controller, cgroup_name)
+        return cls(new_cgroup)
