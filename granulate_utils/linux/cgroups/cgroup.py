@@ -229,7 +229,7 @@ def get_current_process_cgroup(controller: str) -> CgroupCore:
 
     for process_cgroup in get_process_cgroups():
         if is_v1 and controller in process_cgroup.controllers:
-            return CgroupCoreV1(Path(cgroup_mount.path / process_cgroup.cgroup_relative_path))
+            return CgroupCoreV1(cgroup_mount.path / process_cgroup.cgroup_relative_path[1:])
         elif not is_v1 and process_cgroup.hier_id == "0":
-            return CgroupCoreV2(Path(cgroup_mount.path / process_cgroup.cgroup_relative_path))
+            return CgroupCoreV2(cgroup_mount.path / process_cgroup.cgroup_relative_path[1:])
     raise Exception(f"{controller!r} not found")

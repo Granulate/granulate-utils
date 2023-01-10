@@ -70,23 +70,33 @@ def test_cgroup_v2(tmp_path_factory: TempPathFactory):
 
 
 def test_get_cgroup_current_process():
-    root_path = Path("root_path/")
-    relative_path = Path("/dummy")
+    root_path = Path("/root_path")
+    proc_fs_path = "/dummy"
+    full_path = Path("/root_path/dummy")
     CONTROLLER_TYPE = "dummy"
 
     with patch("granulate_utils.linux.cgroups.cgroup.get_cgroup_mount", return_value=CgroupCoreV1(root_path)):
-        with patch("granulate_utils.linux.cgroups.cgroup.read_proc_file", return_value=b"1:dummy:/dummy\n"):
+        with patch(
+            "granulate_utils.linux.cgroups.cgroup.read_proc_file",
+            return_value=f"1:{CONTROLLER_TYPE}:{proc_fs_path}\n".encode(),
+        ):
             cgroup = get_current_process_cgroup(CONTROLLER_TYPE)
-            assert cgroup.path == (root_path / relative_path)
+            assert cgroup.path == full_path
 
     with patch("granulate_utils.linux.cgroups.cgroup.get_cgroup_mount", return_value=CgroupCoreV2(root_path)):
-        with patch("granulate_utils.linux.cgroups.cgroup.read_proc_file", return_value=b"1:dummy:/fail\n0::/dummy\n"):
+        with patch(
+            "granulate_utils.linux.cgroups.cgroup.read_proc_file",
+            return_value=f"1:{CONTROLLER_TYPE}:/fail\n0::{proc_fs_path}\n".encode(),
+        ):
             cgroup = get_current_process_cgroup(CONTROLLER_TYPE)
-            assert cgroup.path == (root_path / relative_path)
+            assert cgroup.path == full_path
 
     with pytest.raises(Exception) as exception:
         with patch("granulate_utils.linux.cgroups.cgroup.get_cgroup_mount", return_value=CgroupCoreV2(root_path)):
-            with patch("granulate_utils.linux.cgroups.cgroup.read_proc_file", return_value=b"1:dummy:/fail\n"):
+            with patch(
+                "granulate_utils.linux.cgroups.cgroup.read_proc_file",
+                return_value=f"1:{CONTROLLER_TYPE}:/fail\n".encode(),
+            ):
                 cgroup = get_current_process_cgroup(CONTROLLER_TYPE)
     assert exception.value.args[0] == f"'{CONTROLLER_TYPE}' not found"
 
