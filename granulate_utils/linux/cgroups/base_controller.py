@@ -17,7 +17,7 @@ from granulate_utils.linux.cgroups.cgroup import (
 
 
 class BaseController:
-    controller: str
+    controller: str  # class attribute to determine the controller type (should be initialized in inheriting classes)
 
     def __init__(self, cgroup: Optional[Union[Path, CgroupCore]] = None) -> None:
         assert is_known_controller(self.controller), f"{self.controller!r} is not supported"
@@ -48,7 +48,7 @@ class BaseController:
         self.cgroup.write_to_interface_file(file_name, data)
 
     @classmethod
-    def create_subcgroup(cls, cgroup_name: str, parent_cgroup: Optional[Union[Path, CgroupCore]] = None):
+    def get_cgroup_in_hierarchy(cls, cgroup_name: str, parent_cgroup: Optional[Union[Path, CgroupCore]] = None):
         parent_controller = cls(parent_cgroup)
-        new_cgroup = parent_controller.cgroup.create_subcgroup(cls.controller, cgroup_name)
+        new_cgroup = parent_controller.cgroup.get_cgroup_in_hierarchy(cls.controller, cgroup_name)
         return cls(new_cgroup)

@@ -31,7 +31,7 @@ def test_cgroup_sanity(tmp_path_factory: TempPathFactory):
 
     sub_cgroup_dir = cgroup_dir / "sub_cgroup"
     assert not sub_cgroup_dir.exists()
-    sub_cgroup = cgroup_v1.create_subcgroup("dummy", "sub_cgroup")
+    sub_cgroup = cgroup_v1.get_cgroup_in_hierarchy("dummy", "sub_cgroup")
     assert sub_cgroup_dir.exists()
     assert sub_cgroup is not None
     assert sub_cgroup.has_parent_cgroup(cgroup_v1.path.name)
@@ -41,10 +41,10 @@ def test_cgroup_sanity(tmp_path_factory: TempPathFactory):
     assert sub_cgroup.get_pids_in_cgroup() == set([5])
     assert sub_cgroup_procs.read_text() == "5"
 
-    same_cgroup = sub_cgroup.create_subcgroup("dummy", sub_cgroup.path.name)
+    same_cgroup = sub_cgroup.get_cgroup_in_hierarchy("dummy", sub_cgroup.path.name)
     assert same_cgroup.path == sub_cgroup.path
 
-    parent_cgroup = sub_cgroup.create_subcgroup("dummy", cgroup_v1.path.name)
+    parent_cgroup = sub_cgroup.get_cgroup_in_hierarchy("dummy", cgroup_v1.path.name)
     assert parent_cgroup.path == cgroup_v1.path
 
 
@@ -60,13 +60,13 @@ def test_cgroup_v2(tmp_path_factory: TempPathFactory):
     CONTROLLER_TYPE = "dummy"
     supported_controllers.write_text(CONTROLLER_TYPE)
     cgroup = CgroupCoreV2(cgroup_dir)
-    sub_cgroup = cgroup.create_subcgroup(CONTROLLER_TYPE, SUB_CGROUP_NAME)
+    sub_cgroup = cgroup.get_cgroup_in_hierarchy(CONTROLLER_TYPE, SUB_CGROUP_NAME)
     assert sub_cgroup is not None
     assert enabled_controllers.read_text().strip() == f"+{CONTROLLER_TYPE}"
 
     with pytest.raises(AssertionError) as exception:
-        sub_cgroup = cgroup.create_subcgroup("dummy2", SUB_CGROUP_NAME)
-    assert exception.value.args[0] == "Controller not supported"
+        sub_cgroup = cgroup.get_cgroup_in_hierarchy("dummy2", SUB_CGROUP_NAME)
+    assert exception.value.args[0] == "Controller not supported 'dummy2'"
 
 
 def test_get_cgroup_current_process():

@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import os
 from abc import abstractmethod
-from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Mapping, Optional
 
@@ -34,26 +33,33 @@ CONTROLLERS = {
 }
 
 
-@dataclass
-class ProcCgroup:
+class ProcCgroupLine:
+    """
+    The format of the line:  hierarchy-ID:controller-list:cgroup-path
+    Example line: 1:cpu:/custom_cgroup
+
+    cgroup-path - the cgroup the process belongs to, relative to the hierarchy mount point e.g. /sys/fs/cgroup
+    """
+
     hier_id: str
-    cgroup_relative_path: str
     controllers: List[str]
+    relative_path: str
+
+    def __init__(self, procfs_line: str):
+        hier_id, controller_list, relative_path = procfs_line.split(":", maxsplit=2)
+        self.hier_id = hier_id
+        self.controllers = controller_list.split(",")
+        self.relative_path = relative_path
 
 
-def get_process_cgroups(process: Optional[psutil.Process] = None) -> List[ProcCgroup]:
+def get_process_cgroups(process: Optional[psutil.Process] = None) -> List[ProcCgroupLine]:
     """
     Get the cgroups of a process in [(hier id., controllers, path)] parsed form.
     If process is None, gets the cgroups of the current process.
     """
-
-    def parse_line(line: str) -> ProcCgroup:
-        hier_id, controller_list, cgroup_path = line.split(":", maxsplit=2)
-        return ProcCgroup(hier_id, cgroup_path, controller_list.split(","))
-
     process = process or psutil.Process()
     text = read_proc_file(process, "cgroup").decode()
-    return [parse_line(line) for line in text.splitlines()]
+    return [ProcCgroupLine(line) for line in text.splitlines()]
 
 
 def is_known_controller(controller: str) -> bool:
@@ -105,12 +111,11 @@ class CgroupCore:
         self.path = path
 
     def _get_parent_cgroup(self, cgroup_name: str) -> Optional[Path]:
-        cgroup_index = self.path.parts.index(cgroup_name)
-        if cgroup_index != -1:
-            return Path(*self.path.parts[: cgroup_index + 1])
+        if cgroup_name in self.path.parts:
+            return Path(self.path.as_posix().split(cgroup_name)[0]) / cgroup_name
         return None
 
-    def _create_subcgroup(self, cgroup_name: str) -> Optional[Path]:
+    def _get_cgroup_in_hierarchy(self, cgroup_name: str) -> Optional[Path]:
         if self.has_parent_cgroup(cgroup_name):
             new_cgroup_path = self._get_parent_cgroup(cgroup_name)
         else:
@@ -125,16 +130,12 @@ class CgroupCore:
         :param cgroup_name: the cgroup name
         :return: bool indicating if cgroup is in hierarchy
         """
-        controller_path_parts = self.path.parts
-        return cgroup_name in controller_path_parts
+        return self._get_parent_cgroup(cgroup_name) is not None
 
     def get_pids_in_cgroup(self) -> set[int]:
         return {int(proc) for proc in self.read_from_interface_file(CGROUP_PROCS_FILE).split()}
 
     def assign_process_to_cgroup(self, pid: int = 0) -> None:
-        if not self.path.exists():
-            raise FileNotFoundError("Cgroup doesn't exist")
-
         self.write_to_interface_file(CGROUP_PROCS_FILE, str(pid))
 
     def read_from_interface_file(self, interface_name: str) -> str:
@@ -146,40 +147,40 @@ class CgroupCore:
         interface_path.write_text(data)
 
     @abstractmethod
-    def create_subcgroup(self, controller: str, cgroup_name: str) -> CgroupCore:
+    def get_cgroup_in_hierarchy(self, controller: str, cgroup_name: str) -> CgroupCore:
         """
-        Create a new CGroup lower in the hierarchy.
-        If a cgroup with the given name is already in hierarchy, return its path.
+        Return a CGroup in the hierarchy which has the given name.
+        If one doesn't exist higher up in the hierarchy, create a new one lower in the hierarchy.
         """
         pass
 
 
 class CgroupCoreV1(CgroupCore):
-    def create_subcgroup(self, controller: str, cgroup_name: str) -> CgroupCore:
-        subcgroup_path = self._create_subcgroup(cgroup_name)
+    def get_cgroup_in_hierarchy(self, controller: str, cgroup_name: str) -> CgroupCore:
+        subcgroup_path = self._get_cgroup_in_hierarchy(cgroup_name)
         assert subcgroup_path is not None
         return CgroupCoreV1(subcgroup_path)
 
 
-CGROUP_SUPPORTED_CONTROLLERS = "cgroup.controllers"
-CGROUP_ENABLED_CONTROLLERS = "cgroup.subtree_control"
+CGROUP_V2_SUPPORTED_CONTROLLERS = "cgroup.controllers"
+CGROUP_V2_ENABLED_CONTROLLERS = "cgroup.subtree_control"
 
 
 class CgroupCoreV2(CgroupCore):
     def is_controller_supported(self, controller: str):
-        return controller in self.read_from_interface_file(CGROUP_SUPPORTED_CONTROLLERS).split()
+        return controller in self.read_from_interface_file(CGROUP_V2_SUPPORTED_CONTROLLERS).split()
 
     def enable_controller(self, controller: str):
-        assert self.is_controller_supported(controller), "Controller not supported"
-        enabled_controllers_file = self.path / CGROUP_ENABLED_CONTROLLERS
+        assert self.is_controller_supported(controller), f"Controller not supported {controller!r}"
+        enabled_controllers_file = self.path / CGROUP_V2_ENABLED_CONTROLLERS
         enabled_controllers_file.write_text(f"+{controller}{os.linesep}")
 
     def disable_controller(self, controller: str):
-        enabled_controllers_file = self.path / CGROUP_ENABLED_CONTROLLERS
+        enabled_controllers_file = self.path / CGROUP_V2_ENABLED_CONTROLLERS
         enabled_controllers_file.write_text(f"-{controller}{os.linesep}")
 
-    def create_subcgroup(self, controller: str, cgroup_name: str) -> CgroupCore:
-        subcgroup_path = self._create_subcgroup(cgroup_name)
+    def get_cgroup_in_hierarchy(self, controller: str, cgroup_name: str) -> CgroupCore:
+        subcgroup_path = self._get_cgroup_in_hierarchy(cgroup_name)
         assert subcgroup_path is not None
 
         new_cgroup = CgroupCoreV2(subcgroup_path)
@@ -207,9 +208,14 @@ def get_cgroup_mount(controller: str, resolve_host_root_links: bool = True) -> O
     return None
 
 
-def create_cgroup_from_path(controller: str, cgroup_path: Path) -> CgroupCore:
+def get_cgroup_mount_checked(controller: str, resolve_host_root_links: bool = True) -> CgroupCore:
     cgroup_mount = get_cgroup_mount(controller)
-    assert cgroup_mount is not None, "Could not find cgroup mount point"
+    assert cgroup_mount is not None, f"Could not find cgroup mount point for controller {controller!r}"
+    return cgroup_mount
+
+
+def create_cgroup_from_path(controller: str, cgroup_path: Path) -> CgroupCore:
+    cgroup_mount = get_cgroup_mount_checked(controller)
 
     try:
         cgroup_path.relative_to(cgroup_mount.path)
@@ -223,13 +229,12 @@ def create_cgroup_from_path(controller: str, cgroup_path: Path) -> CgroupCore:
 
 
 def get_current_process_cgroup(controller: str) -> CgroupCore:
-    cgroup_mount = get_cgroup_mount(controller)
-    assert cgroup_mount is not None, "Could not find cgroup mount point"
+    cgroup_mount = get_cgroup_mount_checked(controller)
     is_v1 = isinstance(cgroup_mount, CgroupCoreV1)
 
     for process_cgroup in get_process_cgroups():
         if is_v1 and controller in process_cgroup.controllers:
-            return CgroupCoreV1(cgroup_mount.path / process_cgroup.cgroup_relative_path[1:])
+            return CgroupCoreV1(cgroup_mount.path / process_cgroup.relative_path[1:])
         elif not is_v1 and process_cgroup.hier_id == "0":
-            return CgroupCoreV2(cgroup_mount.path / process_cgroup.cgroup_relative_path[1:])
+            return CgroupCoreV2(cgroup_mount.path / process_cgroup.relative_path[1:])
     raise Exception(f"{controller!r} not found")

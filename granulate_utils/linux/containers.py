@@ -24,7 +24,7 @@ def get_process_container_id(process: Process) -> Optional[str]:
     :raises NoSuchProcess: If the process doesn't or no longer exists
     """
     for proc_cgroup in cgroups.get_process_cgroups(process):
-        found = CONTAINER_ID_PATTERN.findall(proc_cgroup.cgroup_relative_path)
+        found = CONTAINER_ID_PATTERN.findall(proc_cgroup.relative_path)
         if found:
             return found[-1]
 
