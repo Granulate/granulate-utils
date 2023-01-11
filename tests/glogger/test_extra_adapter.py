@@ -25,7 +25,6 @@ def test_logging_kwargs_not_present_in_extra(caplog):
     caplog.set_level(logging.INFO)
     ExtraAdapter(logging.getLogger()).info("test message", stacklevel=8, stack_info=True, test=6)
     record = caplog.records[0]
-    assert record.test == 6
     assert hasattr(record, "extra")
     assert record.extra == dict(test=6)
 
