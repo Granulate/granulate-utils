@@ -82,11 +82,11 @@ def read_process_execfn(process: psutil.Process) -> str:
 def _read_process_auxv(process: psutil.Process, auxv_id: int) -> int:
     auxv = read_proc_file(process, "auxv")
     if not auxv:
-        # kernel thread / zombie process yield this result.
-        # we don't expect to be called on kernel threads
-        assert not is_kernel_thread(process)
-        # so it's a zombie
-        assert is_process_zombie(process)
+        # Kernel threads and exit()-ed processes don't have auxv.
+        # We don't expect to be called on kernel threads
+        assert not is_kernel_thread(process), "attempted reading auxv of kthread!"
+        # The process status might still be alive until kernel updates it.
+        # That's ok, it will become zombie/dead very soon.
         raise psutil.ZombieProcess(process.pid)
 
     for i in range(0, len(auxv), _AUXV_ENTRY.size):
