@@ -16,6 +16,9 @@ from granulate_utils.exceptions import BadResponseCode
 from granulate_utils.linux.ns import run_in_ns
 from granulate_utils.metadata import Metadata
 
+import json
+import subprocess
+
 METADATA_REQUEST_TIMEOUT = 5
 
 
@@ -33,6 +36,7 @@ class AwsInstanceMetadata(InstanceMetadataBase):
     account_id: str
     image_id: str
     instance_id: str
+    emr_cluster_name: str
 
 
 @dataclass
@@ -60,6 +64,17 @@ class AzureInstanceMetadata(InstanceMetadataBase):
     name: str
     image_info: Optional[Dict[str, str]]
 
+def _find_emr_cluster_name() -> Optional[str]:
+    try:
+        instance_info = json.load(open('/mnt/var/lib/info/extraInstanceData.json', 'rb'))
+        job_info = json.load(open('/mnt/var/lib/info/job-flow.json', 'rb'))
+        cluster_id = job_info['jobFlowId']
+        result = subprocess.run(
+            f'aws emr --region {instance_info["region"]} describe-cluster --cluster-id {cluster_id}'.split(' '),
+            capture_output=True, timeout=5)
+        return json.loads(result.stdout)['Cluster']['Name']
+    except Exception:
+        return ''
 
 def get_aws_metadata() -> Optional[AwsInstanceMetadata]:
     # Documentation:
@@ -81,6 +96,7 @@ def get_aws_metadata() -> Optional[AwsInstanceMetadata]:
     if life_cycle_response is None or metadata_response is None:
         return None
     instance = metadata_response.json()
+    emr_cluster_name = _find_emr_cluster_name()
     return AwsInstanceMetadata(
         provider="aws",
         region=instance["region"],
@@ -90,6 +106,7 @@ def get_aws_metadata() -> Optional[AwsInstanceMetadata]:
         account_id=instance["accountId"],
         image_id=instance["imageId"],
         instance_id=instance["instanceId"],
+        emr_cluster_name=emr_cluster_name,
     )
 
 
