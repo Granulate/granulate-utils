@@ -228,11 +228,14 @@ def create_cgroup_from_path(controller: str, cgroup_path: Path) -> CgroupCore:
         return CgroupCoreV2(cgroup_path)
 
 
-def get_current_process_cgroup(controller: str) -> CgroupCore:
+def get_cgroup_for_process(controller: str, process: Optional[psutil.Process] = None) -> CgroupCore:
+    """
+    Get a CgrouopCore object for a given process. If process is None return for current process.
+    """
     cgroup_mount = get_cgroup_mount_checked(controller)
     is_v1 = isinstance(cgroup_mount, CgroupCoreV1)
 
-    for process_cgroup in get_process_cgroups():
+    for process_cgroup in get_process_cgroups(process):
         if is_v1 and controller in process_cgroup.controllers:
             return CgroupCoreV1(cgroup_mount.path / process_cgroup.relative_path[1:])
         elif not is_v1 and process_cgroup.hier_id == "0":

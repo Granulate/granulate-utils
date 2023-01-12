@@ -9,7 +9,7 @@ from unittest.mock import patch
 import pytest
 from pytest import TempPathFactory
 
-from granulate_utils.linux.cgroups.cgroup import CgroupCoreV1, CgroupCoreV2, get_current_process_cgroup
+from granulate_utils.linux.cgroups.cgroup import CgroupCoreV1, CgroupCoreV2, get_cgroup_for_process
 from granulate_utils.linux.cgroups.cpu_controller import CpuController
 from granulate_utils.linux.cgroups.cpuacct_controller import CpuAcctController
 from granulate_utils.linux.cgroups.memory_controller import MemoryController
@@ -80,7 +80,7 @@ def test_get_cgroup_current_process():
             "granulate_utils.linux.cgroups.cgroup.read_proc_file",
             return_value=f"1:{CONTROLLER_TYPE}:{proc_fs_path}\n".encode(),
         ):
-            cgroup = get_current_process_cgroup(CONTROLLER_TYPE)
+            cgroup = get_cgroup_for_process(CONTROLLER_TYPE)
             assert cgroup.path == full_path
 
     with patch("granulate_utils.linux.cgroups.cgroup.get_cgroup_mount", return_value=CgroupCoreV2(root_path)):
@@ -88,7 +88,7 @@ def test_get_cgroup_current_process():
             "granulate_utils.linux.cgroups.cgroup.read_proc_file",
             return_value=f"1:{CONTROLLER_TYPE}:/fail\n0::{proc_fs_path}\n".encode(),
         ):
-            cgroup = get_current_process_cgroup(CONTROLLER_TYPE)
+            cgroup = get_cgroup_for_process(CONTROLLER_TYPE)
             assert cgroup.path == full_path
 
     with pytest.raises(Exception) as exception:
@@ -97,7 +97,7 @@ def test_get_cgroup_current_process():
                 "granulate_utils.linux.cgroups.cgroup.read_proc_file",
                 return_value=f"1:{CONTROLLER_TYPE}:/fail\n".encode(),
             ):
-                cgroup = get_current_process_cgroup(CONTROLLER_TYPE)
+                cgroup = get_cgroup_for_process(CONTROLLER_TYPE)
     assert exception.value.args[0] == f"'{CONTROLLER_TYPE}' not found"
 
 

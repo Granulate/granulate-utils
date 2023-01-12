@@ -11,7 +11,7 @@ from typing import Optional, Set, Union
 from granulate_utils.linux.cgroups.cgroup import (
     CgroupCore,
     create_cgroup_from_path,
-    get_current_process_cgroup,
+    get_cgroup_for_process,
     is_known_controller,
 )
 
@@ -22,7 +22,7 @@ class BaseController:
     def __init__(self, cgroup: Optional[Union[Path, CgroupCore]] = None) -> None:
         assert is_known_controller(self.controller), f"{self.controller!r} is not supported"
         if cgroup is None:
-            self.cgroup = get_current_process_cgroup(self.controller)
+            self.cgroup = get_cgroup_for_process(self.controller)
         else:
             if isinstance(cgroup, Path):
                 self.cgroup = create_cgroup_from_path(self.controller, cgroup)
