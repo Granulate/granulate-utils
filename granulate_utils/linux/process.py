@@ -67,7 +67,7 @@ def get_mapped_dso_elf_id(process: psutil.Process, dso_part: str) -> Optional[st
 
 
 def read_proc_file(process: psutil.Process, name: str) -> bytes:
-    with _translate_errors(process):
+    with translate_proc_errors(process):
         with open(f"/proc/{process.pid}/{name}", "rb") as f:
             return f.read()
 
@@ -82,11 +82,11 @@ def read_process_execfn(process: psutil.Process) -> str:
 def _read_process_auxv(process: psutil.Process, auxv_id: int) -> int:
     auxv = read_proc_file(process, "auxv")
     if not auxv:
-        # kernel thread / zombie process yield this result.
-        # we don't expect to be called on kernel threads
-        assert not is_kernel_thread(process)
-        # so it's a zombie
-        assert is_process_zombie(process)
+        # Kernel threads and exit()-ed processes don't have auxv.
+        # We don't expect to be called on kernel threads
+        assert not is_kernel_thread(process), "attempted reading auxv of kthread!"
+        # The process status might still be alive until kernel updates it.
+        # That's ok, it will become zombie/dead very soon.
         raise psutil.ZombieProcess(process.pid)
 
     for i in range(0, len(auxv), _AUXV_ENTRY.size):
@@ -101,14 +101,14 @@ def _read_process_auxv(process: psutil.Process, auxv_id: int) -> int:
 
 
 def _read_process_memory(process: psutil.Process, addr: int, size: int) -> bytes:
-    with _translate_errors(process):
+    with translate_proc_errors(process):
         with open(f"/proc/{process.pid}/mem", "rb", buffering=0) as mem:
             mem.seek(addr)
             return mem.read(size)
 
 
 @contextmanager
-def _translate_errors(process: psutil.Process) -> Generator[None, None, None]:
+def translate_proc_errors(process: psutil.Process) -> Generator[None, None, None]:
     try:
         yield
         # Don't use the result if PID has been reused
