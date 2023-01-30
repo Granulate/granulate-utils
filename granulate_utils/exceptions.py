@@ -39,3 +39,10 @@ class MissingExePath(Exception):
     def __init__(self, process: Process):
         self.process = process
         super(MissingExePath, self).__init__(f"No exe path was found for {process}, threads: {process.threads()}")
+
+
+class CgroupInterfaceNotSupported(Exception):
+    def __init__(self, interface_name: str, cgroup_version: str):
+        super(CgroupInterfaceNotSupported, self).__init__(
+            f"Interface file {interface_name} is not supported in CGroup {cgroup_version}"
+        )

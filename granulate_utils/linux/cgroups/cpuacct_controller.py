@@ -4,11 +4,12 @@
 #
 
 from granulate_utils.linux.cgroups.base_controller import BaseController
+from granulate_utils.linux.cgroups.cgroup import ControllerType
 
 
 class CpuAcctController(BaseController):
-    controller = "cpuacct"
-    cpuacct_usage = "cpuacct.usage"
+    CONTROLLER: ControllerType = "cpuacct"
+    CPUACCT_USAGE_FILE = "cpuacct.usage"
 
     def get_cpu_time_ns(self) -> int:
-        return int(self.read_from_interface_file(self.cpuacct_usage))
+        return int(self.read_from_interface_file(self.CPUACCT_USAGE_FILE))

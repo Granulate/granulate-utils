@@ -9,17 +9,28 @@ from unittest.mock import patch
 import pytest
 from pytest import TempPathFactory
 
-from granulate_utils.linux.cgroups.cgroup import CgroupCoreV1, CgroupCoreV2, get_cgroup_for_process
+from granulate_utils.exceptions import CgroupInterfaceNotSupported
+from granulate_utils.linux.cgroups.cgroup import (
+    CGROUP_PROCS_FILE,
+    CgroupCoreV1,
+    CgroupCoreV2,
+    ControllerType,
+    get_cgroup_for_process,
+)
 from granulate_utils.linux.cgroups.cpu_controller import CpuController
 from granulate_utils.linux.cgroups.cpuacct_controller import CpuAcctController
 from granulate_utils.linux.cgroups.memory_controller import MemoryController
 
+DUMMY_CONTROLLER: ControllerType = "cpu"
+DUMMY2_CONTROLLER: ControllerType = "memory"
+
 
 # Cgroup
-def test_cgroup_sanity(tmp_path_factory: TempPathFactory):
+def test_cgroup_v1(tmp_path_factory: TempPathFactory):
     tmp_dir = tmp_path_factory.mktemp("base_controller")
     cgroup_dir = Path(tmp_dir)
-    cpu_procs = cgroup_dir / "cgroup.procs"
+    SUB_CGROUP_NAME = "sub_cgroup"
+    cpu_procs = cgroup_dir / CGROUP_PROCS_FILE
 
     cpu_procs.write_text("1 2 3")
 
@@ -27,25 +38,21 @@ def test_cgroup_sanity(tmp_path_factory: TempPathFactory):
 
     assert cgroup_v1.get_pids_in_cgroup() == set([1, 2, 3])
     cgroup_v1.assign_process_to_cgroup(4)
-    assert cgroup_v1.get_pids_in_cgroup() == set([4])  # write_text overwrites by default.
+    assert cgroup_v1.get_pids_in_cgroup() == set([4])  # write_text overwrites.
 
-    sub_cgroup_dir = cgroup_dir / "sub_cgroup"
+    sub_cgroup_dir = cgroup_dir / SUB_CGROUP_NAME
     assert not sub_cgroup_dir.exists()
-    sub_cgroup = cgroup_v1.get_cgroup_in_hierarchy("dummy", "sub_cgroup")
+    sub_cgroup = cgroup_v1.get_subcgroup(DUMMY2_CONTROLLER, SUB_CGROUP_NAME)
     assert sub_cgroup_dir.exists()
     assert sub_cgroup is not None
-    assert sub_cgroup.has_parent_cgroup(cgroup_v1.path.name)
 
-    sub_cgroup_procs = sub_cgroup_dir / "cgroup.procs"
+    sub_cgroup_procs = sub_cgroup_dir / CGROUP_PROCS_FILE
     sub_cgroup.assign_process_to_cgroup(5)
     assert sub_cgroup.get_pids_in_cgroup() == set([5])
     assert sub_cgroup_procs.read_text() == "5"
 
-    same_cgroup = sub_cgroup.get_cgroup_in_hierarchy("dummy", sub_cgroup.path.name)
-    assert same_cgroup.path == sub_cgroup.path
-
-    parent_cgroup = sub_cgroup.get_cgroup_in_hierarchy("dummy", cgroup_v1.path.name)
-    assert parent_cgroup.path == cgroup_v1.path
+    same_cgroup = sub_cgroup.get_subcgroup(DUMMY_CONTROLLER, sub_cgroup.cgroup_full_path.name)
+    assert same_cgroup.cgroup_full_path == sub_cgroup.cgroup_full_path
 
 
 def test_cgroup_v2(tmp_path_factory: TempPathFactory):
@@ -57,48 +64,46 @@ def test_cgroup_v2(tmp_path_factory: TempPathFactory):
     supported_controllers = sub_cgroup_dir / "cgroup.controllers"
     enabled_controllers = sub_cgroup_dir / "cgroup.subtree_control"
 
-    CONTROLLER_TYPE = "dummy"
-    supported_controllers.write_text(CONTROLLER_TYPE)
+    supported_controllers.write_text(DUMMY_CONTROLLER)
     cgroup = CgroupCoreV2(cgroup_dir)
-    sub_cgroup = cgroup.get_cgroup_in_hierarchy(CONTROLLER_TYPE, SUB_CGROUP_NAME)
+    sub_cgroup = cgroup.get_subcgroup(DUMMY_CONTROLLER, SUB_CGROUP_NAME)
     assert sub_cgroup is not None
-    assert enabled_controllers.read_text().strip() == f"+{CONTROLLER_TYPE}"
+    assert enabled_controllers.read_text().strip() == f"+{DUMMY_CONTROLLER}"
 
     with pytest.raises(AssertionError) as exception:
-        sub_cgroup = cgroup.get_cgroup_in_hierarchy("dummy2", SUB_CGROUP_NAME)
-    assert exception.value.args[0] == "Controller not supported 'dummy2'"
+        sub_cgroup = cgroup.get_subcgroup(DUMMY2_CONTROLLER, SUB_CGROUP_NAME)
+    assert exception.value.args[0] == f"Controller not supported '{DUMMY2_CONTROLLER}'"
 
 
 def test_get_cgroup_current_process():
     root_path = Path("/root_path")
-    proc_fs_path = "/dummy"
+    cgroup_path = "/dummy"
     full_path = Path("/root_path/dummy")
-    CONTROLLER_TYPE = "dummy"
 
     with patch("granulate_utils.linux.cgroups.cgroup.get_cgroup_mount", return_value=CgroupCoreV1(root_path)):
         with patch(
             "granulate_utils.linux.cgroups.cgroup.read_proc_file",
-            return_value=f"1:{CONTROLLER_TYPE}:{proc_fs_path}\n".encode(),
+            return_value=f"1:{DUMMY_CONTROLLER}:{cgroup_path}\n".encode(),
         ):
-            cgroup = get_cgroup_for_process(CONTROLLER_TYPE)
-            assert cgroup.path == full_path
+            cgroup = get_cgroup_for_process(DUMMY_CONTROLLER)
+            assert cgroup.cgroup_full_path == full_path
 
     with patch("granulate_utils.linux.cgroups.cgroup.get_cgroup_mount", return_value=CgroupCoreV2(root_path)):
         with patch(
             "granulate_utils.linux.cgroups.cgroup.read_proc_file",
-            return_value=f"1:{CONTROLLER_TYPE}:/fail\n0::{proc_fs_path}\n".encode(),
+            return_value=f"0::{cgroup_path}\n".encode(),
         ):
-            cgroup = get_cgroup_for_process(CONTROLLER_TYPE)
-            assert cgroup.path == full_path
+            cgroup = get_cgroup_for_process(DUMMY_CONTROLLER)
+            assert cgroup.cgroup_full_path == full_path
 
     with pytest.raises(Exception) as exception:
         with patch("granulate_utils.linux.cgroups.cgroup.get_cgroup_mount", return_value=CgroupCoreV2(root_path)):
             with patch(
                 "granulate_utils.linux.cgroups.cgroup.read_proc_file",
-                return_value=f"1:{CONTROLLER_TYPE}:/fail\n".encode(),
+                return_value="".encode(),
             ):
-                cgroup = get_cgroup_for_process(CONTROLLER_TYPE)
-    assert exception.value.args[0] == f"'{CONTROLLER_TYPE}' not found"
+                cgroup = get_cgroup_for_process(DUMMY_CONTROLLER)
+    assert exception.value.args[0] == f"'{DUMMY_CONTROLLER}' not found"
 
 
 # CpuController
@@ -213,9 +218,9 @@ def test_memory_controller_v2(tmp_path_factory: TempPathFactory):
     assert bytes_limit.read_text() == "max"
     assert swap_bytes_limit.read_text() == "max"
 
-    with pytest.raises(Exception) as exception:
+    with pytest.raises(CgroupInterfaceNotSupported) as exception:
         memory_controller.get_max_usage_in_bytes()
-    assert exception.value.args[0] == "Not implemented"
+    assert exception.value.args[0] == "Interface file max_usage_in_bytes is not supported in CGroup v2"
 
 
 # CpuAcctController
