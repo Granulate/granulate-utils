@@ -8,7 +8,7 @@ import re
 import signal
 from dataclasses import dataclass
 from itertools import dropwhile
-from typing import Iterable, List, Literal, Optional, Union
+from typing import Iterable, List, Literal, Match, Optional, Union
 
 from packaging.version import Version
 
@@ -215,3 +215,85 @@ def parse_jvm_version(version_string: str) -> JvmVersion:
         zing_major = None
 
     return JvmVersion(version, build, vm_name, vm_type, zing_major)
+
+
+@dataclass
+class JvmFlag:
+    name: str
+    type: str
+    value: str
+    origin: str
+    kind: List[str]
+
+    @classmethod
+    def from_match(cls, match: Match) -> "JvmFlag":
+        # get the flag origin if jvm 9+, otherwise get is the flag from non default origin as described above
+        flag_origin_jdk_9 = match.group("flag_origin_jdk_9")
+
+        flag_equal_sign_prefix = match.group("flag_equal_sign_prefix")
+        flag_is_non_default_origin_only_jdk_8 = flag_equal_sign_prefix == ":"
+
+        is_jdk_8 = flag_is_non_default_origin_only_jdk_8 or flag_origin_jdk_9 is None
+
+        # split the list of space separated flag_kinds as described above
+        flag_kind = match.group("flag_kind").split()
+
+        if is_jdk_8:
+            if flag_is_non_default_origin_only_jdk_8:
+                flag_origin = "non-default"
+            else:
+                flag_origin = "default"
+        else:
+            flag_origin = flag_origin_jdk_9
+
+        return cls(
+            name=match.group("flag_name"),
+            type=match.group("flag_type"),
+            value=match.group("flag_value"),
+            origin=flag_origin,
+            kind=sorted(flag_kind),
+        )
+
+
+def parse_jvm_flags(jvm_flags_string: str) -> List[JvmFlag]:
+    """
+    The output of VM.flags -all format on jdk 8:
+    bool UseCompressedClassPointers               := true                                {lp64_product}
+    flag_type flag_name                           := flag_value                          {flag_kind}
+    ":=" indicates non default origin for the flag, while "=" indicates default origin
+
+    The output of VM.flags -all format on jdk 9+:
+    bool OptoScheduling                           = false                               {C2 pd product} {default}
+    flag_type flag_name                           = flag_value                          {flag_kind} {flag_origin}
+
+    flag_kind is space separated list of kinds, e.g. "C2 pd product"
+
+    possible flag kinds: "product", "manageable", "diagnostic", "experimental", "notproduct", "develop",
+    "lp64_product", "rw", "pd", "JVMCI", "C1", "C2", "ARCH"
+
+    possible flag types: "bool", "int", "uint", "intx", "uintx", "uint64_t", "size_t", "double", "ccstr",
+    "ccstrlist"
+
+    possible flag origins: default, non-default, command line, environment, config file, management, ergonomic,
+    attach, internal, jimage, "command line, ergonomic" (flag is set from command line and aligned by ergonomic)
+
+    KNOWN ISSUES:
+    - we don't parse the flag value for ccstrlist type flags (e.g. -XX:CompileCommand='A' -XX:CompileCommand='B')
+    """
+
+    vm_flags = []
+    vm_flags_pattern = re.compile(
+        r"(?P<flag_type>\S+)\s+"
+        r"(?P<flag_name>\S+)\s+"
+        r"(?P<flag_equal_sign_prefix>:)?= "
+        r"(?P<flag_value>\S+)\s*"
+        r"{(?P<flag_kind>.+?)}"
+        r"(?:\s*{(?P<flag_origin_jdk_9>default|non-default|command line|environment|config file|management|ergonomic|attach|internal|jimage|command line, ergonomic)})?"  # noqa: E501
+    )
+
+    for line in jvm_flags_string.splitlines():
+        match = vm_flags_pattern.search(line)
+        if match:
+            vm_flags.append(JvmFlag.from_match(match))
+
+    return vm_flags
