@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-import dataclasses
 import os
 import re
 import signal
@@ -237,12 +236,13 @@ class JvmFlag:
         r"(?:\s*{(?P<flag_origin_jdk_9>.*)})?"
     )
 
-    def to_dict(self) -> Dict[str, Union[str, List[str]]]:
-        return dataclasses.asdict(self)
+    def to_dict(self) -> Dict[str, Dict[str, Union[str, List[str]]]]:
+        return {self.name: {"type": self.type, "value": self.value, "origin": self.origin, "kind": self.kind}}
 
     @classmethod
     def from_dict(cls, jvm_flag_dict: Dict[str, Any]) -> JvmFlag:
-        return JvmFlag(**jvm_flag_dict)
+        name, flag_dict = list(jvm_flag_dict.items())[0]
+        return JvmFlag(name=name, **flag_dict)
 
     @classmethod
     def from_str(cls, line: str) -> Optional[JvmFlag]:

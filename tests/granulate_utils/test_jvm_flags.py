@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict, List, Union
 
 import pytest
 
@@ -111,3 +111,29 @@ ccstrlist OnOutOfMemoryError                        =                           
 )
 def test_parse_jvm_flags(jvm_flags_string: str, expected_jvm_flags_list: List[JvmFlag]) -> None:
     assert parse_jvm_flags(jvm_flags_string) == expected_jvm_flags_list
+
+
+@pytest.mark.parametrize(
+    "jvm_flag,expected_jvm_flag_serialized",
+    [
+        (
+            JvmFlag(
+                name="NonNMethodCodeHeapSize", type="uintx", value="7594288", origin="ergonomic", kind=["pd", "product"]
+            ),
+            {
+                "NonNMethodCodeHeapSize": {
+                    "kind": ["pd", "product"],
+                    "origin": "ergonomic",
+                    "type": "uintx",
+                    "value": "7594288",
+                }
+            },
+        ),
+    ],
+)
+def test_jvm_flag_serialization(
+    jvm_flag: JvmFlag, expected_jvm_flag_serialized: Dict[str, Dict[str, Union[str, List[str]]]]
+) -> None:
+    jvm_flag_serialized = jvm_flag.to_dict()
+    assert jvm_flag_serialized == expected_jvm_flag_serialized
+    assert JvmFlag.from_dict(jvm_flag_serialized) == jvm_flag
