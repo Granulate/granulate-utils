@@ -50,6 +50,13 @@ ccstrlist OnOutOfMemoryError                       =                            
                 JvmFlag(name="OldSize", type="size_t", value="5452592", origin="default", kind=["product"]),
                 JvmFlag(name="OmitStackTraceInFastThrow", type="bool", value="true", origin="attach", kind=["product"]),
                 JvmFlag(
+                    name="OnOutOfMemoryError",
+                    type="ccstrlist",
+                    value="",
+                    origin="default",
+                    kind=["C2", "pd", "product"],
+                ),
+                JvmFlag(
                     name="OnStackReplacePercentage",
                     type="intx",
                     value="140",
@@ -91,6 +98,7 @@ ccstrlist OnOutOfMemoryError                        =                           
                 JvmFlag(
                     name="OmitStackTraceInFastThrow", type="bool", value="true", origin="default", kind=["product"]
                 ),
+                JvmFlag(name="OnOutOfMemoryError", type="ccstrlist", value="", origin="default", kind=["product"]),
                 JvmFlag(
                     name="OnStackReplacePercentage", type="intx", value="140", origin="default", kind=["pd", "product"]
                 ),
