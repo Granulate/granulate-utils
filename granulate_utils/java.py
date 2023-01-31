@@ -233,7 +233,7 @@ class JvmFlag:
         r"(?P<flag_equal_sign_prefix>:)?= "
         r"(?P<flag_value>\S*)\s+"
         r"{(?P<flag_kind>.+?)}"
-        r"(?:\s*{(?P<flag_origin_jdk_9>default|non-default|command line|environment|config file|management|ergonomic|attach|internal|jimage|command line, ergonomic)})?"  # noqa: E501
+        r"(?:\s*{(?P<flag_origin_jdk_9>.*)})?"
     )
 
     @classmethod
