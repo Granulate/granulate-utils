@@ -5,12 +5,13 @@
 
 from __future__ import annotations
 
+import dataclasses
 import os
 import re
 import signal
 from dataclasses import dataclass
 from itertools import dropwhile
-from typing import Iterable, List, Literal, Optional, Union
+from typing import Any, Dict, Iterable, List, Literal, Optional, Union
 
 from packaging.version import Version
 
@@ -235,6 +236,13 @@ class JvmFlag:
         r"{(?P<flag_kind>.+?)}"
         r"(?:\s*{(?P<flag_origin_jdk_9>.*)})?"
     )
+
+    def to_dict(self) -> Dict[str, Union[str, List[str]]]:
+        return dataclasses.asdict(self)
+
+    @classmethod
+    def from_dict(cls, jvm_flag_dict: Dict[str, Any]) -> JvmFlag:
+        return JvmFlag(**jvm_flag_dict)
 
     @classmethod
     def from_str(cls, line: str) -> Optional[JvmFlag]:
