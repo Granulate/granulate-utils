@@ -9,7 +9,7 @@ from granulate_utils.java import JvmFlag, parse_jvm_flags
     "jvm_flags_string,expected_jvm_flags_list",
     [
         (
-            """[Global flags]
+            """
     uintx NonNMethodCodeHeapSize                   = 7594288                                {pd product} {ergonomic}
     uintx NonProfiledCodeHeapSize                  = 122031976                              {pd product} {ergonomic}
      intx NumberOfLoopInstrToAlign                 = 4                                      {C2 product} {management}
@@ -105,6 +105,35 @@ def test_parse_jvm_flags(jvm_flags_string: str, expected_jvm_flags_list: List[Jv
     assert parse_jvm_flags(jvm_flags_string) == expected_jvm_flags_list
 
 
+@pytest.mark.xfail
+@pytest.mark.parametrize(
+    "jvm_flags_string,expected_jvm_flags_list",
+    [
+        (
+            """
+ccstrlist OnError                                  = echo a
+          OnError                                 += echo b                                    {product} {command line}
+ccstrlist OnOutOfMemoryError                       =                                     {C2 pd product} {default}
+""",
+            [
+                JvmFlag(
+                    name="OnError", type="ccstrlist", value="echo a, echo b", origin="command line", kind=["product"]
+                ),
+                JvmFlag(
+                    name="OnOutOfMemoryError",
+                    type="ccstrlist",
+                    value="",
+                    origin="default",
+                    kind=["C2", "pd", "product"],
+                ),
+            ],
+        ),
+    ],
+)
+def test_parse_not_supported_jvm_flags(jvm_flags_string: str, expected_jvm_flags_list: List[JvmFlag]) -> None:
+    assert parse_jvm_flags(jvm_flags_string) != expected_jvm_flags_list
+
+
 @pytest.mark.parametrize(
     "jvm_flag,expected_jvm_flag_serialized",
     [
@@ -129,3 +158,50 @@ def test_jvm_flag_serialization(
     jvm_flag_serialized = jvm_flag.to_dict()
     assert jvm_flag_serialized == expected_jvm_flag_serialized
     assert JvmFlag.from_dict(jvm_flag_serialized) == jvm_flag
+
+
+@pytest.mark.parametrize(
+    "jvm_flags_string,expected_jvm_flags_list",
+    [
+        (
+            """
+     intx ObjectAlignmentInBytes                   = 8                                    {lp64_product} {internal}
+    uintx NonNMethodCodeHeapSize                   = 7594288                                {pd product} {ergonomic}
+ccstrlist OnOutOfMemoryError                       =                                     {C2 pd product} {default}
+   size_t OldSize                                  = 5452592                                   {product} {default}
+    uintx OldPLABWeight                            = 50                                        {product} {environment}
+     intx NumberOfLoopInstrToAlign                 = 4                                      {C2 product} {management}
+   size_t OldPLABSize                              = 1024                                 {ARCH product} {default}
+    uintx NonProfiledCodeHeapSize                  = 122031976                              {pd product} {ergonomic}
+     bool OmitStackTraceInFastThrow                = true                                      {product} {attach}""",
+            [
+                JvmFlag(
+                    name="NonNMethodCodeHeapSize",
+                    type="uintx",
+                    value="7594288",
+                    origin="ergonomic",
+                    kind=["pd", "product"],
+                ),
+                JvmFlag(
+                    name="NonProfiledCodeHeapSize",
+                    type="uintx",
+                    value="122031976",
+                    origin="ergonomic",
+                    kind=["pd", "product"],
+                ),
+                JvmFlag(
+                    name="NumberOfLoopInstrToAlign", type="intx", value="4", origin="management", kind=["C2", "product"]
+                ),
+                JvmFlag(
+                    name="ObjectAlignmentInBytes", type="intx", value="8", origin="internal", kind=["lp64_product"]
+                ),
+                JvmFlag(name="OldPLABSize", type="size_t", value="1024", origin="default", kind=["ARCH", "product"]),
+                JvmFlag(name="OldPLABWeight", type="uintx", value="50", origin="environment", kind=["product"]),
+                JvmFlag(name="OldSize", type="size_t", value="5452592", origin="default", kind=["product"]),
+                JvmFlag(name="OmitStackTraceInFastThrow", type="bool", value="true", origin="attach", kind=["product"]),
+            ],
+        ),
+    ],
+)
+def test_parse_jvm_flags_sorted(jvm_flags_string: str, expected_jvm_flags_list: List[JvmFlag]) -> None:
+    assert parse_jvm_flags(jvm_flags_string) == expected_jvm_flags_list

@@ -231,7 +231,7 @@ class JvmFlag:
         r"(?P<flag_type>\S+)\s+"
         r"(?P<flag_name>\S+)\s+"
         r"(?P<flag_equal_sign_prefix>:)?= "
-        r"(?P<flag_value>\S+)\s+"  # We don't support empty string nor spaces in flag values, although its legal values
+        r"(?P<flag_value>\S+)\s+"  # noqa: E501 # We don't support empty string nor spaces in flag values, although both are legal values
         r"{(?P<flag_kind>.+?)}"
         r"(?:\s*{(?P<flag_origin_jdk_9>.*)})?"
     )
@@ -307,4 +307,7 @@ class JvmFlag:
 
 
 def parse_jvm_flags(jvm_flags_string: str) -> List[JvmFlag]:
-    return [flag for line in jvm_flags_string.splitlines() if (flag := JvmFlag.from_str(line)) is not None]
+    return sorted(
+        [flag for line in jvm_flags_string.splitlines() if (flag := JvmFlag.from_str(line)) is not None],
+        key=lambda flag: flag.name,
+    )
