@@ -231,7 +231,7 @@ class JvmFlag:
         r"(?P<flag_type>\S+)\s+"
         r"(?P<flag_name>\S+)\s+"
         r"(?P<flag_equal_sign_prefix>:)?= "
-        r"(?P<flag_value>\S*)\s+"
+        r"(?P<flag_value>\S+)\s+"  # We don't support empty string nor spaces in flag values, although its legal values
         r"{(?P<flag_kind>.+?)}"
         r"(?:\s*{(?P<flag_origin_jdk_9>.*)})?"
     )
@@ -242,7 +242,7 @@ class JvmFlag:
     @classmethod
     def from_dict(cls, jvm_flag_dict: Dict[str, Any]) -> JvmFlag:
         name, flag_dict = list(jvm_flag_dict.items())[0]
-        return JvmFlag(name=name, **flag_dict)
+        return cls(name=name, **flag_dict)
 
     @classmethod
     def from_str(cls, line: str) -> Optional[JvmFlag]:
