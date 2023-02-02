@@ -5,10 +5,10 @@
 
 from __future__ import annotations
 
+import dataclasses
 import os
 import re
 import signal
-from dataclasses import dataclass
 from itertools import dropwhile
 from typing import Any, Dict, Iterable, List, Literal, Optional, Union
 
@@ -119,7 +119,7 @@ def java_exit_code_to_signo(exit_code: int) -> Optional[int]:
 VmType = Literal["HotSpot", "Zing", "OpenJ9", None]
 
 
-@dataclass
+@dataclasses.dataclass
 class JvmVersion:
     version: Version
     build: int
@@ -219,7 +219,7 @@ def parse_jvm_version(version_string: str) -> JvmVersion:
     return JvmVersion(version, build, vm_name, vm_type, zing_major)
 
 
-@dataclass
+@dataclasses.dataclass
 class JvmFlag:
     name: str
     type: str
@@ -236,13 +236,12 @@ class JvmFlag:
         r"(?:\s*{(?P<flag_origin_jdk_9>.*)})?"
     )
 
-    def to_dict(self) -> Dict[str, Dict[str, Union[str, List[str]]]]:
-        return {self.name: {"type": self.type, "value": self.value, "origin": self.origin, "kind": self.kind}}
+    def to_dict(self) -> Dict[str, Union[str, List[str]]]:
+        return dataclasses.asdict(self)
 
     @classmethod
     def from_dict(cls, jvm_flag_dict: Dict[str, Any]) -> JvmFlag:
-        name, flag_dict = list(jvm_flag_dict.items())[0]
-        return cls(name=name, **flag_dict)
+        return cls(**jvm_flag_dict)
 
     @classmethod
     def from_str(cls, line: str) -> Optional[JvmFlag]:
@@ -271,7 +270,8 @@ class JvmFlag:
         https://github.com/openjdk/jdk17u/blob/2fe42855c48c49b515b97312ce64a5a8ef3af407/src/hotspot/share/runtime/flags/jvmFlag.hpp#L36 # noqa: E501
 
         KNOWN ISSUES:
-        - we don't parse the flag value for ccstrlist type flags (e.g. -XX:CompileCommand='A' -XX:CompileCommand='B')
+        - We don't parse the flag value for ccstrlist type flags (e.g. -XX:CompileCommand='A' -XX:CompileCommand='B')
+        - We don't support empty string nor spaces in flag values, although its legal values
         """
 
         match = cls.vm_flags_pattern.search(line)
@@ -307,7 +307,4 @@ class JvmFlag:
 
 
 def parse_jvm_flags(jvm_flags_string: str) -> List[JvmFlag]:
-    return sorted(
-        [flag for line in jvm_flags_string.splitlines() if (flag := JvmFlag.from_str(line)) is not None],
-        key=lambda flag: flag.name,
-    )
+    return [flag for line in jvm_flags_string.splitlines() if (flag := JvmFlag.from_str(line)) is not None]
