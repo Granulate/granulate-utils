@@ -34,7 +34,7 @@ class Sender:
     def __init__(
         self,
         application_name: str,
-        auth_token: str,
+        auth_token: Optional[str],
         server_address: str,
         *,
         scheme: str = "https",
@@ -112,8 +112,10 @@ class Sender:
         assert self.messages_buffer is not None
 
         time_since_last_send = time.monotonic() - self.last_send_time
-        return self.messages_buffer.count > 0 and (
-            (self.messages_buffer.utilized >= self.send_threshold) or (time_since_last_send >= self.send_interval)
+        return (
+            self.auth_token is not None
+            and self.messages_buffer.count > 0
+            and ((self.messages_buffer.utilized >= self.send_threshold) or (time_since_last_send >= self.send_interval))
         )
 
     def send(self) -> None:
@@ -155,6 +157,7 @@ class Sender:
         return batch
 
     def _send_once_to_server(self, data: bytes) -> None:
+        assert self.auth_token is not None, "auth_token is None"
         headers = {
             "Content-Encoding": "gzip",
             "Content-Type": "application/json",
