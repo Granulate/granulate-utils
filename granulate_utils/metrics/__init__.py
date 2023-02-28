@@ -1,4 +1,41 @@
 from typing import Any, Dict
+from urllib.parse import urljoin
+
+import requests
+
+
+def rest_request_to_json(address: str, object_path: str, *args: Any, **kwargs: Any) -> Any:
+    """
+    Query the given URL and return the JSON response
+    """
+    return rest_request(address, object_path, *args, **kwargs).json()
+
+
+def rest_request(url: str, object_path: str, *args: Any, **kwargs: Any) -> requests.Response:
+    """
+    Query the given URL and return the response
+    """
+    if object_path:
+        url = join_url_dir(url, object_path)
+
+    # Add args to the url
+    if args:
+        for directory in args:
+            url = join_url_dir(url, directory)
+
+    response = requests.get(url, params={k: v for k, v in kwargs.items() if v is not None}, timeout=3)
+    response.raise_for_status()
+    return response
+
+
+def join_url_dir(url: str, *args: Any) -> str:
+    """
+    Join a URL with multiple directories
+    """
+    for path in args:
+        url = url.rstrip("/") + "/"
+        url = urljoin(url, path.lstrip("/"))
+    return url
 
 
 def set_individual_metric(
