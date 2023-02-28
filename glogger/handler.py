@@ -59,15 +59,13 @@ class BatchRequestsHandler(Handler):
         self.messages_buffer.head_serial_no = continue_from
 
         self.sender: Optional[Sender] = None
-        self.init_sender(sender)
+        if sender is not None:
+            self.init_sender(sender)
 
-    def init_sender(self, sender: Optional[Sender]) -> None:
+    def init_sender(self, sender: Sender) -> None:
         assert self.sender is None, "Tried initializing sender which wasn't None"
 
         self.sender = sender
-        if self.sender is None:
-            return
-
         self.sender.start(self.messages_buffer, self.get_metadata)
 
     def emit(self, record: LogRecord) -> None:
