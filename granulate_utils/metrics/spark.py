@@ -2,6 +2,9 @@
 # Copyright (c) Granulate. All rights reserved.
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
+# (C) Datadog, Inc. 2018-present. All rights reserved.
+# Licensed under a 3-clause BSD style license (see LICENSE.bsd3).
+#
 SPARK_APPS_PATH = "api/v1/applications"
 
 SPARK_JOB_METRICS = {
