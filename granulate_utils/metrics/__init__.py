@@ -52,7 +52,9 @@ def set_individual_metric(
     Add a metric to collected_metrics with labels in {name, value, labels} format.
     Metric is only added if the value is not None.
     """
-    if name not in collected_metrics and value is not None:
+    assert name not in collected_metrics, f"attempted to add metric {name!r} twice!"
+
+    if value is not None:
         collected_metrics[name] = {
             "name": name,
             "value": value,
