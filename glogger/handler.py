@@ -7,7 +7,7 @@ import traceback
 from datetime import datetime
 from json import JSONEncoder
 from logging import Handler, LogRecord
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from glogger.messages_buffer import MessagesBuffer
 from glogger.sender import Sender
@@ -33,7 +33,7 @@ class BatchRequestsHandler(Handler):
 
     def __init__(
         self,
-        sender: Sender,
+        sender: Optional[Sender],
         *,
         continue_from: int = 0,
         max_message_size: int = 1 * 1024 * 1024,  # 1mb
@@ -51,7 +51,6 @@ class BatchRequestsHandler(Handler):
         :param overflow_drop_factor: Percentage of messages to be dropped when buffer becomes full.
         """
         super().__init__(logging.DEBUG)
-        self.sender = sender
         self.max_message_size = max_message_size  # maximum message size
 
         self.stdout_logger = get_stdout_logger()
@@ -59,13 +58,22 @@ class BatchRequestsHandler(Handler):
         self.messages_buffer = MessagesBuffer(max_total_length, overflow_drop_factor)
         self.messages_buffer.head_serial_no = continue_from
 
+        self.sender: Optional[Sender] = None
+        if sender is not None:
+            self.init_sender(sender)
+
+    def init_sender(self, sender: Sender) -> None:
+        assert self.sender is None, "Tried initializing sender which wasn't None"
+
+        self.sender = sender
         self.sender.start(self.messages_buffer, self.get_metadata)
 
     def emit(self, record: LogRecord) -> None:
         self.messages_buffer.append(self._format_record(record))
 
     def close(self) -> None:
-        self.sender.stop()
+        if self.sender is not None:
+            self.sender.stop()
         super().close()
 
     def get_metadata(self) -> Dict:
