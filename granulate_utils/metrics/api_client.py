@@ -87,10 +87,10 @@ class APIClient:
     def log_response(self, response: requests.Response) -> None:
         pass
 
-    def submit_spark_metrics(self, url: str, timestamp: int, metrics: List[Dict[str, Any]]) -> Dict:
+    def submit_spark_metrics(self, path: str, timestamp: int, metrics: List[Dict[str, Any]]) -> Dict:
         return self._request_url(
             "POST",
-            url,
+            f"{self._server_address}/{path}",
             {
                 "format_version": 0,
                 "timestamp": timestamp,
