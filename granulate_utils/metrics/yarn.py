@@ -5,12 +5,9 @@
 # (C) Datadog, Inc. 2018-present. All rights reserved.
 # Licensed under a 3-clause BSD style license (see LICENSE.bsd3).
 #
-from typing import Any, Dict, Generator
+from typing import Any, Dict, Generator, List, Optional
 
-from granulate_utils.metrics import rest_request_to_json, set_metrics_from_json
-
-YARN_CLUSTER_PATH = "ws/v1/cluster/metrics"
-YARN_NODES_PATH = "ws/v1/cluster/nodes"
+from granulate_utils.metrics import json_request, set_metrics_from_json
 
 YARN_CLUSTER_METRICS = {
     metric: f"yarn_cluster_{metric}"
@@ -55,10 +52,31 @@ YARN_NODES_METRICS = {
     )
 }
 
+YARN_RM_CLASSNAME = "org.apache.hadoop.yarn.server.resourcemanager.ResourceManager"
+
+
+class ResourceManagerAPI:
+    def __init__(self, rm_address: str):
+        self._apps_url = f"{rm_address}/ws/v1/cluster/apps"
+        self._metrics_url = f"{rm_address}/ws/v1/cluster/metrics"
+        self._nodes_url = f"{rm_address}/ws/v1/cluster/nodes"
+
+    def apps(self, **kwargs) -> List[Dict]:
+        return json_request(self._apps_url, **kwargs).get("apps", {}).get("app", [])
+
+    def metrics(self, **kwargs) -> Optional[Dict]:
+        return json_request(self._metrics_url, **kwargs).get("clusterMetrics")
+
+    def nodes(self, **kwargs) -> List[Dict]:
+        return json_request(self._nodes_url, **kwargs).get("nodes", {}).get("node", [])
+
 
 class YarnCollector:
-    def __init__(self, master_address: str, logger: Any) -> None:
-        self.master_address = master_address
+    name = "yarn"
+
+    def __init__(self, rm_address: str, logger: Any) -> None:
+        self.rm_address = rm_address
+        self.rm = ResourceManagerAPI(rm_address)
         self.logger = logger
 
     def collect(self) -> Generator[Dict[str, Any], None, None]:
@@ -69,17 +87,14 @@ class YarnCollector:
 
     def _cluster_metrics(self, collected_metrics: Dict[str, Dict[str, Any]]) -> None:
         try:
-            metrics_json = rest_request_to_json(self.master_address, YARN_CLUSTER_PATH)
-            if metrics_json.get("clusterMetrics") is not None:
-                set_metrics_from_json(collected_metrics, {}, metrics_json["clusterMetrics"], YARN_CLUSTER_METRICS)
+            if cluster_metrics := self.rm.metrics():
+                set_metrics_from_json(collected_metrics, {}, cluster_metrics, YARN_CLUSTER_METRICS)
         except Exception:
             self.logger.exception("Could not gather yarn cluster metrics")
 
     def _nodes_metrics(self, collected_metrics: Dict[str, Dict[str, Any]]) -> None:
         try:
-            metrics_json = rest_request_to_json(self.master_address, YARN_NODES_PATH, states="RUNNING")
-            running_nodes = metrics_json.get("nodes", {}).get("node", {})
-            for node in running_nodes:
+            for node in self.rm.nodes(states="RUNNING"):
                 for metric, value in node.get("resourceUtilization", {}).items():
                     node[metric] = value  # this will create all relevant metrics under same dictionary
 
