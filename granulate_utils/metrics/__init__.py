@@ -11,16 +11,26 @@ from urllib.parse import urljoin
 import requests
 
 
-def rest_request_to_json(address: str, object_path: str, *args: Any, **kwargs: Any) -> Any:
-    """
-    Query the given URL and return the JSON response
-    """
-    return rest_request(address, object_path, *args, **kwargs).json()
-
-
-def rest_request(url: str, object_path: str, *args: Any, **kwargs: Any) -> requests.Response:
+def rest_request(url: str, **kwargs: Any) -> requests.Response:
     """
     Query the given URL and return the response
+    """
+    response = requests.get(url, params={k: v for k, v in kwargs.items() if v is not None}, timeout=3)
+    response.raise_for_status()
+    return response
+
+
+def json_request(url: str, **kwargs) -> Any:
+    """
+    Query the given URL using HTTP GET and return the JSON response.
+    :param kwargs: request parameters
+    """
+    return rest_request(url, **kwargs).json()
+
+
+def rest_request_to_json(url: str, object_path: str, *args: Any, **kwargs: Any) -> Any:
+    """
+    Query url/object_path/args/... and return the JSON response
     """
     if object_path:
         url = join_url_dir(url, object_path)
@@ -30,9 +40,7 @@ def rest_request(url: str, object_path: str, *args: Any, **kwargs: Any) -> reque
         for directory in args:
             url = join_url_dir(url, directory)
 
-    response = requests.get(url, params={k: v for k, v in kwargs.items() if v is not None}, timeout=3)
-    response.raise_for_status()
-    return response
+    return json_request(url, **kwargs)
 
 
 def join_url_dir(url: str, *args: Any) -> str:
