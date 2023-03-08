@@ -2,8 +2,9 @@
 # Copyright (c) Granulate. All rights reserved.
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
+from datetime import datetime
 import json
-from typing import List, Optional, Union
+from typing import List, Optional, Union, cast
 
 import grpc  # type: ignore # no types-grpc sadly
 
@@ -73,34 +74,32 @@ class CriClient(ContainersClientInterface):
 
         for rt, path in self._runtimes.items():
             with RuntimeServiceWrapper(path) as stub:
-                for container in stub.ListContainers(api_pb2.ListContainersRequest()).containers:
-                    if all_info:
-                        # need verbose=True to get the info which contains the PID
-                        status = stub.ContainerStatus(
-                            api_pb2.ContainerStatusRequest(container_id=container.id, verbose=True)
-                        )
-                        pid: Optional[int] = json.loads(status.info.get("info", "{}")).get("pid")
-                    else:
-                        pid = None
-
-                    containers.append(self._create_container(container, pid, rt))
+                for c in stub.ListContainers(api_pb2.ListContainersRequest()).containers:
+                    container = self._get_container_from_runtime(c.id, rt, stub, all_info)
+                    if container is not None:
+                        containers.append(container)
 
         return containers
+
+    def _get_container_from_runtime(self, container_id: str, runtime_name: str, stub: RuntimeServiceWrapper, all_info: bool) -> Optional[Container]:
+        try:
+            status_response = stub.ContainerStatus(
+                api_pb2.ContainerStatusRequest(container_id=container_id, verbose=all_info)
+            )
+        except grpc._channel._InactiveRpcError as e:
+            if e.code() == grpc.StatusCode.NOT_FOUND:
+                return None
+            raise
+
+        pid: Optional[int] = json.loads(status_response.info.get("info", "{}")).get("pid")
+        return self._create_container_from_status(status_response.status, pid, runtime_name)
 
     def get_container(self, container_id: str, all_info: bool) -> Container:
         for rt, path in self._runtimes.items():
             with RuntimeServiceWrapper(path) as stub:
-                try:
-                    status = stub.ContainerStatus(
-                        api_pb2.ContainerStatusRequest(container_id=container_id, verbose=all_info)
-                    )
-                except grpc._channel._InactiveRpcError as e:
-                    if e.code() == grpc.StatusCode.NOT_FOUND:
-                        continue
-                    raise
-
-                pid: Optional[int] = json.loads(status.info.get("info", "{}")).get("pid")
-                return self._create_container(status.status, pid, rt)
+                maybe_container = self._get_container_from_runtime(container_id, rt, stub, all_info)
+                if maybe_container is not None:
+                    return maybe_container
 
         raise ContainerNotFound(container_id)
 
@@ -108,14 +107,23 @@ class CriClient(ContainersClientInterface):
         return list(self._runtimes.keys())
 
     @classmethod
-    def _create_container(
-        cls, container: Union[api_pb2.Container, api_pb2.ContainerStatus], pid: Optional[int], runtime: str
+    def _create_container_from_status(
+        cls, status: api_pb2.ContainerStatus, pid: Optional[int], runtime: str
     ) -> Container:
+        created_at_ns = cast(int, status.created_at)
+        started_at_ns = cast(int, status.started_at)
+        create_time = datetime.utcfromtimestamp(created_at_ns / 1e9)
+        start_time = None
+        # from ContainerStatus message docs, 0 == not started
+        if started_at_ns != 0:
+            start_time = datetime.utcfromtimestamp(started_at_ns / 1e9)
         return Container(
             runtime=runtime,
-            name=cls._reconstruct_name(container),
-            id=container.id,
-            labels=container.labels,
-            running=container.state == CONTAINER_RUNNING,
+            name=cls._reconstruct_name(status),
+            id=status.id,
+            labels=status.labels,
+            running=status.state == CONTAINER_RUNNING,
             pid=pid,
+            create_time=create_time,
+            start_time=start_time
         )

@@ -4,6 +4,7 @@
 #
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Dict, List, Optional
 
 
@@ -22,6 +23,8 @@ class Container:
     running: bool
     # None if not requested / container is dead
     pid: Optional[int]
+    create_time: datetime  # Creation time of the container (UTC)
+    start_time: Optional[datetime]  # Start time of the container (UTC)
 
 
 class ContainersClientInterface:

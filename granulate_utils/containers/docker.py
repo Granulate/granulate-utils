@@ -3,6 +3,7 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 
+from datetime import datetime
 from typing import List, Optional
 
 import docker
@@ -35,8 +36,23 @@ class DockerClient(ContainersClientInterface):
         return ["docker"]
 
     @staticmethod
-    def _create_container(container: docker.models.containers.Container) -> Container:
+    def _parse_docker_timestamp(time_str: str) -> Optional[datetime]:
+        """
+        Parses timestamps provided by docker API to datetime.
+        DockerAPI provides iso datetimes (in UTC) with fractional milliseconds that python standard library doesn't parse, and
+        also ends with "Z" timezone indicator for UTC.
+        """
+        assert time_str.endswith('Z')  # assert UTC
+        if time_str.startswith('0001'):
+            return None
+        return datetime.fromisoformat(time_str.split('.')[0])
+
+    @classmethod
+    def _create_container(cls, container: docker.models.containers.Container) -> Container:
         pid: Optional[int] = container.attrs["State"].get("Pid")
+        created = cls._parse_docker_timestamp(container.attrs['Created'])
+        assert created is not None
+        started_at = cls._parse_docker_timestamp(container.attrs['State']['StartedAt'])
         if pid == 0:  # Docker returns 0 for dead containers
             pid = None
         return Container(
@@ -46,4 +62,6 @@ class DockerClient(ContainersClientInterface):
             labels=container.labels,
             running=container.status == "running",
             pid=pid,
+            create_time=created,
+            start_time=started_at
         )
