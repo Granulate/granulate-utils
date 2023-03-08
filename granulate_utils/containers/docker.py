@@ -38,9 +38,9 @@ class DockerClient(ContainersClientInterface):
     @staticmethod
     def _parse_docker_timestamp(time_str: str) -> Optional[datetime]:
         """
-        Parses timestamps provided by docker API to datetime.
-        DockerAPI provides iso datetimes (in UTC) with fractional milliseconds that python standard library doesn't parse, and
-        also ends with "Z" timezone indicator for UTC.
+        Parses timestamps provided by DockerAPI to datetime.
+        Docker works with ISO format timestamps (in UTC) with fractional milliseconds that python standard library
+        doesn't parse, and also ends with "Z" timezone indicator for UTC.
         """
         assert time_str.endswith('Z')  # assert UTC
         if time_str.startswith('0001'):
