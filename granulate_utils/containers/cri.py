@@ -2,8 +2,8 @@
 # Copyright (c) Granulate. All rights reserved.
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
-from datetime import datetime
 import json
+from datetime import datetime
 from typing import List, Optional, Union, cast
 
 import grpc  # type: ignore # no types-grpc sadly
