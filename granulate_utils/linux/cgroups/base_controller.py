@@ -21,7 +21,6 @@ class BaseController:
 
     def __init__(self, cgroup: Optional[Union[Path, CgroupCore]] = None) -> None:
         self.cgroup = self.get_cgroup_core(cgroup)
-        assert self.cgroup.is_known_controller(self.CONTROLLER), f"{self.CONTROLLER!r} is not supported"
         assert self.cgroup is not None
 
     @classmethod

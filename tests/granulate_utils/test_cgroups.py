@@ -56,23 +56,53 @@ def test_cgroup_v1(tmp_path_factory: TempPathFactory):
 
 
 def test_cgroup_v2(tmp_path_factory: TempPathFactory):
-    tmp_dir = tmp_path_factory.mktemp("base_controller")
-    cgroup_dir = Path(tmp_dir)
-    SUB_CGROUP_NAME = "sub_cgroup"
-    sub_cgroup_dir = cgroup_dir / SUB_CGROUP_NAME
-    sub_cgroup_dir.mkdir()
-    supported_controllers = sub_cgroup_dir / "cgroup.controllers"
-    enabled_controllers = sub_cgroup_dir / "cgroup.subtree_control"
+    root_cgroup = tmp_path_factory.mktemp("root")
+    parent_cgroup = root_cgroup / "base_controller"
+    current_leaf = parent_cgroup / "leaf"
+    current_leaf.mkdir(exist_ok=True, parents=True)
 
-    supported_controllers.write_text(DUMMY_CONTROLLER)
-    cgroup = CgroupCoreV2(cgroup_dir)
+    (root_cgroup / "cgroup.controllers").touch()
+    (root_cgroup / "cgroup.subtree_control").touch()
+    parent_supported_controllers = parent_cgroup / "cgroup.controllers"
+    parent_supported_controllers.write_text(DUMMY_CONTROLLER)
+    parent_delegated_controllers = parent_cgroup / "cgroup.subtree_control"
+    parent_delegated_controllers.touch()
+
+    SUB_CGROUP_NAME = "sub_cgroup"
+    sub_cgroup_dir = parent_cgroup / SUB_CGROUP_NAME
+
+    cgroup = CgroupCoreV2(current_leaf, root_cgroup)
     sub_cgroup = cgroup.get_subcgroup(DUMMY_CONTROLLER, SUB_CGROUP_NAME)
-    assert sub_cgroup is not None
-    assert enabled_controllers.read_text().strip() == f"+{DUMMY_CONTROLLER}"
+    assert sub_cgroup_dir.absolute() == sub_cgroup.cgroup_full_path.absolute()
+    assert parent_delegated_controllers.read_text().strip() == f"+{DUMMY_CONTROLLER}"
 
     with pytest.raises(AssertionError) as exception:
         sub_cgroup = cgroup.get_subcgroup(DUMMY2_CONTROLLER, SUB_CGROUP_NAME)
-    assert exception.value.args[0] == f"Controller not supported '{DUMMY2_CONTROLLER}'"
+    assert exception.value.args[0] == f"Controller '{DUMMY2_CONTROLLER}' is not supported under {str(root_cgroup)}"
+
+
+def test_cgroup_v2_fallback_to_root(tmp_path_factory: TempPathFactory):
+    root_cgroup = tmp_path_factory.mktemp("root")
+    parent_cgroup = root_cgroup / "base_controller"
+    current_leaf = parent_cgroup / "leaf"
+    current_leaf.mkdir(exist_ok=True, parents=True)
+
+    root_supported_controllers = root_cgroup / "cgroup.controllers"
+    root_supported_controllers.write_text(DUMMY_CONTROLLER)
+    root_delegated_controllers = root_cgroup / "cgroup.subtree_control"
+    root_delegated_controllers.touch()
+    parent_supported_controllers = parent_cgroup / "cgroup.controllers"
+    parent_supported_controllers.touch()
+    parent_delegated_controllers = parent_cgroup / "cgroup.subtree_control"
+    parent_delegated_controllers.touch()
+
+    SUB_CGROUP_NAME = "sub_cgroup"
+    sub_cgroup_dir = root_cgroup / SUB_CGROUP_NAME
+
+    cgroup = CgroupCoreV2(current_leaf, root_cgroup)
+    sub_cgroup = cgroup.get_subcgroup(DUMMY_CONTROLLER, SUB_CGROUP_NAME)
+    assert sub_cgroup_dir.absolute() == sub_cgroup.cgroup_full_path.absolute()
+    assert root_delegated_controllers.read_text().strip() == f"+{DUMMY_CONTROLLER}"
 
 
 def test_get_cgroup_current_process():
@@ -88,7 +118,9 @@ def test_get_cgroup_current_process():
             cgroup = get_cgroup_for_process(DUMMY_CONTROLLER)
             assert cgroup.cgroup_full_path == full_path
 
-    with patch("granulate_utils.linux.cgroups.cgroup.get_cgroup_mount", return_value=CgroupCoreV2(root_path)):
+    with patch(
+        "granulate_utils.linux.cgroups.cgroup.get_cgroup_mount", return_value=CgroupCoreV2(root_path, root_path)
+    ):
         with patch(
             "granulate_utils.linux.cgroups.cgroup.read_proc_file",
             return_value=f"0::{cgroup_path}\n".encode(),
@@ -97,7 +129,9 @@ def test_get_cgroup_current_process():
             assert cgroup.cgroup_full_path == full_path
 
     with pytest.raises(Exception) as exception:
-        with patch("granulate_utils.linux.cgroups.cgroup.get_cgroup_mount", return_value=CgroupCoreV2(root_path)):
+        with patch(
+            "granulate_utils.linux.cgroups.cgroup.get_cgroup_mount", return_value=CgroupCoreV2(root_path, root_path)
+        ):
             with patch(
                 "granulate_utils.linux.cgroups.cgroup.read_proc_file",
                 return_value="".encode(),
@@ -143,7 +177,7 @@ def test_cpu_controller_v2(tmp_path_factory: TempPathFactory):
     cpu_max.write_text("50 100")
     cpu_stat.write_text("stat_value 1")
 
-    cgroup_v2 = CgroupCoreV2(cpu_controller_dir)
+    cgroup_v2 = CgroupCoreV2(cpu_controller_dir, cpu_controller_dir)
     cpu_controller = CpuController(cgroup_v2)
     assert cpu_controller.get_cpu_limit_cores() == 0.5
     stat_data = cpu_controller.get_stat()
@@ -203,7 +237,7 @@ def test_memory_controller_v2(tmp_path_factory: TempPathFactory):
     swap_bytes_limit.write_text("100")
     usage_in_bytes.write_text("500")
 
-    cgroup_v2 = CgroupCoreV2(memory_controller_dir)
+    cgroup_v2 = CgroupCoreV2(memory_controller_dir, memory_controller_dir)
     memory_controller = MemoryController(cgroup_v2)
     assert memory_controller.get_memory_limit() == 128
     assert memory_controller.get_usage_in_bytes() == 500
@@ -220,7 +254,7 @@ def test_memory_controller_v2(tmp_path_factory: TempPathFactory):
 
     with pytest.raises(CgroupInterfaceNotSupported) as exception:
         memory_controller.get_max_usage_in_bytes()
-    assert exception.value.args[0] == "Interface file max_usage_in_bytes is not supported in CGroup v2"
+    assert exception.value.args[0] == "Interface file max_usage_in_bytes is not supported in cGroup v2"
 
 
 # CpuAcctController

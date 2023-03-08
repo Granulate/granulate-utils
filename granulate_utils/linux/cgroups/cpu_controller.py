@@ -9,13 +9,7 @@ from pathlib import Path
 from typing import Dict, Optional, Union
 
 from granulate_utils.linux.cgroups.base_controller import BaseController
-from granulate_utils.linux.cgroups.cgroup import (
-    CGROUP_V2_UNBOUNDED_VALUE,
-    CgroupCore,
-    CgroupCoreV1,
-    CgroupCoreV2,
-    ControllerType,
-)
+from granulate_utils.linux.cgroups.cgroup import CgroupCore, CgroupCoreV1, CgroupCoreV2, ControllerType
 
 
 @dataclass
@@ -78,15 +72,11 @@ class CpuControllerV2(CpuControllerInterface):
     def get_cpu_limit_params(self) -> CpuLimitParams:
         cpu_limit = self.cgroup.read_from_interface_file(self.CPU_LIMIT_FILE).split()
         # If quota is unbounded ('max') we return -1 to be API consistent with CgroupV1
-        return CpuLimitParams(
-            period=int(cpu_limit[1]), quota=int(cpu_limit[0]) if cpu_limit[0] != CGROUP_V2_UNBOUNDED_VALUE else -1
-        )
+        return CpuLimitParams(period=int(cpu_limit[1]), quota=self.cgroup.convert_inner_value_to_outer(cpu_limit[0]))
 
     def set_cpu_limit_quota(self, quota: int) -> None:
         period = self.get_cpu_limit_period()
-        quota_str = str(quota)
-        if quota_str == "-1":
-            quota_str = CGROUP_V2_UNBOUNDED_VALUE
+        quota_str = self.cgroup.convert_outer_value_to_inner(quota)
         self.cgroup.write_to_interface_file(self.CPU_LIMIT_FILE, f"{quota_str} {period}")
 
 

@@ -9,13 +9,7 @@ from typing import Optional, Union
 
 from granulate_utils.exceptions import CgroupInterfaceNotSupported
 from granulate_utils.linux.cgroups.base_controller import BaseController
-from granulate_utils.linux.cgroups.cgroup import (
-    CGROUP_V2_UNBOUNDED_VALUE,
-    CgroupCore,
-    CgroupCoreV1,
-    CgroupCoreV2,
-    ControllerType,
-)
+from granulate_utils.linux.cgroups.cgroup import CgroupCore, CgroupCoreV1, CgroupCoreV2, ControllerType
 
 
 class MemoryControllerInterface:
@@ -32,19 +26,13 @@ class MemoryControllerInterface:
         pass
 
     def get_memory_limit(self) -> int:
-        return self.convert_inner_value_to_outer(self.cgroup.read_from_interface_file(self.MEMORY_LIMIT_FILE))
-
-    @classmethod
-    def convert_outer_value_to_inner(cls, val: int) -> str:
-        return str(val)
-
-    @classmethod
-    def convert_inner_value_to_outer(cls, val: str) -> int:
-        return int(val)
+        return self.cgroup.convert_inner_value_to_outer(self.cgroup.read_from_interface_file(self.MEMORY_LIMIT_FILE))
 
     def _set_swap_limit(self, limit: int) -> None:
         try:
-            self.cgroup.write_to_interface_file(self.MEMORY_SWAP_LIMIT_FILE, self.convert_outer_value_to_inner(limit))
+            self.cgroup.write_to_interface_file(
+                self.MEMORY_SWAP_LIMIT_FILE, self.cgroup.convert_outer_value_to_inner(limit)
+            )
         except PermissionError:
             # if swap extension is not enabled (CONFIG_MEMCG_SWAP), this file doesn't exist
             # and PermissionError is thrown (since it can't be created)
@@ -81,24 +69,11 @@ class MemoryControllerV2(MemoryControllerInterface):
         # So in Cgroup V2 we set swap limit to be 0.
         if limit == -1:
             swap_limit = -1
-            memory_limit = CGROUP_V2_UNBOUNDED_VALUE
         else:
             swap_limit = 0
-            memory_limit = str(limit)
+
         super()._set_swap_limit(swap_limit)
-        self.cgroup.write_to_interface_file(self.MEMORY_LIMIT_FILE, memory_limit)
-
-    @classmethod
-    def convert_outer_value_to_inner(cls, val: int) -> str:
-        if val == -1:
-            return CGROUP_V2_UNBOUNDED_VALUE
-        return super().convert_outer_value_to_inner(val)
-
-    @classmethod
-    def convert_inner_value_to_outer(cls, val: str) -> int:
-        if val == CGROUP_V2_UNBOUNDED_VALUE:
-            return -1
-        return super().convert_inner_value_to_outer(val)
+        self.cgroup.write_to_interface_file(self.MEMORY_LIMIT_FILE, self.cgroup.convert_outer_value_to_inner(limit))
 
 
 class MemoryController(BaseController):

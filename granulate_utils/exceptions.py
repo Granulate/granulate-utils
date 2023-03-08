@@ -44,5 +44,10 @@ class MissingExePath(Exception):
 class CgroupInterfaceNotSupported(Exception):
     def __init__(self, interface_name: str, cgroup_version: str):
         super(CgroupInterfaceNotSupported, self).__init__(
-            f"Interface file {interface_name} is not supported in CGroup {cgroup_version}"
+            f"Interface file {interface_name} is not supported in cGroup {cgroup_version}"
         )
+
+
+class CgroupControllerNotMounted(Exception):
+    def __init__(self, controller_name: str):
+        super(CgroupControllerNotMounted, self).__init__(f"Controller {controller_name} is not mounted on the system")
