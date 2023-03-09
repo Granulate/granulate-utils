@@ -8,7 +8,7 @@ from typing import List, Optional, Union, cast
 
 import grpc  # type: ignore # no types-grpc sadly
 
-from granulate_utils.containers.container import Container, ContainersClientInterface
+from granulate_utils.containers.container import Container, ContainersClientInterface, TimeInfo
 from granulate_utils.exceptions import ContainerNotFound, CriNotAvailableError
 from granulate_utils.generated.containers.cri import api_pb2 as api_pb2  # type: ignore
 from granulate_utils.generated.containers.cri.api_pb2_grpc import RuntimeServiceStub  # type: ignore
@@ -74,32 +74,39 @@ class CriClient(ContainersClientInterface):
 
         for rt, path in self._runtimes.items():
             with RuntimeServiceWrapper(path) as stub:
-                for c in stub.ListContainers(api_pb2.ListContainersRequest()).containers:
-                    container = self._get_container_from_runtime(c.id, rt, stub, all_info)
-                    if container is not None:
-                        containers.append(container)
+                for container in stub.ListContainers(api_pb2.ListContainersRequest()).containers:
+                    if all_info:
+                        status_response = self._get_container_status(stub, container, verbose=all_info)
+                        assert status_response is not None, "container went down"
+                        pid: Optional[int] = json.loads(status_response.info.get("info", "{}")).get("pid")
+                        containers.append(self._create_container(status_response.status, rt, pid))
+                    else:
+                        containers.append(self._create_container(container, rt, None))
 
         return containers
 
-    def _get_container_from_runtime(self, container_id: str, runtime_name: str, stub: RuntimeServiceWrapper, all_info: bool) -> Optional[Container]:
+    def _get_container_status(
+        self, stub: RuntimeServiceStub, container: Union[api_pb2.Container, str], *, verbose: bool
+    ) -> Optional[api_pb2.ContainerStatusResponse]:
         try:
-            status_response = stub.ContainerStatus(
-                api_pb2.ContainerStatusRequest(container_id=container_id, verbose=all_info)
-            )
+            if isinstance(container, str):
+                container_id = container
+            else:
+                container_id = container.id
+            return stub.ContainerStatus(api_pb2.ContainerStatusRequest(container_id=container_id, verbose=verbose))
         except grpc._channel._InactiveRpcError as e:
             if e.code() == grpc.StatusCode.NOT_FOUND:
                 return None
             raise
 
-        pid: Optional[int] = json.loads(status_response.info.get("info", "{}")).get("pid")
-        return self._create_container_from_status(status_response.status, pid, runtime_name)
-
     def get_container(self, container_id: str, all_info: bool) -> Container:
         for rt, path in self._runtimes.items():
             with RuntimeServiceWrapper(path) as stub:
-                maybe_container = self._get_container_from_runtime(container_id, rt, stub, all_info)
-                if maybe_container is not None:
-                    return maybe_container
+                status_response = self._get_container_status(stub, container_id, verbose=all_info)
+                if not status_response:
+                    continue
+                pid: Optional[int] = json.loads(status_response.info.get("info", "{}")).get("pid")
+                return self._create_container(status_response.status, rt, pid)
 
         raise ContainerNotFound(container_id)
 
@@ -107,23 +114,28 @@ class CriClient(ContainersClientInterface):
         return list(self._runtimes.keys())
 
     @classmethod
-    def _create_container_from_status(
-        cls, status: api_pb2.ContainerStatus, pid: Optional[int], runtime: str
+    def _create_container(
+        cls,
+        container: Union[api_pb2.Container, api_pb2.ContainerStatus],
+        runtime: str,
+        pid: Optional[int] = None,
     ) -> Container:
-        created_at_ns = cast(int, status.created_at)
-        started_at_ns = cast(int, status.started_at)
-        create_time = datetime.utcfromtimestamp(created_at_ns / 1e9)
-        start_time = None
-        # from ContainerStatus message docs, 0 == not started
-        if started_at_ns != 0:
-            start_time = datetime.utcfromtimestamp(started_at_ns / 1e9)
+        time_info: Optional[TimeInfo] = None
+        if isinstance(container, api_pb2.ContainerStatus):
+            created_at_ns = cast(int, container.created_at)
+            started_at_ns = cast(int, container.started_at)
+            create_time = datetime.utcfromtimestamp(created_at_ns / 1e9)
+            start_time = None
+            # from ContainerStatus message docs, 0 == not started
+            if started_at_ns != 0:
+                start_time = datetime.utcfromtimestamp(started_at_ns / 1e9)
+            time_info = TimeInfo(create_time=create_time, start_time=start_time)
         return Container(
             runtime=runtime,
-            name=cls._reconstruct_name(status),
-            id=status.id,
-            labels=status.labels,
-            running=status.state == CONTAINER_RUNNING,
+            name=cls._reconstruct_name(container),
+            id=container.id,
+            labels=container.labels,
+            running=container.state == CONTAINER_RUNNING,
             pid=pid,
-            create_time=create_time,
-            start_time=start_time
+            time_info=time_info,
         )

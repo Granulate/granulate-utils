@@ -9,6 +9,12 @@ from typing import Dict, List, Optional
 
 
 @dataclass
+class TimeInfo:
+    create_time: datetime  # Creation time of the container (UTC)
+    start_time: Optional[datetime]  # Start time of the container (UTC) - None=not started
+
+
+@dataclass
 class Container:
     """
     Shared "Container" descriptor class, used for Docker containers & CRI containers.
@@ -23,8 +29,7 @@ class Container:
     running: bool
     # None if not requested / container is dead
     pid: Optional[int]
-    create_time: datetime  # Creation time of the container (UTC)
-    start_time: Optional[datetime]  # Start time of the container (UTC)
+    time_info: Optional[TimeInfo]
 
 
 class ContainersClientInterface:

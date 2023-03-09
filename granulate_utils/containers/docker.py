@@ -10,7 +10,7 @@ import docker
 import docker.errors
 import docker.models.containers
 
-from granulate_utils.containers.container import Container, ContainersClientInterface
+from granulate_utils.containers.container import Container, ContainersClientInterface, TimeInfo
 from granulate_utils.exceptions import ContainerNotFound
 from granulate_utils.linux import ns
 
@@ -42,19 +42,20 @@ class DockerClient(ContainersClientInterface):
         Docker works with ISO format timestamps (in UTC) with fractional milliseconds that python standard library
         doesn't parse, and also ends with "Z" timezone indicator for UTC.
         """
-        assert time_str.endswith('Z')  # assert UTC
-        if time_str.startswith('0001'):
+        assert time_str.endswith("Z")  # assert UTC
+        if time_str.startswith("0001"):
             return None
-        return datetime.fromisoformat(time_str.split('.')[0])
+        return datetime.fromisoformat(time_str.split(".")[0])
 
     @classmethod
     def _create_container(cls, container: docker.models.containers.Container) -> Container:
         pid: Optional[int] = container.attrs["State"].get("Pid")
-        created = cls._parse_docker_timestamp(container.attrs['Created'])
+        created = cls._parse_docker_timestamp(container.attrs["Created"])
         assert created is not None
-        started_at = cls._parse_docker_timestamp(container.attrs['State']['StartedAt'])
+        started_at = cls._parse_docker_timestamp(container.attrs["State"]["StartedAt"])
         if pid == 0:  # Docker returns 0 for dead containers
             pid = None
+        time_info = TimeInfo(create_time=created, start_time=started_at)
         return Container(
             runtime="docker",
             name=container.name,
@@ -62,6 +63,5 @@ class DockerClient(ContainersClientInterface):
             labels=container.labels,
             running=container.status == "running",
             pid=pid,
-            create_time=created,
-            start_time=started_at
+            time_info=time_info,
         )
