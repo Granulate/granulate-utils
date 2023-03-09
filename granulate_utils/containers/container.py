@@ -29,6 +29,7 @@ class Container:
     running: bool
     # None if not requested / container is dead
     pid: Optional[int]
+    # None if not requested, make sure to pass all_info=True
     time_info: Optional[TimeInfo]
 
 
