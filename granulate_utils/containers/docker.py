@@ -9,6 +9,7 @@ from typing import List, Optional
 import docker
 import docker.errors
 import docker.models.containers
+from dateutil.parser import isoparse
 
 from granulate_utils.containers.container import Container, ContainersClientInterface, TimeInfo
 from granulate_utils.exceptions import ContainerNotFound
@@ -50,9 +51,9 @@ class DockerClient(ContainersClientInterface):
     @classmethod
     def _create_container(cls, container: docker.models.containers.Container) -> Container:
         pid: Optional[int] = container.attrs["State"].get("Pid")
-        created = cls._parse_docker_timestamp(container.attrs["Created"])
+        created = isoparse(container.attrs["Created"])
         assert created is not None
-        started_at = cls._parse_docker_timestamp(container.attrs["State"]["StartedAt"])
+        started_at = isoparse(container.attrs["State"]["StartedAt"])
         if pid == 0:  # Docker returns 0 for dead containers
             pid = None
         time_info = TimeInfo(create_time=created, start_time=started_at)
