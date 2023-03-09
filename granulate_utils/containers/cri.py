@@ -4,7 +4,7 @@
 #
 import json
 from datetime import datetime
-from typing import List, Optional, Union, cast
+from typing import List, Optional, Union
 
 import grpc  # type: ignore # no types-grpc sadly
 
@@ -13,6 +13,7 @@ from granulate_utils.exceptions import ContainerNotFound, CriNotAvailableError
 from granulate_utils.generated.containers.cri import api_pb2 as api_pb2  # type: ignore
 from granulate_utils.generated.containers.cri.api_pb2_grpc import RuntimeServiceStub  # type: ignore
 from granulate_utils.linux import ns
+from granulate_utils.type_utils import assert_cast
 
 RUNTIMES = (
     ("containerd", "/run/containerd/containerd.sock"),
@@ -122,8 +123,8 @@ class CriClient(ContainersClientInterface):
     ) -> Container:
         time_info: Optional[TimeInfo] = None
         if isinstance(container, api_pb2.ContainerStatus):
-            created_at_ns = cast(int, container.created_at)
-            started_at_ns = cast(int, container.started_at)
+            created_at_ns = assert_cast(int, container.created_at)
+            started_at_ns = assert_cast(int, container.started_at)
             create_time = datetime.utcfromtimestamp(created_at_ns / 1e9)
             start_time = None
             # from ContainerStatus message docs, 0 == not started
