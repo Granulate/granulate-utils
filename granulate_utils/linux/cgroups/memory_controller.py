@@ -9,23 +9,43 @@ from typing import Optional, Union
 
 from granulate_utils.exceptions import CgroupInterfaceNotSupported
 from granulate_utils.linux.cgroups.base_controller import BaseController
-from granulate_utils.linux.cgroups.cgroup import CgroupCore, CgroupCoreV1, CgroupCoreV2, ControllerType
+from granulate_utils.linux.cgroups.cgroup import CgroupCore, ControllerType
 
 
-class MemoryControllerInterface:
-    MEMORY_LIMIT_FILE: str
-    MEMORY_USAGE_FILE: str
-    MEMORY_MAX_USAGE_IN_BYTES_FILE: str
-    MEMORY_SWAP_LIMIT_FILE: str
+class MemoryController(BaseController):
+    CONTROLLER: ControllerType = "memory"
+    MEMORY_LIMIT_FILE: str = ""
+    MEMORY_USAGE_FILE: str = ""
+    MEMORY_MAX_USAGE_IN_BYTES_FILE: str = ""
+    MEMORY_SWAP_LIMIT_FILE: str = ""
 
-    def __init__(self, cgroup: CgroupCore):
-        self.cgroup = cgroup
+    def __init__(self, cgroup: Optional[Union[Path, CgroupCore]] = None):
+        super().__init__(cgroup)
+
+    def get_usage_in_bytes(self) -> int:
+        return int(self.read_from_interface_file(self.MEMORY_USAGE_FILE))
+
+    def get_max_usage_in_bytes(self) -> int:
+        if self.MEMORY_MAX_USAGE_IN_BYTES_FILE == "":
+            # Cgroup V2 doesn't implement max_usage
+            raise CgroupInterfaceNotSupported("max_usage_in_bytes", "v2")
+        return int(self.read_from_interface_file(self.MEMORY_MAX_USAGE_IN_BYTES_FILE))
+
+    def reset_memory_limit(self) -> None:
+        self.set_limit_in_bytes(-1)
 
     @abstractmethod
     def set_limit_in_bytes(self, limit: int) -> None:
+        """
+        Set the memory limit in bytes.
+        :param limit: memory limit in bytes. -1 is for unbounded.
+        """
         pass
 
     def get_memory_limit(self) -> int:
+        """
+        Returns the memory limit. If memory is unbounded, return -1
+        """
         return self.cgroup.convert_inner_value_to_outer(self.cgroup.read_from_interface_file(self.MEMORY_LIMIT_FILE))
 
     def _set_swap_limit(self, limit: int) -> None:
@@ -39,7 +59,7 @@ class MemoryControllerInterface:
             pass
 
 
-class MemoryControllerV1(MemoryControllerInterface):
+class MemoryControllerV1(MemoryController):
     MEMORY_LIMIT_FILE = "memory.limit_in_bytes"
     MEMORY_SWAP_LIMIT_FILE = "memory.memsw.limit_in_bytes"
     MEMORY_MAX_USAGE_IN_BYTES_FILE = "memory.max_usage_in_bytes"
@@ -57,7 +77,7 @@ class MemoryControllerV1(MemoryControllerInterface):
             self._set_swap_limit(limit)
 
 
-class MemoryControllerV2(MemoryControllerInterface):
+class MemoryControllerV2(MemoryController):
     MEMORY_LIMIT_FILE = "memory.max"
     MEMORY_SWAP_LIMIT_FILE = "memory.swap.max"
     MEMORY_MAX_USAGE_IN_BYTES_FILE = ""
@@ -76,37 +96,17 @@ class MemoryControllerV2(MemoryControllerInterface):
         self.cgroup.write_to_interface_file(self.MEMORY_LIMIT_FILE, self.cgroup.convert_outer_value_to_inner(limit))
 
 
-class MemoryController(BaseController):
-    CONTROLLER: ControllerType = "memory"
+class MemoryControllerFactory:
+    @staticmethod
+    def get_memory_controller(cgroup_core: CgroupCore) -> MemoryController:
+        if cgroup_core.is_v1:
+            return MemoryControllerV1(cgroup_core)
+        return MemoryControllerV2(cgroup_core)
 
-    def __init__(self, cgroup: Optional[Union[Path, CgroupCore]] = None):
-        super().__init__(cgroup)
-        if isinstance(self.cgroup, CgroupCoreV1):
-            self.controller_interface: MemoryControllerInterface = MemoryControllerV1(self.cgroup)
-        elif isinstance(self.cgroup, CgroupCoreV2):
-            self.controller_interface = MemoryControllerV2(self.cgroup)
-
-    def get_memory_limit(self) -> int:
-        """
-        Returns the memory limit. If memory is unbounded, return -1
-        """
-        return self.controller_interface.get_memory_limit()
-
-    def get_usage_in_bytes(self) -> int:
-        return int(self.read_from_interface_file(self.controller_interface.MEMORY_USAGE_FILE))
-
-    def get_max_usage_in_bytes(self) -> int:
-        if self.controller_interface.MEMORY_MAX_USAGE_IN_BYTES_FILE == "":
-            # Cgroup V2 doesn't implement max_usage
-            raise CgroupInterfaceNotSupported("max_usage_in_bytes", "v2")
-        return int(self.read_from_interface_file(self.controller_interface.MEMORY_MAX_USAGE_IN_BYTES_FILE))
-
-    def reset_memory_limit(self) -> None:
-        self.set_limit_in_bytes(-1)
-
-    def set_limit_in_bytes(self, limit: int) -> None:
-        """
-        Set the memory limit in bytes.
-        :param limit: memory limit in bytes. -1 is for unbounded.
-        """
-        self.controller_interface.set_limit_in_bytes(limit)
+    @classmethod
+    def get_sub_memory_controller(
+        cls, new_cgroup_name: str, parent_cgroup: Optional[Union[Path, CgroupCore]] = None
+    ) -> MemoryController:
+        current_cgroup = MemoryController.get_cgroup_core(parent_cgroup)
+        subcgroup_core = current_cgroup.get_subcgroup(MemoryController.CONTROLLER, new_cgroup_name)
+        return cls.get_memory_controller(subcgroup_core)

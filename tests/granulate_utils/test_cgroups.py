@@ -17,9 +17,9 @@ from granulate_utils.linux.cgroups.cgroup import (
     ControllerType,
     get_cgroup_for_process,
 )
-from granulate_utils.linux.cgroups.cpu_controller import CpuController
+from granulate_utils.linux.cgroups.cpu_controller import CpuControllerFactory
 from granulate_utils.linux.cgroups.cpuacct_controller import CpuAcctController
-from granulate_utils.linux.cgroups.memory_controller import MemoryController
+from granulate_utils.linux.cgroups.memory_controller import MemoryControllerFactory
 
 DUMMY_CONTROLLER: ControllerType = "cpu"
 DUMMY2_CONTROLLER: ControllerType = "memory"
@@ -153,7 +153,7 @@ def test_cpu_controller_v1(tmp_path_factory: TempPathFactory):
     cpu_stat.write_text("stat_value 1")
 
     cgroup_v1 = CgroupCoreV1(cpu_controller_dir)
-    cpu_controller = CpuController(cgroup_v1)
+    cpu_controller = CpuControllerFactory.get_cpu_controller(cgroup_v1)
     assert cpu_controller.get_cpu_limit_cores() == 0.5
     stat_data = cpu_controller.get_stat()
     assert len(stat_data) == 1
@@ -178,7 +178,7 @@ def test_cpu_controller_v2(tmp_path_factory: TempPathFactory):
     cpu_stat.write_text("stat_value 1")
 
     cgroup_v2 = CgroupCoreV2(cpu_controller_dir, cpu_controller_dir)
-    cpu_controller = CpuController(cgroup_v2)
+    cpu_controller = CpuControllerFactory.get_cpu_controller(cgroup_v2)
     assert cpu_controller.get_cpu_limit_cores() == 0.5
     stat_data = cpu_controller.get_stat()
     assert len(stat_data) == 1
@@ -209,7 +209,7 @@ def test_memory_controller_v1(tmp_path_factory: TempPathFactory):
     usage_in_bytes.write_text("500")
 
     cgroup_v1 = CgroupCoreV1(memory_controller_dir)
-    memory_controller = MemoryController(cgroup_v1)
+    memory_controller = MemoryControllerFactory.get_memory_controller(cgroup_v1)
     assert memory_controller.get_memory_limit() == 128
     assert memory_controller.get_max_usage_in_bytes() == 400
     assert memory_controller.get_usage_in_bytes() == 500
@@ -238,7 +238,7 @@ def test_memory_controller_v2(tmp_path_factory: TempPathFactory):
     usage_in_bytes.write_text("500")
 
     cgroup_v2 = CgroupCoreV2(memory_controller_dir, memory_controller_dir)
-    memory_controller = MemoryController(cgroup_v2)
+    memory_controller = MemoryControllerFactory.get_memory_controller(cgroup_v2)
     assert memory_controller.get_memory_limit() == 128
     assert memory_controller.get_usage_in_bytes() == 500
 
