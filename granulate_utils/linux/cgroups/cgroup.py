@@ -126,6 +126,8 @@ class CgroupCore:
         """
         :param pid: the pid, if 0 - current process
         """
+        # This way is consistent between cGroups v1 and v2
+        # The tasks file in cGroups v1 is used for moving specific threads instead of processes
         self.write_to_interface_file(CGROUP_PROCS_FILE, str(pid))
 
     def read_from_interface_file(self, interface_name: str) -> str:
