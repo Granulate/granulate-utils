@@ -12,7 +12,7 @@ def wrap_thread_pool(pool: ThreadPoolExecutor) -> Generator[ThreadPoolExecutor, 
     except _base.TimeoutError as e:
         raise TimeoutError(*e.args) from e
     finally:
-        pool.shutdown(wait=False, cancel_futures=True)
+        pool.shutdown(wait=False)
 
 
 def call_in_parallel(
