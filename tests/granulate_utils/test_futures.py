@@ -10,19 +10,19 @@ def wait(seconds: int) -> int:
     return seconds
 
 
-def test_return_first_result_sanity() -> None:
+def test_call_in_parallel_sanity() -> None:
     assert 1 == next(call_in_parallel((lambda: wait(1), lambda: wait(2), lambda: wait(3)), timeout=5)).result()
     assert 1 == next(call_in_parallel((lambda: wait(3), lambda: wait(2), lambda: wait(1)), timeout=5)).result()
     for i, future in enumerate(call_in_parallel((lambda: wait(0), lambda: wait(1), lambda: wait(2)), timeout=5)):
         assert i == future.result()
 
 
-def test_return_first_result_timeout() -> None:
+def test_call_in_parallel_timeout() -> None:
     with pytest.raises(TimeoutError, match="futures unfinished"):
         next(call_in_parallel((lambda: wait(2), lambda: wait(2)), timeout=1)).result()
 
 
-def test_return_first_result_exception_handling() -> None:
+def test_call_in_parallel_exception_handling() -> None:
     def throwing_first() -> None:
         raise Exception("throwing")
 
