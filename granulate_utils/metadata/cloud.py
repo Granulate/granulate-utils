@@ -13,9 +13,9 @@ from requests import Response
 from requests.exceptions import ConnectionError
 
 from granulate_utils.exceptions import BadResponseCode
+from granulate_utils.futures import call_in_parallel
 from granulate_utils.linux.ns import run_in_ns
 from granulate_utils.metadata import Metadata
-from granulate_utils.futures import call_in_parallel
 
 METADATA_REQUEST_TIMEOUT = 5
 
