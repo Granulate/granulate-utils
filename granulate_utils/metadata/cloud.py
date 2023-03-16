@@ -168,7 +168,7 @@ def get_static_cloud_instance_metadata(logger: Union[logging.LoggerAdapter, logg
     def _fetch() -> Tuple[Optional[Metadata], List[Exception]]:
         cloud_metadata_fetchers = [get_aws_metadata, get_gcp_metadata, get_azure_metadata]
         raised_exceptions: List[Exception] = []
-        for future in call_in_parallel(cloud_metadata_fetchers, timeout=6):
+        for future in call_in_parallel(cloud_metadata_fetchers, timeout=METADATA_REQUEST_TIMEOUT + 1):
             try:
                 response = future.result()
                 if response is not None:
