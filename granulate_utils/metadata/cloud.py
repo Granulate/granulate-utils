@@ -15,6 +15,7 @@ from requests.exceptions import ConnectionError
 from granulate_utils.exceptions import BadResponseCode
 from granulate_utils.linux.ns import run_in_ns
 from granulate_utils.metadata import Metadata
+from granulate_utils.futures import call_in_parallel
 
 METADATA_REQUEST_TIMEOUT = 5
 
@@ -167,9 +168,9 @@ def get_static_cloud_instance_metadata(logger: Union[logging.LoggerAdapter, logg
     def _fetch() -> Tuple[Optional[Metadata], List[Exception]]:
         cloud_metadata_fetchers = [get_aws_metadata, get_gcp_metadata, get_azure_metadata]
         raised_exceptions: List[Exception] = []
-        for fetcher in cloud_metadata_fetchers:
+        for future in call_in_parallel(cloud_metadata_fetchers, timeout=6):
             try:
-                response = fetcher()
+                response = future.result()
                 if response is not None:
                     return response.__dict__, []
             except (ConnectionError, BadResponseCode):
