@@ -3,7 +3,7 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional, Union
 
 import grpc  # type: ignore # no types-grpc sadly
@@ -125,11 +125,11 @@ class CriClient(ContainersClientInterface):
         if isinstance(container, api_pb2.ContainerStatus):
             created_at_ns = assert_cast(int, container.created_at)
             started_at_ns = assert_cast(int, container.started_at)
-            create_time = datetime.utcfromtimestamp(created_at_ns / 1e9)
+            create_time = datetime.fromtimestamp(created_at_ns / 1e9, tz=timezone.utc)
             start_time = None
             # from ContainerStatus message docs, 0 == not started
             if started_at_ns != 0:
-                start_time = datetime.utcfromtimestamp(started_at_ns / 1e9)
+                start_time = datetime.fromtimestamp(started_at_ns / 1e9, tz=timezone.utc)
             time_info = TimeInfo(create_time=create_time, start_time=start_time)
         return Container(
             runtime=runtime,
