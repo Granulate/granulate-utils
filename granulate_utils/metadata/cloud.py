@@ -6,7 +6,7 @@
 import logging
 from dataclasses import dataclass
 from http.client import NOT_FOUND
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Union
 
 import requests
 from requests import Response
@@ -168,21 +168,21 @@ def get_static_cloud_instance_metadata(logger: Union[logging.LoggerAdapter, logg
     raised_exceptions: List[Exception] = []
     cloud_metadata_fetchers = [get_aws_metadata, get_gcp_metadata, get_azure_metadata]
 
-    def _fetch() -> Tuple[Optional[Metadata], List[Exception]]:
+    def _fetch() -> Optional[Metadata]:
         for future in call_in_parallel(cloud_metadata_fetchers, timeout=METADATA_REQUEST_TIMEOUT + 1):
             try:
                 response = future.result()
                 if response is not None:
-                    return response.__dict__, []
+                    return response.__dict__
             except (ConnectionError, BadResponseCode):
                 pass
             except Exception as exception:
                 raised_exceptions.append(exception)
 
-        return None, raised_exceptions
+        return None
 
     try:
-        metadata, raised_exceptions = run_in_ns(["net"], _fetch)
+        metadata = run_in_ns(["net"], _fetch)
         if metadata is not None:
             return metadata
     except TimeoutError as exception:
