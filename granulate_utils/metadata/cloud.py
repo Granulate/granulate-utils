@@ -165,9 +165,10 @@ def send_request(url: str, headers: Dict[str, str] = None, method: str = "get") 
 
 
 def get_static_cloud_instance_metadata(logger: Union[logging.LoggerAdapter, logging.Logger]) -> Optional[Metadata]:
+    raised_exceptions: List[Exception] = []
+    cloud_metadata_fetchers = [get_aws_metadata, get_gcp_metadata, get_azure_metadata]
+
     def _fetch() -> Tuple[Optional[Metadata], List[Exception]]:
-        cloud_metadata_fetchers = [get_aws_metadata, get_gcp_metadata, get_azure_metadata]
-        raised_exceptions: List[Exception] = []
         for future in call_in_parallel(cloud_metadata_fetchers, timeout=METADATA_REQUEST_TIMEOUT + 1):
             try:
                 response = future.result()
@@ -180,9 +181,12 @@ def get_static_cloud_instance_metadata(logger: Union[logging.LoggerAdapter, logg
 
         return None, raised_exceptions
 
-    metadata, raised_exceptions = run_in_ns(["net"], _fetch)
-    if metadata is not None:
-        return metadata
+    try:
+        metadata, raised_exceptions = run_in_ns(["net"], _fetch)
+        if metadata is not None:
+            return metadata
+    except TimeoutError as exception:
+        raised_exceptions.append(exception)
 
     formatted_exceptions = (
         ", ".join([repr(exception) for exception in raised_exceptions]) if raised_exceptions else "(none)"
