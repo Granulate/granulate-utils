@@ -3,7 +3,6 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 
-from datetime import datetime
 from typing import List, Optional
 
 import docker
@@ -35,18 +34,6 @@ class DockerClient(ContainersClientInterface):
 
     def get_runtimes(self) -> List[str]:
         return ["docker"]
-
-    @staticmethod
-    def _parse_docker_timestamp(time_str: str) -> Optional[datetime]:
-        """
-        Parses timestamps provided by DockerAPI to datetime.
-        Docker works with ISO format timestamps (in UTC) with fractional milliseconds that python standard library
-        doesn't parse, and also ends with "Z" timezone indicator for UTC.
-        """
-        assert time_str.endswith("Z")  # assert UTC
-        if time_str.startswith("0001"):
-            return None
-        return datetime.fromisoformat(time_str.split(".")[0])
 
     @classmethod
     def _create_container(cls, container: docker.models.containers.Container) -> Container:
