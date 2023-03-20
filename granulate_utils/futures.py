@@ -1,8 +1,6 @@
 from concurrent.futures import Future, ThreadPoolExecutor, _base, as_completed
 from contextlib import contextmanager
-from typing import Callable, Collection, Generator, TypeVar
-
-T = TypeVar("T")
+from typing import Callable, Collection, Generator, Any
 
 
 @contextmanager
@@ -19,8 +17,8 @@ def wrap_thread_pool(pool: ThreadPoolExecutor) -> Generator[ThreadPoolExecutor, 
 
 
 def call_in_parallel(
-    callables: Collection[Callable[[], T]], timeout: float, max_threads: int = 10
-) -> Generator[Future[T], None, None]:
+    callables: Collection[Callable[[], Any]], timeout: float, max_threads: int = 10
+) -> Generator[Future, None, None]:
     """
     Call the given callables in parallel and generate their futures in correspondence to their finishing order.
 
