@@ -34,3 +34,10 @@ def test_call_in_parallel_exception_handling() -> None:
         raise Exception("throwing")
 
     assert 1 == next(call_in_parallel((throwing_last, lambda: wait(1)), timeout=5)).result()
+
+    # Verify that result() is the one throwing and not __next__()
+    for i, future in enumerate(call_in_parallel((throwing_first, lambda: wait(1), throwing_last), timeout=5)):
+        try:
+            assert i == future.result()
+        except Exception:
+            assert i in (0, 2)
