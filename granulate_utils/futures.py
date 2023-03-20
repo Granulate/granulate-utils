@@ -1,6 +1,6 @@
 from concurrent.futures import Future, ThreadPoolExecutor, _base, as_completed
 from contextlib import contextmanager
-from typing import Callable, Collection, Generator, Any
+from typing import Any, Callable, Collection, Generator
 
 
 @contextmanager
