@@ -5,10 +5,27 @@
 # (C) Datadog, Inc. 2018-present. All rights reserved.
 # Licensed under a 3-clause BSD style license (see LICENSE.bsd3).
 #
-from typing import Any, Dict
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, Iterable, Tuple, Union
 from urllib.parse import urljoin
 
 import requests
+
+
+@dataclass
+class Sample:
+    # The field names match the schema expected by the server one-to-one, so we can get a JSON-able
+    # dict simply by accessing __dict__.
+    labels: Dict[str, str]
+    name: str  # metric name
+    value: Union[int, float]
+
+
+@dataclass
+class MetricsSnapshot:
+    timestamp: datetime
+    samples: Tuple[Sample, ...]
 
 
 def rest_request(url: str, **kwargs: Any) -> requests.Response:
@@ -85,3 +102,17 @@ def set_metrics_from_json(
     for field_name, metric_name in metrics.items():
         metric_value = metrics_json.get(field_name)
         set_individual_metric(collected_metrics, metric_name, metric_value, labels)
+
+
+def samples_from_json(
+    labels: Dict[str, str], response_json: Dict[Any, Any], metrics: Dict[str, str]
+) -> Iterable[Sample]:
+    """
+    Extract metrics values from JSON response and return as Samples.
+    """
+    if response_json is None:
+        return
+
+    for field_name, metric_name in metrics.items():
+        if (value := response_json.get(field_name)) is not None:
+            yield Sample(labels, metric_name, value)
