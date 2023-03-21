@@ -5,9 +5,9 @@
 # (C) Datadog, Inc. 2018-present. All rights reserved.
 # Licensed under a 3-clause BSD style license (see LICENSE.bsd3).
 #
-from typing import Any, Dict, Generator, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
-from granulate_utils.metrics import json_request, set_metrics_from_json
+from granulate_utils.metrics import Collector, Sample, json_request, samples_from_json
 
 YARN_CLUSTER_METRICS = {
     metric: f"yarn_cluster_{metric}"
@@ -71,7 +71,7 @@ class ResourceManagerAPI:
         return json_request(self._nodes_url, **kwargs).get("nodes", {}).get("node", [])
 
 
-class YarnCollector:
+class YarnCollector(Collector):
     name = "yarn"
 
     def __init__(self, rm_address: str, logger: Any) -> None:
@@ -79,26 +79,27 @@ class YarnCollector:
         self.rm = ResourceManagerAPI(rm_address)
         self.logger = logger
 
-    def collect(self) -> Generator[Dict[str, Any], None, None]:
-        collected_metrics: Dict[str, Dict[str, Any]] = {}
-        self._cluster_metrics(collected_metrics)
-        self._nodes_metrics(collected_metrics)
-        yield from collected_metrics.values()
+    def collect(self) -> Iterable[Sample]:
+        try:
+            yield from self._cluster_metrics()
+            yield from self._nodes_metrics()
+        except Exception as e:
+            self.logger.exception("Could not gather yarn metrics", exception=e)
 
-    def _cluster_metrics(self, collected_metrics: Dict[str, Dict[str, Any]]) -> None:
+    def _cluster_metrics(self) -> Iterable[Sample]:
         try:
             if cluster_metrics := self.rm.metrics():
-                set_metrics_from_json(collected_metrics, {}, cluster_metrics, YARN_CLUSTER_METRICS)
-        except Exception:
-            self.logger.exception("Could not gather yarn cluster metrics")
+                yield from samples_from_json({}, cluster_metrics, YARN_CLUSTER_METRICS)
+        except Exception as e:
+            self.logger.exception("Could not gather yarn cluster metrics", exception=e)
 
-    def _nodes_metrics(self, collected_metrics: Dict[str, Dict[str, Any]]) -> None:
+    def _nodes_metrics(self) -> Iterable[Sample]:
         try:
             for node in self.rm.nodes(states="RUNNING"):
                 for metric, value in node.get("resourceUtilization", {}).items():
                     node[metric] = value  # this will create all relevant metrics under same dictionary
 
                 labels = {"node_hostname": node["nodeHostName"]}
-                set_metrics_from_json(collected_metrics, labels, node, YARN_NODES_METRICS)
-        except Exception:
-            self.logger.exception("Could not gather yarn nodes metrics")
+                yield from samples_from_json(labels, node, YARN_NODES_METRICS)
+        except Exception as e:
+            self.logger.exception("Could not gather yarn nodes metrics", exception=e)

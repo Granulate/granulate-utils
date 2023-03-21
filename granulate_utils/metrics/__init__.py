@@ -5,6 +5,7 @@
 # (C) Datadog, Inc. 2018-present. All rights reserved.
 # Licensed under a 3-clause BSD style license (see LICENSE.bsd3).
 #
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, Iterable, Tuple, Union
@@ -20,6 +21,12 @@ class Sample:
     labels: Dict[str, str]
     name: str  # metric name
     value: Union[int, float]
+
+
+class Collector(ABC):
+    @abstractmethod
+    def collect(self) -> Iterable[Sample]:
+        pass
 
 
 @dataclass
@@ -58,6 +65,23 @@ def rest_request_to_json(url: str, object_path: str, *args: Any, **kwargs: Any) 
             url = join_url_dir(url, directory)
 
     return json_request(url, **kwargs)
+
+
+def rest_request_raw(url: str, object_path: str, *args: Any, **kwargs: Any) -> requests.Response:
+    """
+    Query the given URL and return the response in it's raw format
+    """
+    if object_path:
+        url = join_url_dir(url, object_path)
+
+    # Add args to the url
+    if args:
+        for directory in args:
+            url = join_url_dir(url, directory)
+
+    response = requests.get(url, params={k: v for k, v in kwargs.items() if v is not None}, timeout=3)
+    response.raise_for_status()
+    return response
 
 
 def get_request_url(address, url: str) -> str:
