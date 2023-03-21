@@ -5,10 +5,27 @@
 # (C) Datadog, Inc. 2018-present. All rights reserved.
 # Licensed under a 3-clause BSD style license (see LICENSE.bsd3).
 #
-from typing import Any, Dict
-from urllib.parse import urljoin
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, Iterable, List, Tuple, Union
+from urllib.parse import urljoin, urlparse
 
 import requests
+
+
+@dataclass
+class Sample:
+    # The field names match the schema expected by the server one-to-one, so we can get a JSON-able
+    # dict simply by accessing __dict__.
+    labels: Dict[str, str]
+    name: str  # metric name
+    value: Union[int, float]
+
+
+@dataclass
+class MetricsSnapshot:
+    timestamp: datetime
+    samples: Tuple[Sample, ...]
 
 
 def rest_request(url: str, **kwargs: Any) -> requests.Response:
@@ -43,6 +60,19 @@ def rest_request_to_json(url: str, object_path: str, *args: Any, **kwargs: Any) 
     return json_request(url, **kwargs)
 
 
+def get_request_url(address, url: str) -> str:
+    """
+    Get the request address, build with proxy if necessary
+    """
+    parsed = urlparse(url)
+
+    _url = url
+    if not (parsed.netloc and parsed.scheme):
+        _url = urljoin(address, parsed.path)
+
+    return _url
+
+
 def join_url_dir(url: str, *args: Any) -> str:
     """
     Join a URL with multiple directories
@@ -54,7 +84,7 @@ def join_url_dir(url: str, *args: Any) -> str:
 
 
 def set_individual_metric(
-    collected_metrics: Dict[str, Dict[str, Any]], name: str, value: Any, labels: Dict[str, str]
+        collected_metrics: Dict[str, Dict[str, Any]], name: str, value: Any, labels: Dict[str, str]
 ) -> None:
     """
     Add a metric to collected_metrics with labels in {name, value, labels} format.
@@ -71,10 +101,10 @@ def set_individual_metric(
 
 
 def set_metrics_from_json(
-    collected_metrics: Dict[str, Dict[str, Any]],
-    labels: Dict[str, str],
-    metrics_json: Dict[Any, Any],
-    metrics: Dict[str, str],
+        collected_metrics: Dict[str, Dict[str, Any]],
+        labels: Dict[str, str],
+        metrics_json: Dict[Any, Any],
+        metrics: Dict[str, str],
 ) -> None:
     """
     Extract metrics values from JSON response and add to collected_metrics in {name, value, labels} format.
@@ -85,3 +115,17 @@ def set_metrics_from_json(
     for field_name, metric_name in metrics.items():
         metric_value = metrics_json.get(field_name)
         set_individual_metric(collected_metrics, metric_name, metric_value, labels)
+
+
+def samples_from_json(
+        labels: Dict[str, str], response_json: Dict[Any, Any], metrics: Dict[str, str]
+) -> Iterable[Sample]:
+    """
+    Parse the JSON response and set the metrics
+    """
+    if response_json is None:
+        return
+
+    for field_name, metric_name in metrics.items():
+        if (value := response_json.get(field_name)) is not None:
+            yield Sample(labels, metric_name, value)
