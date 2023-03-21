@@ -108,7 +108,7 @@ def samples_from_json(
     labels: Dict[str, str], response_json: Dict[Any, Any], metrics: Dict[str, str]
 ) -> Iterable[Sample]:
     """
-    Parse the JSON response and set the metrics
+    Extract metrics values from JSON response and return as Samples.
     """
     if response_json is None:
         return
