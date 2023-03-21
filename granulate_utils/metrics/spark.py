@@ -6,12 +6,19 @@
 # Licensed under a 3-clause BSD style license (see LICENSE.bsd3).
 #
 
-from typing import Any, Dict, Iterable, List, Tuple, Union
-from bs4 import BeautifulSoup
+from typing import Any, Dict, Iterable, Tuple
 
-from granulate_utils.metrics import rest_request_to_json, get_request_url, samples_from_json, Sample
-from granulate_utils.metrics.metrics import SPARK_APPLICATION_GAUGE_METRICS, SPARK_APPLICATION_DIFF_METRICS, \
-    SPARK_AGGREGATED_STAGE_METRICS, SPARK_EXECUTORS_METRICS, SPARK_RUNNING_APPS_COUNT_METRIC
+from granulate_utils.metrics import Sample, get_request_url, rest_request_to_json, samples_from_json
+from granulate_utils.metrics.metrics import (
+    SPARK_AGGREGATED_STAGE_METRICS,
+    SPARK_APPLICATION_DIFF_METRICS,
+    SPARK_APPLICATION_GAUGE_METRICS,
+    SPARK_EXECUTORS_METRICS,
+    SPARK_RUNNING_APPS_COUNT_METRIC,
+)
+
+# from bs4 import BeautifulSoup
+
 
 SPARK_APPS_PATH = "api/v1/applications"
 MESOS_MASTER_APP_PATH = "/frameworks"
@@ -39,7 +46,7 @@ class SparkApplicationMetricsCollector:
         self.logger = logger
         self._last_iteration_app_job_metrics: Dict[str, Dict[str, Any]] = {}
 
-    def collect(self) -> Iterable[Dict[str, Union[str, int, float]]]:
+    def collect(self) -> Iterable[Sample]:
         try:
             yield from self._spark_application_metrics()
             yield from self._spark_stage_metrics()
@@ -106,7 +113,9 @@ class SparkApplicationMetricsCollector:
                 response = rest_request_to_json(base_url, SPARK_APPS_PATH, app_id, "stages")
                 self.logger.debug("Got response for stage metrics for app %s", app_id)
             except Exception as e:
-                self.logger.exception("Exception occurred while trying to retrieve stage metrics", extra={"exception": e})
+                self.logger.exception(
+                    "Exception occurred while trying to retrieve stage metrics", extra={"exception": e}
+                )
                 return
 
             aggregated_metrics = dict.fromkeys(SPARK_AGGREGATED_STAGE_METRICS.keys(), 0)
@@ -144,4 +153,3 @@ class SparkApplicationMetricsCollector:
 
     def _running_applications_count_metric(self) -> Iterable[Sample]:
         yield Sample(name=SPARK_RUNNING_APPS_COUNT_METRIC, value=len(self.running_apps), labels={})
-

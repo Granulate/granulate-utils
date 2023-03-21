@@ -7,7 +7,7 @@
 #
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, Iterable, List, Tuple, Union
+from typing import Any, Dict, Iterable, Tuple, Union
 from urllib.parse import urljoin, urlparse
 
 import requests
@@ -84,7 +84,7 @@ def join_url_dir(url: str, *args: Any) -> str:
 
 
 def set_individual_metric(
-        collected_metrics: Dict[str, Dict[str, Any]], name: str, value: Any, labels: Dict[str, str]
+    collected_metrics: Dict[str, Dict[str, Any]], name: str, value: Any, labels: Dict[str, str]
 ) -> None:
     """
     Add a metric to collected_metrics with labels in {name, value, labels} format.
@@ -101,10 +101,10 @@ def set_individual_metric(
 
 
 def set_metrics_from_json(
-        collected_metrics: Dict[str, Dict[str, Any]],
-        labels: Dict[str, str],
-        metrics_json: Dict[Any, Any],
-        metrics: Dict[str, str],
+    collected_metrics: Dict[str, Dict[str, Any]],
+    labels: Dict[str, str],
+    metrics_json: Dict[Any, Any],
+    metrics: Dict[str, str],
 ) -> None:
     """
     Extract metrics values from JSON response and add to collected_metrics in {name, value, labels} format.
@@ -118,7 +118,7 @@ def set_metrics_from_json(
 
 
 def samples_from_json(
-        labels: Dict[str, str], response_json: Dict[Any, Any], metrics: Dict[str, str]
+    labels: Dict[str, str], response_json: Dict[Any, Any], metrics: Dict[str, str]
 ) -> Iterable[Sample]:
     """
     Parse the JSON response and set the metrics
