@@ -71,7 +71,9 @@ OpenJDK 64-Bit Server VM (build 24.251-b02, mixed mode)""",
             """java version "1.8.0_312"
 Java Runtime Environment (Zing 21.12.0.0-b2-linux64) (build 1.8.0_312-b2)
 Zing 64-Bit Tiered VM (Zing 21.12.0.0-b2-linux64) (build 1.8.0_312-zing_21.12.0.0-b3-product-linux-X86_64, mixed mode)""",  # noqa
-            JvmVersion(Version("8.312"), 2, "Zing 64-Bit Tiered VM (Zing 21.12.0.0-b2-linux64)", "Zing", Version("21.12.0")),
+            JvmVersion(
+                Version("8.312"), 2, "Zing 64-Bit Tiered VM (Zing 21.12.0.0-b2-linux64)", "Zing", Version("21.12.0")
+            ),
         ),
         # zing 22 & java 15
         (
