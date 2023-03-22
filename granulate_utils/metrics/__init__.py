@@ -13,6 +13,9 @@ from urllib.parse import urljoin, urlparse
 
 import requests
 
+YARN_SPARK_APPLICATION_SPECIFIER = "SPARK"
+YARN_RUNNING_APPLICATION_SPECIFIER = "RUNNING"
+
 
 @dataclass
 class Sample:
@@ -145,7 +148,7 @@ def samples_from_json(
     labels: Dict[str, str], response_json: Dict[Any, Any], metrics: Dict[str, str]
 ) -> Iterable[Sample]:
     """
-    Parse the JSON response and set the metrics
+    Extract metrics values from JSON response and return as Samples.
     """
     if response_json is None:
         return
@@ -153,7 +156,3 @@ def samples_from_json(
     for field_name, metric_name in metrics.items():
         if (value := response_json.get(field_name)) is not None:
             yield Sample(labels, metric_name, value)
-
-
-YARN_SPARK_APPLICATION_SPECIFIER = "SPARK"
-YARN_RUNNING_APPLICATION_SPECIFIER = "RUNNING"
