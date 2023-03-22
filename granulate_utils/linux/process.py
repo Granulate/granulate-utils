@@ -7,7 +7,7 @@ import re
 import struct
 from contextlib import contextmanager
 from functools import lru_cache
-from typing import Generator, Optional
+from typing import Generator, List, Optional
 
 import psutil
 
@@ -47,10 +47,19 @@ def is_process_zombie(process: psutil.Process) -> bool:
     return process.status() == "zombie"
 
 
-def is_musl(process: psutil.Process) -> bool:
+def is_musl(process: psutil.Process, maps: Optional[List[psutil._pslinux.pmmap_grouped]] = None) -> bool:
+    """
+    Returns True if the maps of the process contain a mapping of ld-musl, which we use as an identifier of
+    musl-based processes.
+    Note that this doesn't check for existence of glibc-compat (https://github.com/sgerrand/alpine-pkg-glibc). Processes
+    might have ld-musl, but if they use glibc-compat we might want to consider them glibc based. This decision is left
+    for the caller.
+    """
     # TODO: make sure no glibc libc.so file exists (i.e, return True if musl, False if glibc, and raise
-    # if not conclusive)
-    return any("ld-musl" in m.path for m in process.memory_maps())
+    # if not conclusive). if glibc-compat is in use, we will have glibc related maps...
+    if maps is None:
+        maps = process.memory_maps()
+    return any("ld-musl" in m.path for m in maps)
 
 
 def get_mapped_dso_elf_id(process: psutil.Process, dso_part: str) -> Optional[str]:
