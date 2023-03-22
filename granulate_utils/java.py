@@ -125,7 +125,7 @@ class JvmVersion:
     build: int
     name: str
     vm_type: VmType
-    zing_major: Optional[int] = None  # non-None if Zing
+    zing_version: Optional[Version] = None  # major.minor.patch version, non-None if Zing
 
 
 # Parse java version information from "java -version" output
@@ -210,13 +210,13 @@ def parse_jvm_version(version_string: str) -> JvmVersion:
         if m is None:
             # Zing <= 20 versions have a different format
             # this matches the "20" out of (build 1.8.0-zing_20.03.0.0-b1).
-            m = re.search(r"\(build[^\)]+zing_(\d+)\.[^\(]+\)", version_string)
+            m = re.search(r"\(build[^\)]+zing_(\d+\.\d+\.\d+)\.[^\(]+\)", version_string)
             assert m is not None, f"Missing old format of Zing version? {version_string!r}"
-        zing_major: Optional[int] = int(m.group(1))
+        zing_version: Optional[Version] = Version(m.group(1))
     else:
-        zing_major = None
+        zing_version = None
 
-    return JvmVersion(version, build, vm_name, vm_type, zing_major)
+    return JvmVersion(version, build, vm_name, vm_type, zing_version)
 
 
 @dataclasses.dataclass
