@@ -18,7 +18,6 @@ from granulate_utils.metrics import (
     YARN_SPARK_APPLICATION_SPECIFIER,
     Collector,
     MetricsSnapshot,
-    Sample,
     rest_request_raw,
     rest_request_to_json,
 )
@@ -423,8 +422,7 @@ class BigDataSampler:
             )
             have_conf = True
 
-        if have_conf:
-            # We can create collectors
+        if have_conf and self._spark_samplers == []:
             self._init_collectors()
 
         return have_conf
@@ -435,11 +433,11 @@ class BigDataSampler:
         It will take care of all the logic to collect metrics from Spark, without any backend communication.
         It will return MetricsSnapshot object.
         """
-
         if self._spark_samplers:
-            collected: List[Sample] = []
+            collected = []
             for collector in self._spark_samplers:
-                collected += collector.collect()
+                for sample in collector.collect():
+                    collected.append(sample)
             # No need to submit samples that don't actually have a value:
             samples = tuple(filter(lambda s: s.value is not None, collected))
             snapshot = MetricsSnapshot(datetime.now(tz=timezone.utc), samples)
