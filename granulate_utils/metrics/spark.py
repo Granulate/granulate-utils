@@ -11,6 +11,8 @@ from typing import Any, Dict, Iterable, Tuple
 from bs4 import BeautifulSoup
 
 from granulate_utils.metrics import (
+    YARN_RUNNING_APPLICATION_SPECIFIER,
+    YARN_SPARK_APPLICATION_SPECIFIER,
     Collector,
     Sample,
     get_request_url,
@@ -26,7 +28,6 @@ from granulate_utils.metrics.metrics import (
     SPARK_RUNNING_APPS_COUNT_METRIC,
 )
 from granulate_utils.metrics.modes import SPARK_MESOS_MODE, SPARK_STANDALONE_MODE, SPARK_YARN_MODE
-from granulate_utils.metrics.sampler import YARN_RUNNING_APPLICATION_SPECIFIER, YARN_SPARK_APPLICATION_SPECIFIER
 
 SPARK_APPS_PATH = "api/v1/applications"
 MESOS_MASTER_APP_PATH = "/frameworks"
@@ -40,7 +41,7 @@ SPARK_MASTER_APP_PATH = "/app/"
 
 class SparkRunningApps:
     def __init__(self, cluster_mode: str, master_address: str, logger: Any) -> None:
-        self._master_address = master_address
+        self._master_address = f"http://{master_address}"
         self._cluster_mode = cluster_mode
         self._logger = logger
 
@@ -121,7 +122,11 @@ class SparkRunningApps:
         """
         # Parsing the master address json object:
         # https://github.com/apache/spark/blob/67a254c7ed8c5c3321e8bed06294bc2c9a2603de/core/src/main/scala/org/apache/spark/deploy/JsonProtocol.scala#L202
-        metrics_json = rest_request_to_json(self._master_address, SPARK_MASTER_STATE_PATH)
+        try:
+            metrics_json = rest_request_to_json(self._master_address, SPARK_MASTER_STATE_PATH)
+        except Exception:
+            self._logger.exception("Could not fetch data from url", url=self._master_address)
+            return {}
         running_apps = {}
 
         for app in metrics_json.get("activeapps", []):

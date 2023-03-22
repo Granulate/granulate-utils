@@ -153,3 +153,7 @@ def samples_from_json(
     for field_name, metric_name in metrics.items():
         if (value := response_json.get(field_name)) is not None:
             yield Sample(labels, metric_name, value)
+
+
+YARN_SPARK_APPLICATION_SPECIFIER = "SPARK"
+YARN_RUNNING_APPLICATION_SPECIFIER = "RUNNING"
