@@ -76,7 +76,7 @@ class YarnCollector(Collector):
 
     def __init__(self, rm_address: str, logger: Any) -> None:
         self.rm_address = f"http://{rm_address}"
-        self.rm = ResourceManagerAPI(rm_address)
+        self.rm = ResourceManagerAPI(self.rm_address)
         self.logger = logger
 
     def collect(self) -> Iterable[Sample]:
