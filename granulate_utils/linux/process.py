@@ -7,7 +7,7 @@ import re
 import struct
 from contextlib import contextmanager
 from functools import lru_cache
-from typing import Generator, List, Optional
+from typing import Any, Generator, List, Optional
 
 import psutil
 
@@ -47,7 +47,7 @@ def is_process_zombie(process: psutil.Process) -> bool:
     return process.status() == "zombie"
 
 
-def is_musl(process: psutil.Process, maps: Optional[List[psutil._pslinux.pmmap_grouped]] = None) -> bool:
+def is_musl(process: psutil.Process, maps: Optional[List[Any]] = None) -> bool:  # no proper type for maps :/
     """
     Returns True if the maps of the process contain a mapping of ld-musl, which we use as an identifier of
     musl-based processes.
