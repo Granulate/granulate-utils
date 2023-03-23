@@ -401,6 +401,12 @@ class BigDataSampler:
         """
         I guess every sampler should have this method, so TODO is to make it abstract in a base class.
         return a boolean so the caller can check if the discovery was successful or not, and set it's own timeout.
+
+        For every collector we need to know:
+        1. the cluster mode (yarn, standalone, mesos)
+        2. the master address
+
+        returns True if we have these configurations, False otherwise
         """
         have_conf = False
         if self._master_address is None or self._cluster_mode is None:
