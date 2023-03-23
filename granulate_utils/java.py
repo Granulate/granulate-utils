@@ -206,7 +206,7 @@ def parse_jvm_version(version_string: str) -> JvmVersion:
     if vm_type == "Zing":
         # name is e.g Zing 64-Bit Tiered VM Zing22.04.1.0+1
         # or (Zing 21.12.0.0-b2-linux64) from the azul/prime:1.8.0-312-2-21.12.0.0 image.
-        m = re.search(r"Zing ?(\d+)\.", vm_name)
+        m = re.search(r"Zing ?(\d+\.\d+\.\d+)\.", vm_name)
         if m is None:
             # Zing <= 20 versions have a different format
             # this matches the "20" out of (build 1.8.0-zing_20.03.0.0-b1).
