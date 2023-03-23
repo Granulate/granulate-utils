@@ -8,7 +8,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, Iterable, Tuple, Union
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import requests
 
@@ -43,6 +43,19 @@ def json_request(url: str, **kwargs) -> Any:
     :param kwargs: request parameters
     """
     return rest_request(url, **kwargs).json()
+
+
+def get_request_url(address, url: str) -> str:
+    """
+    Get the request address, build with proxy if necessary
+    """
+    parsed = urlparse(url)
+
+    _url = url
+    if not (parsed.netloc and parsed.scheme):
+        _url = urljoin(address, parsed.path)
+
+    return _url
 
 
 def rest_request_to_json(url: str, object_path: str, *args: Any, **kwargs: Any) -> Any:
