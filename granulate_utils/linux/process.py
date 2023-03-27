@@ -2,14 +2,16 @@
 # Copyright (c) Granulate. All rights reserved.
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
+import contextlib
 import os
 import re
 import struct
 from contextlib import contextmanager
 from functools import lru_cache
-from typing import Any, Generator, List, Optional
+from typing import Any, Callable, Generator, Iterator, List, Optional
 
 import psutil
+from psutil import AccessDenied, NoSuchProcess
 
 from granulate_utils.exceptions import MissingExePath
 from granulate_utils.linux.elf import get_elf_id
@@ -149,3 +151,10 @@ def is_process_basename_matching(process: psutil.Process, basename_pattern: str)
 def is_kernel_thread(process: psutil.Process) -> bool:
     # Kernel threads should be child of process with pid 2, or with pid 2.
     return process.pid == 2 or process.ppid() == 2
+
+
+def search_for_process(filter: Callable[[psutil.Process], bool]) -> Iterator[psutil.Process]:
+    for proc in psutil.process_iter():
+        with contextlib.suppress(NoSuchProcess, AccessDenied):
+            if is_process_running(proc) and filter(proc):
+                yield proc
