@@ -27,7 +27,7 @@ from granulate_utils.metrics.metrics import (
     SPARK_EXECUTORS_METRICS,
     SPARK_RUNNING_APPS_COUNT_METRIC,
 )
-from granulate_utils.metrics.modes import SPARK_MESOS_MODE, SPARK_STANDALONE_MODE, SPARK_YARN_MODE
+from granulate_utils.metrics.mode import SPARK_MESOS_MODE, SPARK_STANDALONE_MODE, SPARK_YARN_MODE
 
 SPARK_APPS_PATH = "api/v1/applications"
 MESOS_MASTER_APP_PATH = "/frameworks"

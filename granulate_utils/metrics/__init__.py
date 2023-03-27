@@ -55,6 +55,19 @@ def json_request(url: str, **kwargs) -> Any:
     return rest_request(url, **kwargs).json()
 
 
+def get_request_url(address, url: str) -> str:
+    """
+    Get the request address, build with proxy if necessary
+    """
+    parsed = urlparse(url)
+
+    _url = url
+    if not (parsed.netloc and parsed.scheme):
+        _url = urljoin(address, parsed.path)
+
+    return _url
+
+
 def rest_request_to_json(url: str, object_path: str, *args: Any, **kwargs: Any) -> Any:
     """
     Query url/object_path/args/... and return the JSON response
@@ -85,19 +98,6 @@ def rest_request_raw(url: str, object_path: str, *args: Any, **kwargs: Any) -> r
     response = requests.get(url, params={k: v for k, v in kwargs.items() if v is not None}, timeout=3)
     response.raise_for_status()
     return response
-
-
-def get_request_url(address, url: str) -> str:
-    """
-    Get the request address, build with proxy if necessary
-    """
-    parsed = urlparse(url)
-
-    _url = url
-    if not (parsed.netloc and parsed.scheme):
-        _url = urljoin(address, parsed.path)
-
-    return _url
 
 
 def join_url_dir(url: str, *args: Any) -> str:
