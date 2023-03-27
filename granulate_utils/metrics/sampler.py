@@ -3,7 +3,6 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 import os
-import socket
 from threading import Event, Thread
 from typing import Any, Optional, Tuple
 from xml.etree import ElementTree as ET
@@ -23,12 +22,7 @@ class SparkSampler:
     Spark cluster metrics sampler
     """
 
-    def __init__(
-        self,
-        sample_period: float,
-        storage_dir: str,
-        logger: Any,
-    ):
+    def __init__(self, sample_period: float, storage_dir: str, logger: Any, hostname: str):
         self._logger = logger
         self._master_address: Optional[str] = None
         self._spark_mode: Optional[str] = None
@@ -38,18 +32,12 @@ class SparkSampler:
         self._stop_event = Event()
         self._stop_collection = False
         self._is_running = False
+        self._hostname = hostname
         self._storage_dir = storage_dir
         if self._storage_dir is not None:
             assert os.path.exists(self._storage_dir) and os.path.isdir(self._storage_dir)
         else:
             self._logger.debug("Output directory is None. Will add metrics to queue")
-
-    def get_hostname(self) -> str:
-        try:
-            hostname = socket.gethostname()
-        except Exception as e:
-            self._logger.exception("Failed to get hostname", exception=e)
-        return hostname
 
     def _get_yarn_config_path(self, process: psutil.Process) -> str:
         env = process.environ()
@@ -137,7 +125,7 @@ class SparkSampler:
         if self._master_address:
             return self._master_address
         else:
-            host_name = self.get_hostname()
+            host_name = self._hostname
             return host_name + ":5050"
 
     def _get_yarn_host_name(self, resource_manager_process: psutil.Process) -> str:
@@ -151,7 +139,7 @@ class SparkSampler:
                 "Selected hostname from yarn.resourcemanager.hostname config", resourcemanager_hostname=hostname
             )
         else:
-            hostname = self.get_hostname()
+            hostname = self._hostname
             self._logger.debug("Selected hostname from my hostname", resourcemanager_hostname=hostname)
         return hostname
 
