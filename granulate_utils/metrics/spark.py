@@ -9,6 +9,7 @@
 from typing import Any, Dict, Iterable, Tuple
 
 from bs4 import BeautifulSoup
+from requests import HTTPError
 
 from granulate_utils.metrics import (
     YARN_RUNNING_APPLICATION_SPECIFIER,
@@ -122,11 +123,7 @@ class SparkRunningApps:
         """
         # Parsing the master address json object:
         # https://github.com/apache/spark/blob/67a254c7ed8c5c3321e8bed06294bc2c9a2603de/core/src/main/scala/org/apache/spark/deploy/JsonProtocol.scala#L202
-        try:
-            metrics_json = rest_request_to_json(self._master_address, SPARK_MASTER_STATE_PATH)
-        except Exception:
-            self._logger.exception("Could not fetch data from url", url=self._master_address)
-            return {}
+        metrics_json = rest_request_to_json(self._master_address, SPARK_MASTER_STATE_PATH)
         running_apps = {}
 
         for app in metrics_json.get("activeapps", []):
@@ -141,12 +138,15 @@ class SparkRunningApps:
                 if app_id and app_name and app_url:
                     running_apps[app_id] = (app_name, app_url)
                     self._logger.debug("Added app to running apps", app_id=app_id, app_name=app_name, app_url=app_url)
-            except KeyError:
-                self._logger.exception("Key error was found while iterating applications.")
+            except HTTPError as e:
+                if e.response.status_code == 404:
+                    # it's possible for the requests to fail if the job
+                    # completed since we got the list of apps.  Just continue
+                    pass
+                else:
+                    self._logger.exception("HTTP error was found while iterating applications.")
             except Exception:
-                # it's possible for the requests to fail if the job
-                # completed since we got the list of apps.  Just continue
-                pass
+                self._logger.exception("Error was found while iterating applications.")
 
         return running_apps
 

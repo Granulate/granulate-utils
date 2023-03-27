@@ -107,12 +107,9 @@ class BigDataSampler:
         Selects the master address for a standalone cluster.
         Uses master_address if given.
         """
-        if self._master_address:
-            return self._master_address
-        else:
-            master_ip = self._get_master_process_arg_value(process, "--host")
-            master_port = self._get_master_process_arg_value(process, "--webui-port")
-            return f"{master_ip}:{master_port}"
+        master_ip = self._get_master_process_arg_value(process, "--host")
+        master_port = self._get_master_process_arg_value(process, "--webui-port")
+        return f"{master_ip}:{master_port}"
 
     def _get_master_process_arg_value(self, process: psutil.Process, arg_name: str) -> Optional[str]:
         process_args = process.cmdline()
@@ -138,22 +135,15 @@ class BigDataSampler:
                     if value_property is not None and value_property.text is not None:
                         return value_property.text
 
-        if self._master_address is not None:
-            return self._master_address
-        else:
-            host_name = self._get_yarn_host_name(resource_manager_process)
-            return host_name + ":8088"
+        host_name = self._get_yarn_host_name(resource_manager_process)
+        return host_name + ":8088"
 
     def _guess_mesos_master_webapp_address(self, process: psutil.Process) -> str:
         """
         Selects the master address for a mesos-master running on this node. Uses master_address if given, or defaults
         to my hostname.
         """
-        if self._master_address:
-            return self._master_address
-        else:
-            host_name = self._hostname
-            return host_name + ":5050"
+        return self._hostname + ":5050"
 
     def _get_yarn_host_name(self, resource_manager_process: psutil.Process) -> str:
         """
