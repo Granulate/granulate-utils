@@ -2,9 +2,10 @@
 # Copyright (c) Granulate. All rights reserved.
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
+import logging
 import os
 from threading import Event, Thread
-from typing import Any, Optional, Tuple
+from typing import Optional, Tuple
 from xml.etree import ElementTree as ET
 
 import psutil
@@ -22,7 +23,7 @@ class SparkSampler:
     Spark cluster metrics sampler
     """
 
-    def __init__(self, sample_period: float, storage_dir: str, logger: Any, hostname: str):
+    def __init__(self, sample_period: float, storage_dir: str, logger: logging.LoggerAdapter, hostname: str):
         self._logger = logger
         self._master_address: Optional[str] = None
         self._spark_mode: Optional[str] = None

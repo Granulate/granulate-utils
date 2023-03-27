@@ -5,6 +5,7 @@
 # (C) Datadog, Inc. 2018-present. All rights reserved.
 # Licensed under a 3-clause BSD style license (see LICENSE.bsd3).
 #
+import logging
 import re
 from typing import Any, Dict, Iterable, List, Tuple, Union
 from urllib.parse import urljoin, urlparse
@@ -50,7 +51,7 @@ STRUCTURED_STREAMS_METRICS_REGEX = re.compile(
 class SparkCollector:
     def __init__(
         self,
-        logger: Any,
+        logger: logging.LoggerAdapter,
         cluster_mode: str,
         master_address: str,
         *,
