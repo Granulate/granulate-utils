@@ -5,7 +5,8 @@
 # (C) Datadog, Inc. 2018-present. All rights reserved.
 # Licensed under a 3-clause BSD style license (see LICENSE.bsd3).
 #
-from typing import Any, Dict, Iterable, List, Optional
+import logging
+from typing import Dict, Iterable, List, Optional
 
 from granulate_utils.metrics import Collector, Sample, json_request, samples_from_json
 
@@ -74,7 +75,7 @@ class ResourceManagerAPI:
 class YarnCollector(Collector):
     name = "yarn"
 
-    def __init__(self, rm_address: str, logger: Any) -> None:
+    def __init__(self, rm_address: str, logger: logging.LoggerAdapter) -> None:
         self.rm_address = f"http://{rm_address}"
         self.rm = ResourceManagerAPI(self.rm_address)
         self.logger = logger

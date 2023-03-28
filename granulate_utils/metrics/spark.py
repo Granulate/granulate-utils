@@ -5,7 +5,7 @@
 # (C) Datadog, Inc. 2018-present. All rights reserved.
 # Licensed under a 3-clause BSD style license (see LICENSE.bsd3).
 #
-
+import logging
 from typing import Any, Dict, Iterable, Tuple
 
 from bs4 import BeautifulSoup
@@ -41,7 +41,7 @@ SPARK_MASTER_APP_PATH = "/app/"
 
 
 class SparkRunningApps:
-    def __init__(self, cluster_mode: str, master_address: str, logger: Any) -> None:
+    def __init__(self, cluster_mode: str, master_address: str, logger: logging.LoggerAdapter) -> None:
         self._master_address = f"http://{master_address}"
         self._cluster_mode = cluster_mode
         self._logger = logger
@@ -168,7 +168,7 @@ class SparkRunningApps:
 
 
 class SparkApplicationMetricsCollector(Collector):
-    def __init__(self, cluster_mode: str, master_address: str, logger: Any) -> None:
+    def __init__(self, cluster_mode: str, master_address: str, logger: logging.LoggerAdapter) -> None:
         self.master_address = master_address
         self._cluster_mode = cluster_mode
         self.logger = logger
