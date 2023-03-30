@@ -38,7 +38,7 @@ class Sampler(ABC):
         pass
 
     @abstractmethod
-    def collect_loop_helper(self) -> Optional[MetricsSnapshot]:
+    def snapshot(self) -> Optional[MetricsSnapshot]:
         """
         This function will be used in a collector loop.
         It will take care of all the logic to collect metrics from Spark, without any backend communication.
@@ -306,7 +306,7 @@ class BigDataSampler(Sampler):
 
         return have_conf
 
-    def collect_loop_helper(self) -> Optional[MetricsSnapshot]:
+    def snapshot(self) -> Optional[MetricsSnapshot]:
         """
         Returns a MetricsSnapshot with the collected metrics.
         """
