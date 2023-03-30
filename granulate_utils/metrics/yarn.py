@@ -9,49 +9,10 @@ import logging
 from typing import Dict, Iterable, List, Optional
 
 from granulate_utils.metrics import Collector, Sample, json_request, samples_from_json
+from granulate_utils.metrics.metrics import YARN_CLUSTER_METRICS, YARN_NODES_METRICS
 
-YARN_CLUSTER_METRICS = {
-    metric: f"yarn_cluster_{metric}"
-    for metric in (
-        "appsSubmitted",
-        "appsCompleted",
-        "appsPending",
-        "appsRunning",
-        "appsFailed",
-        "appsKilled",
-        "totalMB",
-        "availableMB",
-        "allocatedMB",
-        "availableVirtualCores",
-        "allocatedVirtualCores",
-        "totalNodes",
-        "activeNodes",
-        "lostNodes",
-        "decommissioningNodes",
-        "decommissionedNodes",
-        "rebootedNodes",
-        "shutdownNodes",
-        "unhealthyNodes",
-        "containersAllocated",
-        "containersPending",
-    )
-}
-YARN_NODES_METRICS = {
-    metric: f"yarn_node_{metric}"
-    for metric in (
-        "numContainers",
-        "usedMemoryMB",
-        "availMemoryMB",
-        "usedVirtualCores",
-        "availableVirtualCores",
-        "nodePhysicalMemoryMB",
-        "nodeVirtualMemoryMB",
-        "nodeCPUUsage",
-        "containersCPUUsage",
-        "aggregatedContainersPhysicalMemoryMB",
-        "aggregatedContainersVirtualMemoryMB",
-    )
-}
+YARN_SPARK_APPLICATION_SPECIFIER = "SPARK"
+YARN_RUNNING_APPLICATION_SPECIFIER = "RUNNING"
 
 YARN_RM_CLASSNAME = "org.apache.hadoop.yarn.server.resourcemanager.ResourceManager"
 

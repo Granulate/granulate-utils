@@ -13,9 +13,6 @@ from urllib.parse import urljoin, urlparse
 
 import requests
 
-YARN_SPARK_APPLICATION_SPECIFIER = "SPARK"
-YARN_RUNNING_APPLICATION_SPECIFIER = "RUNNING"
-
 
 @dataclass
 class Sample:

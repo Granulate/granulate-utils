@@ -12,8 +12,6 @@ from bs4 import BeautifulSoup
 from requests import HTTPError
 
 from granulate_utils.metrics import (
-    YARN_RUNNING_APPLICATION_SPECIFIER,
-    YARN_SPARK_APPLICATION_SPECIFIER,
     Collector,
     Sample,
     get_request_url,
@@ -29,6 +27,7 @@ from granulate_utils.metrics.metrics import (
     SPARK_RUNNING_APPS_COUNT_METRIC,
 )
 from granulate_utils.metrics.mode import SPARK_MESOS_MODE, SPARK_STANDALONE_MODE, SPARK_YARN_MODE
+from granulate_utils.metrics.yarn import YARN_RUNNING_APPLICATION_SPECIFIER, YARN_SPARK_APPLICATION_SPECIFIER
 
 SPARK_APPS_PATH = "api/v1/applications"
 MESOS_MASTER_APP_PATH = "/frameworks"
