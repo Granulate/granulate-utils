@@ -56,7 +56,7 @@ class Sampler(ABC):
         """
         pass
 
-class BigDataSampler:
+class BigDataSampler(Sampler):
     """
     Spark cluster metrics sampler
     """
@@ -281,7 +281,7 @@ class BigDataSampler:
                 SparkApplicationMetricsCollector(self._cluster_mode, self._master_address, self._logger)
             )
 
-    def discover(self) -> Optional[bool]:
+    def discover(self) -> bool:
         """
         I guess every sampler should have this method, so TODO is to make it abstract in a base class.
         return a boolean so the caller can check if the discovery was successful or not, and set it's own timeout.
