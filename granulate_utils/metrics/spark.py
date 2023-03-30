@@ -41,7 +41,7 @@ SPARK_MASTER_APP_PATH = "/app/"
 
 class SparkRunningApps:
     def __init__(self, cluster_mode: str, master_address: str, logger: logging.LoggerAdapter) -> None:
-        self._master_address = f"http://{master_address}"
+        self._master_address = master_address
         self._cluster_mode = cluster_mode
         self._logger = logger
 

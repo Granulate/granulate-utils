@@ -37,7 +37,7 @@ class YarnCollector(Collector):
     name = "yarn"
 
     def __init__(self, rm_address: str, logger: logging.LoggerAdapter) -> None:
-        self.rm_address = f"http://{rm_address}"
+        self.rm_address = rm_address
         self.rm = ResourceManagerAPI(self.rm_address)
         self.logger = logger
 

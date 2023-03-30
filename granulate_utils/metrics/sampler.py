@@ -75,6 +75,7 @@ class BigDataSampler(Sampler):
             cluster_conf = self._guess_cluster_mode()
             if cluster_conf is not None:
                 self._master_address, self._cluster_mode = cluster_conf
+                self._master_address = f"http://{self._master_address}"
 
         # In Standalone and Mesos we'd use applications metrics
         if self._cluster_mode in (SPARK_STANDALONE_MODE, SPARK_MESOS_MODE):
