@@ -7,6 +7,7 @@
 #
 import logging
 import os
+from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 from xml.etree import ElementTree as ET
@@ -33,6 +34,27 @@ MESOS_MASTER_APP_PATH = "/frameworks"
 
 FIND_CLUSTER_TIMEOUT_SECS = 10 * 60
 
+class Sampler(ABC):
+    @abstractmethod
+    def discover(self) -> bool:
+        """
+        The collector's main loop will use this function to determine what Collector's to enabled, if to enable at all.
+       returns True if we have these configurations, False otherwise
+
+        returns True if discover succeeded, False otherwise
+        """
+
+        pass
+
+    @abstractmethod
+    def collect_loop_helper(self) -> Optional[MetricsSnapshot]:
+        """
+        This function will be used in a collector loop.
+        It will take care of all the logic to collect metrics from Spark, without any backend communication.
+
+        returns Optional[MetricsSnapshot].
+        """
+        pass
 
 class BigDataSampler:
     """
