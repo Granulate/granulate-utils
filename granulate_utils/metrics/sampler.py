@@ -39,10 +39,10 @@ class Sampler(ABC):
     @abstractmethod
     def discover(self) -> bool:
         """
-         The collector's main loop will use this function to determine what Collector's to enabled, if to enable at all.
+        The collector's main loop will use this function to determine what Collector's to enabled, if to enable at all.
         returns True if we have these configurations, False otherwise
 
-         returns True if discover succeeded, False otherwise
+        returns True if discover succeeded, False otherwise
         """
 
         pass
