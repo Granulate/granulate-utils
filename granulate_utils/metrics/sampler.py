@@ -316,8 +316,7 @@ class BigDataSampler(Sampler):
                 collected.extend(collector.collect())
             # No need to submit samples that don't actually have a value:
             samples = tuple(filter(lambda s: s.value is not None, collected))
-            snapshot = MetricsSnapshot(datetime.now(tz=timezone.utc), samples)
-            return snapshot
+            return MetricsSnapshot(datetime.now(tz=timezone.utc), samples)
 
         # If we don't have any samplers, we don't have any metrics to collect:
         return None
