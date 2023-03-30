@@ -34,14 +34,15 @@ MESOS_MASTER_APP_PATH = "/frameworks"
 
 FIND_CLUSTER_TIMEOUT_SECS = 10 * 60
 
+
 class Sampler(ABC):
     @abstractmethod
     def discover(self) -> bool:
         """
-        The collector's main loop will use this function to determine what Collector's to enabled, if to enable at all.
-       returns True if we have these configurations, False otherwise
+         The collector's main loop will use this function to determine what Collector's to enabled, if to enable at all.
+        returns True if we have these configurations, False otherwise
 
-        returns True if discover succeeded, False otherwise
+         returns True if discover succeeded, False otherwise
         """
 
         pass
@@ -55,6 +56,7 @@ class Sampler(ABC):
         returns Optional[MetricsSnapshot].
         """
         pass
+
 
 class BigDataSampler(Sampler):
     """
