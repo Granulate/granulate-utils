@@ -258,7 +258,7 @@ class BigDataSampler(Sampler):
             self._logger.warning("Could not get proper Spark cluster configuration")
             return None
 
-        self._logger.info("Guessed settings are", cluster_mode=spark_cluster_mode, webapp_url=webapp_url)
+        self._logger.info("Guessed settings", cluster_mode=spark_cluster_mode, webapp_url=webapp_url)
 
         return webapp_url, spark_cluster_mode
 
