@@ -181,8 +181,8 @@ class SparkApplicationMetricsCollector(Collector):
             yield from self._spark_stage_metrics(running_apps)
             yield from self._spark_executor_metrics(running_apps)
             yield from self._running_applications_count_metric(running_apps)
-        except Exception as e:
-            self.logger.exception("Failed to collect Spark metrics", exception=e)
+        except Exception:
+            self.logger.exception("Failed to collect Spark metrics")
 
     def _spark_application_metrics(self, running_apps: Dict[str, Tuple[str, str]]) -> Iterable[Sample]:
         """

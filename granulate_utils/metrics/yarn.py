@@ -45,15 +45,15 @@ class YarnCollector(Collector):
         try:
             yield from self._cluster_metrics()
             yield from self._nodes_metrics()
-        except Exception as e:
-            self.logger.exception("Could not gather yarn metrics", exception=e)
+        except Exception:
+            self.logger.exception("Could not gather yarn metrics")
 
     def _cluster_metrics(self) -> Iterable[Sample]:
         try:
             if cluster_metrics := self.rm.metrics():
                 yield from samples_from_json({}, cluster_metrics, YARN_CLUSTER_METRICS)
-        except Exception as e:
-            self.logger.exception("Could not gather yarn cluster metrics", exception=e)
+        except Exception:
+            self.logger.exception("Could not gather yarn cluster metrics")
 
     def _nodes_metrics(self) -> Iterable[Sample]:
         try:
@@ -63,5 +63,5 @@ class YarnCollector(Collector):
 
                 labels = {"node_hostname": node["nodeHostName"]}
                 yield from samples_from_json(labels, node, YARN_NODES_METRICS)
-        except Exception as e:
-            self.logger.exception("Could not gather yarn nodes metrics", exception=e)
+        except Exception:
+            self.logger.exception("Could not gather yarn nodes metrics")
