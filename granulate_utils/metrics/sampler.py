@@ -22,16 +22,6 @@ from granulate_utils.metrics.mode import SPARK_MESOS_MODE, SPARK_STANDALONE_MODE
 from granulate_utils.metrics.spark import SparkApplicationMetricsCollector
 from granulate_utils.metrics.yarn import YarnCollector
 
-SPARK_MASTER_STATE_PATH = "/json"
-SPARK_MASTER_APP_PATH = "/app/"
-
-# COMMON urls
-YARN_APPS_PATH = "ws/v1/cluster/apps"
-YARN_CLUSTER_PATH = "ws/v1/cluster/metrics"
-YARN_NODES_PATH = "ws/v1/cluster/nodes"
-SPARK_APPS_PATH = "api/v1/applications"
-MESOS_MASTER_APP_PATH = "/frameworks"
-
 FIND_CLUSTER_TIMEOUT_SECS = 10 * 60
 
 
