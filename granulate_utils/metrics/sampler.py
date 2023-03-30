@@ -230,8 +230,8 @@ class BigDataSampler(Sampler):
 
     def _guess_cluster_mode(self) -> Optional[Tuple[str, str]]:
         """
-        Guess the cluster mode and master address
-        Enables `applications_metrics` in case of Standalone or Mesos
+        Guess the cluster mode and master address, depends on cluster mode.
+
         returns (master address, cluster mode)
         """
         spark_master_process = self._get_spark_manager_process()
