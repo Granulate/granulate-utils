@@ -285,10 +285,7 @@ class BigDataSampler(Sampler):
 
     def discover(self) -> bool:
         """
-        I guess every sampler should have this method, so TODO is to make it abstract in a base class.
-        return a boolean so the caller can check if the discovery was successful or not, and set it's own timeout.
-
-        For every collector we need to know:
+        Discovers:
         1. the cluster mode (yarn, standalone, mesos)
         2. the master address
 
@@ -321,9 +318,7 @@ class BigDataSampler(Sampler):
 
     def collect_loop_helper(self) -> Optional[MetricsSnapshot]:
         """
-        This function will be used in a collector loop.
-        It will take care of all the logic to collect metrics from Spark, without any backend communication.
-        It will return MetricsSnapshot object.
+        Returns a MetricsSnapshot with the collected metrics.
         """
         if self._spark_samplers:
             collected = []
