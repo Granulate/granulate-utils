@@ -17,7 +17,7 @@ import psutil
 from granulate_utils.exceptions import MissingExePath
 from granulate_utils.linux.ns import resolve_host_path
 from granulate_utils.linux.process import process_exe, search_for_process
-from granulate_utils.metrics import Collector, MetricsSnapshot
+from granulate_utils.metrics import Collector, MetricsSnapshot, Sample
 from granulate_utils.metrics.mode import SPARK_MESOS_MODE, SPARK_STANDALONE_MODE, SPARK_YARN_MODE
 from granulate_utils.metrics.spark import SparkApplicationMetricsCollector
 from granulate_utils.metrics.yarn import YarnCollector
@@ -311,10 +311,9 @@ class BigDataSampler(Sampler):
         Returns a MetricsSnapshot with the collected metrics.
         """
         if self._spark_samplers:
-            collected = []
+            collected: List[Sample] = []
             for collector in self._spark_samplers:
-                for sample in collector.collect():
-                    collected.append(sample)
+                collected.extend(collector.collect())
             # No need to submit samples that don't actually have a value:
             samples = tuple(filter(lambda s: s.value is not None, collected))
             snapshot = MetricsSnapshot(datetime.now(tz=timezone.utc), samples)
