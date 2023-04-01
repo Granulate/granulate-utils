@@ -138,12 +138,12 @@ class SparkRunningApps:
                     running_apps[app_id] = (app_name, app_url)
                     self._logger.debug("Added app to running apps", app_id=app_id, app_name=app_name, app_url=app_url)
             except HTTPError as e:
-                if e.response.status_code == 404:
+                if e.response.status_code != 404:
+                    self._logger.exception("HTTP error was found while iterating applications.")
+                else:
                     # it's possible for the requests to fail if the job
                     # completed since we got the list of apps.  Just continue
                     pass
-                else:
-                    self._logger.exception("HTTP error was found while iterating applications.")
             except Exception:
                 self._logger.exception("Error was found while iterating applications.")
 
