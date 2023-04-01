@@ -50,12 +50,12 @@ class SparkRunningApps:
         Determine what mode was specified
         """
         if self._cluster_mode == SPARK_YARN_MODE:
-            running_apps = self._yarn_init()
+            running_apps = self._get_yarn_apps()
             return self._get_spark_app_ids(running_apps)
         elif self._cluster_mode == SPARK_STANDALONE_MODE:
-            return self._standalone_init()
+            return self._get_standalone_apps()
         elif self._cluster_mode == SPARK_MESOS_MODE:
-            return self._mesos_init()
+            return self._get_mesos_apps()
         else:
             raise ValueError(f"Invalid cluster mode {self._cluster_mode!r}")
 
@@ -80,7 +80,7 @@ class SparkRunningApps:
 
         return spark_apps
 
-    def _yarn_init(self) -> Dict[str, Tuple[str, str]]:
+    def _get_yarn_apps(self) -> Dict[str, Tuple[str, str]]:
         """
         Return a dictionary of {app_id: (app_name, tracking_url)} for running Spark applications.
         """
@@ -105,7 +105,7 @@ class SparkRunningApps:
 
         return running_apps
 
-    def _mesos_init(self) -> Dict[str, Tuple[str, str]]:
+    def _get_mesos_apps(self) -> Dict[str, Tuple[str, str]]:
         running_apps = {}
         metrics_json = rest_request_to_json(self._master_address, MESOS_MASTER_APP_PATH)
         for app_json in metrics_json.get("frameworks", []):
@@ -116,7 +116,7 @@ class SparkRunningApps:
                 running_apps[app_id] = (app_name, tracking_url)
         return running_apps
 
-    def _standalone_init(self) -> Dict[str, Tuple[str, str]]:
+    def _get_standalone_apps(self) -> Dict[str, Tuple[str, str]]:
         """
         Return a dictionary of {app_id: (app_name, tracking_url)} for the running Spark applications
         """
