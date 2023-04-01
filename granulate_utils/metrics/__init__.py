@@ -92,9 +92,7 @@ def rest_request_raw(url: str, object_path: str, *args: Any, **kwargs: Any) -> r
         for directory in args:
             url = join_url_dir(url, directory)
 
-    response = requests.get(url, params={k: v for k, v in kwargs.items() if v is not None}, timeout=3)
-    response.raise_for_status()
-    return response
+    return json_request(url, **kwargs)
 
 
 def join_url_dir(url: str, *args: Any) -> str:
