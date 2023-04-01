@@ -79,6 +79,7 @@ def bake_url(url: str, object_path: str, *args: Any) -> str:
 
     return url
 
+
 def rest_request_to_json(url: str, object_path: str, *args: Any, **kwargs: Any) -> Any:
     """
     Query url/object_path/args/... and return the JSON response
