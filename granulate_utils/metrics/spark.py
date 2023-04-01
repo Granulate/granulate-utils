@@ -245,7 +245,7 @@ class SparkApplicationMetricsCollector(Collector):
                 self.logger.exception(
                     "Exception occurred while trying to retrieve stage metrics", extra={"exception": e}
                 )
-                return
+                break
 
             aggregated_metrics = dict.fromkeys(SPARK_AGGREGATED_STAGE_METRICS.keys(), 0)
             for stage in response:
