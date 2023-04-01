@@ -65,9 +65,9 @@ def get_request_url(address, url: str) -> str:
     return _url
 
 
-def rest_request_to_json(url: str, object_path: str, *args: Any, **kwargs: Any) -> Any:
+def bake_url(url: str, object_path: str, *args: Any) -> str:
     """
-    Query url/object_path/args/... and return the JSON response
+    Bakes the given url with the given object_path and args
     """
     if object_path:
         url = join_url_dir(url, object_path)
@@ -77,6 +77,13 @@ def rest_request_to_json(url: str, object_path: str, *args: Any, **kwargs: Any) 
         for directory in args:
             url = join_url_dir(url, directory)
 
+    return url
+
+def rest_request_to_json(url: str, object_path: str, *args: Any, **kwargs: Any) -> Any:
+    """
+    Query url/object_path/args/... and return the JSON response
+    """
+    url = bake_url(url, object_path, *args)
     return json_request(url, **kwargs)
 
 
@@ -84,14 +91,7 @@ def rest_request_raw(url: str, object_path: str, *args: Any, **kwargs: Any) -> r
     """
     Query the given URL and return the response in it's raw format
     """
-    if object_path:
-        url = join_url_dir(url, object_path)
-
-    # Add args to the url
-    if args:
-        for directory in args:
-            url = join_url_dir(url, directory)
-
+    url = bake_url(url, object_path, *args)
     return json_request(url, **kwargs)
 
 
