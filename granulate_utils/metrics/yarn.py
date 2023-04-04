@@ -11,9 +11,6 @@ from typing import Dict, Iterable, List, Optional
 from granulate_utils.metrics import Collector, Sample, json_request, samples_from_json
 from granulate_utils.metrics.metrics import YARN_CLUSTER_METRICS, YARN_NODES_METRICS
 
-YARN_SPARK_APPLICATION_SPECIFIER = "SPARK"
-YARN_RUNNING_APPLICATION_SPECIFIER = "RUNNING"
-
 YARN_RM_CLASSNAME = "org.apache.hadoop.yarn.server.resourcemanager.ResourceManager"
 
 

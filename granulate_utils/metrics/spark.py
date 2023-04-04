@@ -27,7 +27,6 @@ from granulate_utils.metrics.metrics import (
     SPARK_RUNNING_APPS_COUNT_METRIC,
 )
 from granulate_utils.metrics.mode import SPARK_MESOS_MODE, SPARK_STANDALONE_MODE, SPARK_YARN_MODE
-from granulate_utils.metrics.yarn import YARN_RUNNING_APPLICATION_SPECIFIER, YARN_SPARK_APPLICATION_SPECIFIER
 
 SPARK_APPS_PATH = "api/v1/applications"
 MESOS_MASTER_APP_PATH = "/frameworks"
@@ -85,8 +84,9 @@ class SparkRunningApps:
         Return a dictionary of {app_id: (app_name, tracking_url)} for running Spark applications.
         """
         return self._yarn_get_spark_apps(
-            states=YARN_RUNNING_APPLICATION_SPECIFIER, applicationTypes=YARN_SPARK_APPLICATION_SPECIFIER
+            states="RUNNING", applicationTypes="SPARK"
         )
+
 
     def _yarn_get_spark_apps(self, *args: Any, **kwargs: Any) -> Dict[str, Tuple[str, str]]:
         metrics_json = rest_request_to_json(self._master_address, YARN_APPS_PATH, *args, **kwargs)
