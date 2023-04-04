@@ -2,10 +2,14 @@
 # Copyright (c) Granulate. All rights reserved.
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
+# (C) Datadog, Inc. 2018-present. All rights reserved.
+# Licensed under a 3-clause BSD style license (see LICENSE.bsd3).
+#
 import logging
 import os
-from threading import Event, Thread
-from typing import Optional, Tuple
+from abc import ABC, abstractmethod
+from datetime import datetime, timezone
+from typing import List, Optional, Tuple
 from xml.etree import ElementTree as ET
 
 import psutil
@@ -13,32 +17,69 @@ import psutil
 from granulate_utils.exceptions import MissingExePath
 from granulate_utils.linux.ns import resolve_host_path
 from granulate_utils.linux.process import process_exe, search_for_process
+from granulate_utils.metrics import Collector, MetricsSnapshot, Sample
 from granulate_utils.metrics.mode import SPARK_MESOS_MODE, SPARK_STANDALONE_MODE, SPARK_YARN_MODE
+from granulate_utils.metrics.spark import SparkApplicationMetricsCollector
+from granulate_utils.metrics.yarn import YarnCollector
 
 FIND_CLUSTER_TIMEOUT_SECS = 10 * 60
 
 
-class SparkSampler:
+class Sampler(ABC):
+    @abstractmethod
+    def discover(self) -> bool:
+        """
+        The collector's main loop will use this function to determine what Collector's to enabled, if to enable at all.
+        returns True if we have these configurations, False otherwise
+
+        returns True if discover succeeded, False otherwise
+        """
+
+        pass
+
+    @abstractmethod
+    def snapshot(self) -> Optional[MetricsSnapshot]:
+        """
+        This function will be used in a collector loop.
+        It will take care of all the logic to collect metrics from Spark, without any backend communication.
+
+        returns Optional[MetricsSnapshot].
+        """
+        pass
+
+
+class BigDataSampler(Sampler):
     """
     Spark cluster metrics sampler
     """
 
-    def __init__(self, sample_period: float, storage_dir: str, logger: logging.LoggerAdapter, hostname: str):
+    def __init__(
+        self,
+        logger: logging.LoggerAdapter,
+        hostname: str,
+        master_address: Optional[str],
+        cluster_mode: Optional[str],
+        applications_metrics: Optional[bool] = False,
+    ):
         self._logger = logger
-        self._master_address: Optional[str] = None
-        self._spark_mode: Optional[str] = None
-        self._collection_thread: Optional[Thread] = None
-        self._sample_period = sample_period
-        # not the same instance as GProfiler._stop_event
-        self._stop_event = Event()
-        self._stop_collection = False
-        self._is_running = False
         self._hostname = hostname
-        self._storage_dir = storage_dir
-        if self._storage_dir is not None:
-            assert os.path.exists(self._storage_dir) and os.path.isdir(self._storage_dir)
-        else:
-            self._logger.debug("Output directory is None. Will add metrics to queue")
+        self._applications_metrics = applications_metrics
+        self._spark_samplers: List[Collector] = []
+
+        if (cluster_mode is not None) and (master_address is not None):
+            # No need to guess cluster mode and master address
+            self._cluster_mode = cluster_mode
+            self._master_address = f"http://{master_address}"
+        elif (cluster_mode is None) and (master_address is None):
+            # Guess cluster mode and master address
+            cluster_conf = self._guess_cluster_mode()
+            if cluster_conf is not None:
+                self._master_address, self._cluster_mode = cluster_conf
+                self._master_address = f"http://{self._master_address}"
+
+        # In Standalone and Mesos we'd use applications metrics
+        if self._cluster_mode in (SPARK_STANDALONE_MODE, SPARK_MESOS_MODE):
+            self._applications_metrics = True
 
     def _get_yarn_config_path(self, process: psutil.Process) -> str:
         env = process.environ()
@@ -81,12 +122,9 @@ class SparkSampler:
         Selects the master address for a standalone cluster.
         Uses master_address if given.
         """
-        if self._master_address:
-            return self._master_address
-        else:
-            master_ip = self._get_master_process_arg_value(process, "--host")
-            master_port = self._get_master_process_arg_value(process, "--webui-port")
-            return f"{master_ip}:{master_port}"
+        master_ip = self._get_master_process_arg_value(process, "--host")
+        master_port = self._get_master_process_arg_value(process, "--webui-port")
+        return f"{master_ip}:{master_port}"
 
     def _get_master_process_arg_value(self, process: psutil.Process, arg_name: str) -> Optional[str]:
         process_args = process.cmdline()
@@ -112,22 +150,15 @@ class SparkSampler:
                     if value_property is not None and value_property.text is not None:
                         return value_property.text
 
-        if self._master_address is not None:
-            return self._master_address
-        else:
-            host_name = self._get_yarn_host_name(resource_manager_process)
-            return host_name + ":8088"
+        host_name = self._get_yarn_host_name(resource_manager_process)
+        return host_name + ":8088"
 
     def _guess_mesos_master_webapp_address(self, process: psutil.Process) -> str:
         """
         Selects the master address for a mesos-master running on this node. Uses master_address if given, or defaults
         to my hostname.
         """
-        if self._master_address:
-            return self._master_address
-        else:
-            host_name = self._hostname
-            return host_name + ":5050"
+        return self._hostname + ":5050"
 
     def _get_yarn_host_name(self, resource_manager_process: psutil.Process) -> str:
         """
@@ -198,8 +229,12 @@ class SparkSampler:
         except StopIteration:
             return None
 
-    def _find_spark_cluster(self) -> Optional[Tuple[str, str]]:
-        """:return: (master address, cluster mode)"""
+    def _guess_cluster_mode(self) -> Optional[Tuple[str, str]]:
+        """
+        Guess the cluster mode and master address, depends on cluster mode.
+
+        returns (master address, cluster mode)
+        """
         spark_master_process = self._get_spark_manager_process()
         spark_cluster_mode = "unknown"
         webapp_url = None
@@ -224,6 +259,65 @@ class SparkSampler:
             self._logger.warning("Could not get proper Spark cluster configuration")
             return None
 
-        self._logger.info("Guessed settings are", cluster_mode=spark_cluster_mode, webapp_url=webapp_url)
+        self._logger.info("Guessed settings", cluster_mode=spark_cluster_mode, webapp_url=webapp_url)
 
         return webapp_url, spark_cluster_mode
+
+    def _init_collectors(self):
+        """
+        This function fills in self._spark_samplers with the appropriate collectors.
+        """
+        if self._cluster_mode == SPARK_YARN_MODE:
+            self._spark_samplers.append(YarnCollector(self._master_address, self._logger))
+        elif self._cluster_mode == SPARK_STANDALONE_MODE or self._cluster_mode == SPARK_MESOS_MODE:
+            self._spark_samplers.append(
+                SparkApplicationMetricsCollector(self._cluster_mode, self._master_address, self._logger)
+            )
+
+    def discover(self) -> bool:
+        """
+        Discovers:
+        1. the cluster mode (yarn, standalone, mesos)
+        2. the master address
+
+        returns True if we have these configurations, False otherwise
+        """
+        have_conf = False
+        if self._master_address is None or self._cluster_mode is None:
+            self._logger.debug("Trying to guess cluster mode and master address")
+            cluster_conf = self._guess_cluster_mode()
+            if cluster_conf is not None:
+                self._master_address, self._cluster_mode = cluster_conf
+                self._logger.info(
+                    "Guessed cluster mode and master address",
+                    cluster_mode=self._cluster_mode,
+                    master_address=self._master_address,
+                )
+                have_conf = True
+        else:
+            self._logger.info(
+                "We already know cluster mode and master address",
+                cluster_mode=self._cluster_mode,
+                master_address=self._master_address,
+            )
+            have_conf = True
+
+        if have_conf and self._spark_samplers == []:
+            self._init_collectors()
+
+        return have_conf
+
+    def snapshot(self) -> Optional[MetricsSnapshot]:
+        """
+        Returns a MetricsSnapshot with the collected metrics.
+        """
+        if self._spark_samplers:
+            collected: List[Sample] = []
+            for collector in self._spark_samplers:
+                collected.extend(collector.collect())
+            # No need to submit samples that don't actually have a value:
+            samples = tuple(filter(lambda s: s.value is not None, collected))
+            return MetricsSnapshot(datetime.now(tz=timezone.utc), samples)
+
+        # If we don't have any samplers, we don't have any metrics to collect:
+        return None

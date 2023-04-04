@@ -5,6 +5,7 @@
 # (C) Datadog, Inc. 2018-present. All rights reserved.
 # Licensed under a 3-clause BSD style license (see LICENSE.bsd3).
 #
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, Iterable, Tuple, Union
@@ -20,6 +21,12 @@ class Sample:
     labels: Dict[str, str]
     name: str  # metric name
     value: Union[int, float]
+
+
+class Collector(ABC):
+    @abstractmethod
+    def collect(self) -> Iterable[Sample]:
+        pass
 
 
 @dataclass
@@ -58,9 +65,9 @@ def get_request_url(address, url: str) -> str:
     return _url
 
 
-def rest_request_to_json(url: str, object_path: str, *args: Any, **kwargs: Any) -> Any:
+def bake_url(url: str, object_path: str, *args: Any) -> str:
     """
-    Query url/object_path/args/... and return the JSON response
+    Bakes the given url with the given object_path and args
     """
     if object_path:
         url = join_url_dir(url, object_path)
@@ -70,6 +77,22 @@ def rest_request_to_json(url: str, object_path: str, *args: Any, **kwargs: Any) 
         for directory in args:
             url = join_url_dir(url, directory)
 
+    return url
+
+
+def rest_request_to_json(url: str, object_path: str, *args: Any, **kwargs: Any) -> Any:
+    """
+    Query url/object_path/args/... and return the JSON response
+    """
+    url = bake_url(url, object_path, *args)
+    return json_request(url, **kwargs)
+
+
+def rest_request_raw(url: str, object_path: str, *args: Any, **kwargs: Any) -> requests.Response:
+    """
+    Query the given URL and return the response in it's raw format
+    """
+    url = bake_url(url, object_path, *args)
     return json_request(url, **kwargs)
 
 
