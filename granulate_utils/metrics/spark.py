@@ -83,10 +83,7 @@ class SparkRunningApps:
         """
         Return a dictionary of {app_id: (app_name, tracking_url)} for running Spark applications.
         """
-        return self._yarn_get_spark_apps(
-            states="RUNNING", applicationTypes="SPARK"
-        )
-
+        return self._yarn_get_spark_apps(states="RUNNING", applicationTypes="SPARK")
 
     def _yarn_get_spark_apps(self, *args: Any, **kwargs: Any) -> Dict[str, Tuple[str, str]]:
         metrics_json = rest_request_to_json(self._master_address, YARN_APPS_PATH, *args, **kwargs)
