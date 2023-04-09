@@ -65,21 +65,13 @@ class BigDataSampler(Sampler):
         self._hostname = hostname
         self._applications_metrics = applications_metrics
         self._spark_samplers: List[Collector] = []
+        self._master_address: Optional[str] = None
+        self._cluster_mode: Optional[str] = None
 
         if (cluster_mode is not None) and (master_address is not None):
             # No need to guess cluster mode and master address
             self._cluster_mode = cluster_mode
             self._master_address = f"http://{master_address}"
-        elif (cluster_mode is None) and (master_address is None):
-            # Guess cluster mode and master address
-            cluster_conf = self._guess_cluster_mode()
-            if cluster_conf is not None:
-                self._master_address, self._cluster_mode = cluster_conf
-                self._master_address = f"http://{self._master_address}"
-
-        # In Standalone and Mesos we'd use applications metrics
-        if self._cluster_mode in (SPARK_STANDALONE_MODE, SPARK_MESOS_MODE):
-            self._applications_metrics = True
 
     def _get_yarn_config_path(self, process: psutil.Process) -> str:
         env = process.environ()
