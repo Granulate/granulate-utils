@@ -261,7 +261,11 @@ class BigDataSampler(Sampler):
         """
         if self._cluster_mode == SPARK_YARN_MODE:
             self._spark_samplers.append(YarnCollector(self._master_address, self._logger))
-        elif self._cluster_mode == SPARK_STANDALONE_MODE or self._cluster_mode == SPARK_MESOS_MODE:
+        elif (
+            self._cluster_mode == SPARK_STANDALONE_MODE
+            or self._cluster_mode == SPARK_MESOS_MODE
+            or self._applications_metrics is True
+        ):
             self._spark_samplers.append(
                 SparkApplicationMetricsCollector(self._cluster_mode, self._master_address, self._logger)
             )
