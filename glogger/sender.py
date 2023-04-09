@@ -42,6 +42,7 @@ class Sender:
         send_threshold: float = 0.8,
         send_min_interval: float = 10.0,
         max_send_tries: int = 3,
+        verify: bool = True,
     ):
         """
         Create a new Sender and start flushing log messages in a background thread.
@@ -68,6 +69,7 @@ class Sender:
         self.server_uri = f"{scheme}://{server_address}/api/v1/logs"
         self.jsonify = JSONEncoder(separators=(",", ":"), default=repr).encode  # compact, no whitespace
         self.session = Session()
+        self.session.verify = verify
         self.messages_buffer: Optional[MessagesBuffer] = None
         self.metadata_callback: Callable[[], Dict] = lambda: {}
 
