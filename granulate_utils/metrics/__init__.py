@@ -93,7 +93,7 @@ def rest_request_raw(url: str, object_path: str, *args: Any, **kwargs: Any) -> r
     Query the given URL and return the response in it's raw format
     """
     url = bake_url(url, object_path, *args)
-    return json_request(url, **kwargs)
+    return rest_request(url, **kwargs)
 
 
 def join_url_dir(url: str, *args: Any) -> str:
