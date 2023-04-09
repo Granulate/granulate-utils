@@ -283,19 +283,18 @@ class BigDataSampler(Sampler):
             self._logger.debug("Trying to guess cluster mode and master address")
             cluster_conf = self._guess_cluster_mode()
             if cluster_conf is not None:
-                self._master_address, self._cluster_mode = cluster_conf
-                self._logger.info(
+                master_address, self._cluster_mode = cluster_conf
+                self._master_address = f"http://{master_address}"
+                self._logger.debug(
                     "Guessed cluster mode and master address",
                     cluster_mode=self._cluster_mode,
                     master_address=self._master_address,
                 )
                 have_conf = True
         else:
-            self._logger.info(
-                "We already know cluster mode and master address",
-                cluster_mode=self._cluster_mode,
-                master_address=self._master_address,
-            )
+            assert (
+                self._cluster_mode is not None and self._master_address is not None
+            ), "discover() was invoked after returned true"
             have_conf = True
 
         if have_conf and self._spark_samplers == []:
