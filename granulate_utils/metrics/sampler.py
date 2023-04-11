@@ -280,7 +280,17 @@ class BigDataSampler(Sampler):
         returns True if we have these configurations, False otherwise
         """
         have_conf = False
-        if self._master_address is None or self._cluster_mode is None:
+
+        if self._master_address is not None and self._cluster_mode is not None:
+            # No need to guess, manually configured
+            self._logger.debug(
+                "No need to guess cluster mode and master address, manually configured",
+                cluster_mode=self._cluster_mode,
+                master_address=self._master_address,
+            )
+            have_conf = True
+
+        elif self._master_address is None or self._cluster_mode is None:
             self._logger.debug("Trying to guess cluster mode and master address")
             cluster_conf = self._guess_cluster_mode()
             if cluster_conf is not None:
@@ -292,11 +302,6 @@ class BigDataSampler(Sampler):
                     master_address=self._master_address,
                 )
                 have_conf = True
-        else:
-            assert (
-                self._cluster_mode is not None and self._master_address is not None
-            ), "discover() was invoked after returned true"
-            have_conf = True
 
         if have_conf and self._spark_samplers == []:
             self._init_collectors()
