@@ -73,10 +73,6 @@ class BigDataSampler(Sampler):
             self._cluster_mode = cluster_mode
             self._master_address = f"http://{master_address}"
 
-        # In Standalone and Mesos we'd use applications metrics
-        if self._cluster_mode in (SPARK_STANDALONE_MODE, SPARK_MESOS_MODE):
-            self._applications_metrics = True
-
     def _get_yarn_config_path(self, process: psutil.Process) -> str:
         env = process.environ()
         if "HADOOP_CONF_DIR" in env:
@@ -265,7 +261,12 @@ class BigDataSampler(Sampler):
         """
         if self._cluster_mode == SPARK_YARN_MODE:
             self._spark_samplers.append(YarnCollector(self._master_address, self._logger))
-        elif self._applications_metrics is True:
+
+        # In Standalone and Mesos we'd use applications metrics
+        if self._cluster_mode in (SPARK_STANDALONE_MODE, SPARK_MESOS_MODE):
+            self._applications_metrics = True
+
+        if self._applications_metrics is True:
             self._spark_samplers.append(
                 SparkApplicationMetricsCollector(self._cluster_mode, self._master_address, self._logger)
             )
