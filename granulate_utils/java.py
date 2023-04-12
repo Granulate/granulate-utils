@@ -140,7 +140,7 @@ def parse_jvm_version(version_string: str) -> JvmVersion:
 
     # the version always starts with "openjdk version" or "java version". strip all lines
     # before that.
-    lines = list(dropwhile(lambda l: not ("openjdk version" in l or "java version" in l), lines))
+    lines = list(dropwhile(lambda line: not ("openjdk version" in line or "java version" in line), lines))
 
     # version is always in quotes
     _, version_str, _ = lines[0].split('"')
