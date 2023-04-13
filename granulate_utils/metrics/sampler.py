@@ -68,6 +68,8 @@ class BigDataSampler(Sampler):
         self._master_address: Optional[str] = None
         self._cluster_mode: Optional[str] = None
 
+        assert (cluster_mode is None) == (master_address is None), "cluster_mode and master_address must be both None or both not None"
+
         if (cluster_mode is not None) and (master_address is not None):
             # No need to guess cluster mode and master address
             self._cluster_mode = cluster_mode
