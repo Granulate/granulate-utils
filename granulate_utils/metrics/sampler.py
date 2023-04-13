@@ -294,7 +294,7 @@ class BigDataSampler(Sampler):
             )
             have_conf = True
 
-        elif self._master_address is None or self._cluster_mode is None:
+        else:
             self._logger.debug("Trying to guess cluster mode and master address")
             cluster_conf = self._guess_cluster_mode()
             if cluster_conf is not None:
