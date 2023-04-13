@@ -270,7 +270,7 @@ class BigDataSampler(Sampler):
         if self._cluster_mode in (SPARK_STANDALONE_MODE, SPARK_MESOS_MODE):
             self._applications_metrics = True
 
-        if self._applications_metrics is True:
+        if self._applications_metrics:
             self._spark_samplers.append(
                 SparkApplicationMetricsCollector(self._cluster_mode, self._master_address, self._logger)
             )
