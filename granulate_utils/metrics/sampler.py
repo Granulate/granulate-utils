@@ -70,7 +70,7 @@ class BigDataSampler(Sampler):
 
         assert (cluster_mode is None) == (
             master_address is None
-        ), "cluster_mode and master_address must be both None or both not None"
+        ), "cluster_mode and master_address must be configured together, or not at all"
 
         if (cluster_mode is not None) and (master_address is not None):
             # No need to guess cluster mode and master address
