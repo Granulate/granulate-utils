@@ -6,3 +6,4 @@ docker~=5.0.0
 typing-extensions>=4.1.0
 pyelftools~=0.28
 packaging~=23.1
+beautifulsoup4==4.11.1

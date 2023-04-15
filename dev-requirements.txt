@@ -9,3 +9,4 @@ grpcio-tools==1.53.0
 types-dataclasses==0.6.6
 backoff-stubs~=1.10
 pytest~=7.0.1
+types-beautifulsoup4==4.11.1
