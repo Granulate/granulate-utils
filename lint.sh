@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -xe
 
 if [ -f venv/bin/activate ]; then
   source venv/bin/activate
