@@ -65,21 +65,17 @@ class BigDataSampler(Sampler):
         self._hostname = hostname
         self._applications_metrics = applications_metrics
         self._spark_samplers: List[Collector] = []
+        self._master_address: Optional[str] = None
+        self._cluster_mode: Optional[str] = None
+
+        assert (cluster_mode is None) == (
+            master_address is None
+        ), "cluster_mode and master_address must be configured together, or not at all"
 
         if (cluster_mode is not None) and (master_address is not None):
             # No need to guess cluster mode and master address
             self._cluster_mode = cluster_mode
             self._master_address = f"http://{master_address}"
-        elif (cluster_mode is None) and (master_address is None):
-            # Guess cluster mode and master address
-            cluster_conf = self._guess_cluster_mode()
-            if cluster_conf is not None:
-                self._master_address, self._cluster_mode = cluster_conf
-                self._master_address = f"http://{self._master_address}"
-
-        # In Standalone and Mesos we'd use applications metrics
-        if self._cluster_mode in (SPARK_STANDALONE_MODE, SPARK_MESOS_MODE):
-            self._applications_metrics = True
 
     def _get_yarn_config_path(self, process: psutil.Process) -> str:
         env = process.environ()
@@ -269,7 +265,12 @@ class BigDataSampler(Sampler):
         """
         if self._cluster_mode == SPARK_YARN_MODE:
             self._spark_samplers.append(YarnCollector(self._master_address, self._logger))
-        elif self._cluster_mode == SPARK_STANDALONE_MODE or self._cluster_mode == SPARK_MESOS_MODE:
+
+        # In Standalone and Mesos we'd use applications metrics
+        if self._cluster_mode in (SPARK_STANDALONE_MODE, SPARK_MESOS_MODE):
+            self._applications_metrics = True
+
+        if self._applications_metrics:
             self._spark_samplers.append(
                 SparkApplicationMetricsCollector(self._cluster_mode, self._master_address, self._logger)
             )
@@ -283,24 +284,28 @@ class BigDataSampler(Sampler):
         returns True if we have these configurations, False otherwise
         """
         have_conf = False
-        if self._master_address is None or self._cluster_mode is None:
+
+        if self._master_address is not None and self._cluster_mode is not None:
+            # No need to guess, manually configured
+            self._logger.debug(
+                "No need to guess cluster mode and master address, manually configured",
+                cluster_mode=self._cluster_mode,
+                master_address=self._master_address,
+            )
+            have_conf = True
+
+        else:
             self._logger.debug("Trying to guess cluster mode and master address")
             cluster_conf = self._guess_cluster_mode()
             if cluster_conf is not None:
-                self._master_address, self._cluster_mode = cluster_conf
-                self._logger.info(
+                master_address, self._cluster_mode = cluster_conf
+                self._master_address = f"http://{master_address}"
+                self._logger.debug(
                     "Guessed cluster mode and master address",
                     cluster_mode=self._cluster_mode,
                     master_address=self._master_address,
                 )
                 have_conf = True
-        else:
-            self._logger.info(
-                "We already know cluster mode and master address",
-                cluster_mode=self._cluster_mode,
-                master_address=self._master_address,
-            )
-            have_conf = True
 
         if have_conf and self._spark_samplers == []:
             self._init_collectors()
