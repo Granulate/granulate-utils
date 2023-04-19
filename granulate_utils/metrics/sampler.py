@@ -309,7 +309,7 @@ class BigDataSampler(Sampler):
                 )
                 have_conf = True
 
-        if have_conf and self._collectors == []:
+        if have_conf:
             self._init_collectors()
 
         return have_conf
