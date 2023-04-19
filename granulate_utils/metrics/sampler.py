@@ -283,6 +283,8 @@ class BigDataSampler(Sampler):
 
         returns True if we have these configurations, False otherwise
         """
+        assert self._spark_samplers == [], "discover() should only be called once"
+
         have_conf = False
 
         if self._master_address is not None and self._cluster_mode is not None:
