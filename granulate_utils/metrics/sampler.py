@@ -64,7 +64,7 @@ class BigDataSampler(Sampler):
         self._logger = logger
         self._hostname = hostname
         self._applications_metrics = applications_metrics
-        self._spark_samplers: List[Collector] = []
+        self._collectors: List[Collector] = []
         self._master_address: Optional[str] = None
         self._cluster_mode: Optional[str] = None
 
@@ -264,14 +264,14 @@ class BigDataSampler(Sampler):
         This function fills in self._spark_samplers with the appropriate collectors.
         """
         if self._cluster_mode == SPARK_YARN_MODE:
-            self._spark_samplers.append(YarnCollector(self._master_address, self._logger))
+            self._collectors.append(YarnCollector(self._master_address, self._logger))
 
         # In Standalone and Mesos we'd use applications metrics
         if self._cluster_mode in (SPARK_STANDALONE_MODE, SPARK_MESOS_MODE):
             self._applications_metrics = True
 
         if self._applications_metrics:
-            self._spark_samplers.append(
+            self._collectors.append(
                 SparkApplicationMetricsCollector(self._cluster_mode, self._master_address, self._logger)
             )
 
@@ -283,6 +283,8 @@ class BigDataSampler(Sampler):
 
         returns True if we have these configurations, False otherwise
         """
+        assert self._collectors == [], "discover() should only be called once"
+
         have_conf = False
 
         if self._master_address is not None and self._cluster_mode is not None:
@@ -307,7 +309,7 @@ class BigDataSampler(Sampler):
                 )
                 have_conf = True
 
-        if have_conf and self._spark_samplers == []:
+        if have_conf:
             self._init_collectors()
 
         return have_conf
@@ -316,9 +318,9 @@ class BigDataSampler(Sampler):
         """
         Returns a MetricsSnapshot with the collected metrics.
         """
-        if self._spark_samplers:
+        if self._collectors:
             collected: List[Sample] = []
-            for collector in self._spark_samplers:
+            for collector in self._collectors:
                 collected.extend(collector.collect())
             # No need to submit samples that don't actually have a value:
             samples = tuple(filter(lambda s: s.value is not None, collected))
