@@ -300,11 +300,6 @@ class BigDataSampler(Sampler):
             if cluster_conf is not None:
                 master_address, self._cluster_mode = cluster_conf
                 self._master_address = f"http://{master_address}"
-                self._logger.debug(
-                    "Guessed cluster mode and master address",
-                    cluster_mode=self._cluster_mode,
-                    master_address=self._master_address,
-                )
                 have_conf = True
 
         if have_conf:
