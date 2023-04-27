@@ -3,6 +3,7 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 import json
+import os
 from typing import List, Optional, Union
 
 import grpc  # type: ignore # no types-grpc sadly
@@ -47,12 +48,15 @@ class CriClient(ContainersClientInterface):
 
     @staticmethod
     def _is_cri_available(path: str) -> bool:
-        with RuntimeServiceWrapper(path) as stub:
-            try:
-                stub.Version(api_pb2.VersionRequest())
-                return True
-            except grpc._channel._InactiveRpcError:
-                return False
+        if os.path.exists(path):
+            with RuntimeServiceWrapper(path) as stub:
+                try:
+                    stub.Version(api_pb2.VersionRequest())
+                    return True
+                except grpc._channel._InactiveRpcError:
+                    return False
+        else:
+            return False
 
     @staticmethod
     def _reconstruct_name(container: Union[api_pb2.Container, api_pb2.ContainerStatus]) -> str:
