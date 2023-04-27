@@ -236,7 +236,6 @@ class BigDataSampler(Sampler):
         webapp_url = None
 
         if spark_master_process is None:
-            self._logger.debug("Could not find any spark master process (resource manager or spark master)")
             return None
 
         if "org.apache.hadoop.yarn.server.resourcemanager.ResourceManager" in spark_master_process.cmdline():
@@ -297,7 +296,6 @@ class BigDataSampler(Sampler):
             have_conf = True
 
         else:
-            self._logger.debug("Trying to guess cluster mode and master address")
             cluster_conf = self._guess_cluster_mode()
             if cluster_conf is not None:
                 master_address, self._cluster_mode = cluster_conf
