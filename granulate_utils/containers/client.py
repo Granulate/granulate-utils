@@ -7,7 +7,6 @@ import contextlib
 from typing import List, Optional
 
 from granulate_utils.containers.container import Container, ContainersClientInterface
-from granulate_utils.containers.cri import CriClient
 from granulate_utils.containers.docker import DockerClient
 from granulate_utils.exceptions import ContainerNotFound, NoContainerRuntimesError
 
@@ -21,11 +20,16 @@ class ContainersClient(ContainersClientInterface):
     or not.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, cri_in_subprocess: bool) -> None:
         try:
             self._docker_client: Optional[DockerClient] = DockerClient()
         except Exception:
             self._docker_client = None
+
+        if cri_in_subprocess:
+            from granulate_utils.containers.cri_subprocess import CriClientSubprocess as CriClient
+        else:
+            from granulate_utils.containers.cri import CriClient
 
         try:
             self._cri_client: Optional[CriClient] = CriClient()
