@@ -4,13 +4,12 @@
 #
 
 import json
+import logging
 import os
 import time
 from typing import Optional
 
 import requests
-
-from gprofiler.log import get_logger_adapter
 
 HOST_KEY_NAME = "*.sink.ganglia.host"
 DATABRICKS_DEPLOY_CONF_PATH = "/databricks/common/conf/deploy.conf"
@@ -22,19 +21,18 @@ REQUEST_TIMEOUT = 5
 DEFAULT_WEBUI_PORT = 40001
 MAX_RETRIES = 90
 
-logger = get_logger_adapter(__name__)
-
 
 class DatabricksClient:
-    def __init__(self) -> None:
-        logger.debug("Getting Databricks job name.")
+    def __init__(self, logger: logging.LoggerAdapter) -> None:
+        self.logger = logger
+        self.logger.debug("Getting Databricks job name.")
         self.job_name = self.get_job_name()
         if self.job_name is None:
-            logger.warning(
+            self.logger.warning(
                 "Failed initializing Databricks client. Databricks job name will not be included in ephemeral clusters."
             )
         else:
-            logger.debug(f"Got Databricks job name: {self.job_name}")
+            self.logger.debug(f"Got Databricks job name: {self.job_name}")
 
     @staticmethod
     def get_webui_address() -> Optional[str]:
@@ -50,7 +48,7 @@ class DatabricksClient:
             try:
                 return self._get_job_name_impl()
             except Exception:
-                logger.exception("Got Exception while collecting Databricks job name.")
+                self.logger.exception("Got Exception while collecting Databricks job name.")
         return None
 
     def _get_job_name_impl(self) -> Optional[str]:
@@ -60,23 +58,23 @@ class DatabricksClient:
         webui = self.get_webui_address()
         # The API used: https://spark.apache.org/docs/latest/monitoring.html#rest-api
         apps_url = SPARKUI_APPS_URL.format(webui)
-        logger.debug(f"Databricks SparkUI address: {apps_url}.")
+        self.logger.debug(f"Databricks SparkUI address: {apps_url}.")
         resp = requests.get(apps_url, timeout=REQUEST_TIMEOUT)
         if not resp.ok:
-            logger.warning(
+            self.logger.warning(
                 f"Failed initializing Databricks client. {apps_url!r} request failed, status_code: {resp.status_code}."
             )
             return None
         apps = resp.json()
         if len(apps) == 0:
-            logger.warning("Failed initializing Databricks client. There are no apps.")
+            self.logger.warning("Failed initializing Databricks client. There are no apps.")
             return None
         # There's an assumption that only one app exists, and even if there are more -
         # the name of the job should be the same.
         env_url = f"{apps_url}/{apps[0]['id']}/environment"
         resp = requests.get(env_url, timeout=REQUEST_TIMEOUT)
         if not resp.ok:
-            logger.warning(
+            self.logger.warning(
                 f"Failed initializing Databricks client. {env_url!r} request failed, status_code: {resp.status_code}."
             )
             return None
