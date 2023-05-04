@@ -5,14 +5,12 @@
 
 import json
 import logging
-import os
 import time
 from typing import Optional
 
 import requests
 
 HOST_KEY_NAME = "*.sink.ganglia.host"
-DATABRICKS_DEPLOY_CONF_PATH = "/databricks/common/conf/deploy.conf"
 DATABRICKS_METRICS_PROP_PATH = "/databricks/spark/conf/metrics.properties"
 CLUSTER_TAGS_KEY = "spark.databricks.clusterUsageTags.clusterAllTags"
 JOB_NAME_KEY = "RunName"
@@ -58,9 +56,6 @@ class DatabricksClient:
         return job_name
 
     def _get_job_name_impl(self) -> Optional[str]:
-        # Make sure we're running on a databricks machine
-        if not os.path.isfile(DATABRICKS_DEPLOY_CONF_PATH):
-            return None
         webui = self.get_webui_address()
         # The API used: https://spark.apache.org/docs/latest/monitoring.html#rest-api
         apps_url = SPARKUI_APPS_URL.format(webui)
