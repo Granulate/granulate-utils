@@ -16,7 +16,7 @@ from glogger.messages_buffer import MessagesBuffer
 from .stdout_logger import get_stdout_logger
 
 SERVER_SEND_ERROR_MESSAGE = "Error posting logs to server"
-SERVER_INVALID_TOKEN = "Invalid API token"
+SERVER_INVALID_TOKEN = "Invalid token"
 
 
 class SendBatch(NamedTuple):
