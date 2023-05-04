@@ -39,24 +39,22 @@ class CriClient(ContainersClientInterface):
     def __init__(self) -> None:
         self._runtimes = {}
         for rt, path in RUNTIMES:
-            path = "unix://" + ns.resolve_host_root_links(path)
-            if self._is_cri_available(path):
-                self._runtimes[rt] = path
+            if os.path.exists(path):
+                path = "unix://" + ns.resolve_host_root_links(path)
+                if self._is_cri_available(path):
+                    self._runtimes[rt] = path
 
         if not self._runtimes:
             raise CriNotAvailableError(f"CRI is not available at any of {RUNTIMES}")
 
     @staticmethod
     def _is_cri_available(path: str) -> bool:
-        if os.path.exists(path):
-            with RuntimeServiceWrapper(path) as stub:
-                try:
-                    stub.Version(api_pb2.VersionRequest())
-                    return True
-                except grpc._channel._InactiveRpcError:
-                    return False
-        else:
-            return False
+        with RuntimeServiceWrapper(path) as stub:
+            try:
+                stub.Version(api_pb2.VersionRequest())
+                return True
+            except grpc._channel._InactiveRpcError:
+                return False
 
     @staticmethod
     def _reconstruct_name(container: Union[api_pb2.Container, api_pb2.ContainerStatus]) -> str:
