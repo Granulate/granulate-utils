@@ -43,13 +43,19 @@ class DatabricksClient:
 
     def get_job_name(self) -> Optional[str]:
         # Retry in case of a connection error, as the metrics server might not be up yet.
+        job_name = None
         for i in range(MAX_RETRIES):
-            time.sleep(10)
             try:
-                return self._get_job_name_impl()
-            except Exception:
-                self.logger.exception("Got Exception while collecting Databricks job name.")
-        return None
+                if job_name := self._get_job_name_impl():
+                    # Got the job name, no need to retry.
+                    return job_name
+                else:
+                    # No job name yet, retry.
+                    time.sleep(10)
+            except Exception as e:
+                self.logger.exception("Got Exception while collecting Databricks job name.", exception=e)
+        self.logger.debug("Databricks get job name timeout")
+        return job_name
 
     def _get_job_name_impl(self) -> Optional[str]:
         # Make sure we're running on a databricks machine
