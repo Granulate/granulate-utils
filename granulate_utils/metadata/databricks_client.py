@@ -17,7 +17,7 @@ JOB_NAME_KEY = "RunName"
 SPARKUI_APPS_URL = "http://{}/api/v1/applications"
 REQUEST_TIMEOUT = 5
 DEFAULT_WEBUI_PORT = 40001
-MAX_RETRIES = 90
+MAX_RETRIES = 20
 
 
 class DatabricksClient:
@@ -49,7 +49,7 @@ class DatabricksClient:
                     return job_name
                 else:
                     # No job name yet, retry.
-                    time.sleep(10)
+                    time.sleep(30)
             except Exception as e:
                 self.logger.exception("Got Exception while collecting Databricks job name.", exception=e)
         self.logger.debug("Databricks get job name timeout")
