@@ -49,3 +49,8 @@ class MissingExePath(Exception):
 class AlreadyInCgroup(Exception):
     def __init__(self, subsystem: str, cgroup: str) -> None:
         super().__init__(f"{subsystem!r} subsystem is already in a predefined cgroup: {cgroup!r}")
+
+
+class SparkJobNameDiscoverException(Exception):
+    def __init__(self, msg: str) -> None:
+        super().__init__(msg)

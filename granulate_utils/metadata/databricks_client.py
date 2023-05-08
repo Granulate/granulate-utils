@@ -7,6 +7,8 @@ import json
 import logging
 import time
 from typing import Optional
+from granulate_utils.exceptions import SparkJobNameDiscoverException
+
 
 import requests
 
@@ -20,9 +22,6 @@ DEFAULT_WEBUI_PORT = 40001
 MAX_RETRIES = 20
 
 
-class SparkJobNameDiscoverException(Exception):
-    def __init__(self, msg: str) -> None:
-        super().__init__(msg)
 
 
 class DatabricksClient:
