@@ -20,6 +20,11 @@ DEFAULT_WEBUI_PORT = 40001
 MAX_RETRIES = 20
 
 
+class SparkJobNameDiscoverException(Exception):
+    def __init__(self, msg: str) -> None:
+        super().__init__(msg)
+
+
 class DatabricksClient:
     def __init__(self, logger: logging.LoggerAdapter) -> None:
         self.logger = logger
@@ -32,6 +37,11 @@ class DatabricksClient:
         else:
             self.logger.debug(f"Got Databricks job name: {self.job_name}")
 
+    def _request_get(self, url: str):
+        resp = requests.get(url, timeout=REQUEST_TIMEOUT)
+        resp.raise_for_status()
+        return resp
+
     @staticmethod
     def get_webui_address() -> Optional[str]:
         with open(DATABRICKS_METRICS_PROP_PATH) as f:
@@ -41,7 +51,6 @@ class DatabricksClient:
 
     def get_job_name(self) -> Optional[str]:
         # Retry in case of a connection error, as the metrics server might not be up yet.
-        job_name = None
         for i in range(MAX_RETRIES):
             try:
                 if job_name := self._get_job_name_impl():
@@ -49,41 +58,54 @@ class DatabricksClient:
                     return job_name
                 else:
                     # No job name yet, retry.
-                    time.sleep(30)
+                    time.sleep(15)
+            except SparkJobNameDiscoverException as e:
+                self.logger.exception("Failed to get Databricks job name.", exception=e)
             except Exception as e:
-                self.logger.exception("Got Exception while collecting Databricks job name.", exception=e)
-        self.logger.debug("Databricks get job name timeout")
-        return job_name
+                self.logger.exception("Generic exception was raise during spark job name discovery.", exception=e)
+        self.logger.info("Databricks get job name timeout, continuing...")
+        return None
 
     def _get_job_name_impl(self) -> Optional[str]:
         webui = self.get_webui_address()
         # The API used: https://spark.apache.org/docs/latest/monitoring.html#rest-api
         apps_url = SPARKUI_APPS_URL.format(webui)
         self.logger.debug(f"Databricks SparkUI address: {apps_url}.")
-        resp = requests.get(apps_url, timeout=REQUEST_TIMEOUT)
-        if not resp.ok:
-            self.logger.warning(
-                f"Failed initializing Databricks client. {apps_url!r} request failed, status_code: {resp.status_code}."
-            )
+        try:
+            resp = self._request_get(apps_url)
+        except requests.exceptions.RequestException:
+            # Request might fail in cases where the cluster is still initializing, retrying.
             return None
-        apps = resp.json()
+        try:
+            apps = resp.json()
+        except Exception as e:
+            raise SparkJobNameDiscoverException(f"Failed to parse apps url response, query response={resp!r}") from e
         if len(apps) == 0:
-            self.logger.warning("Failed initializing Databricks client. There are no apps.")
+            # apps might be empty because of initialization, retrying.
+            self.logger.debug("No apps yet, retrying.")
             return None
-        # There's an assumption that only one app exists, and even if there are more -
-        # the name of the job should be the same.
-        env_url = f"{apps_url}/{apps[0]['id']}/environment"
-        resp = requests.get(env_url, timeout=REQUEST_TIMEOUT)
-        if not resp.ok:
-            self.logger.warning(
-                f"Failed initializing Databricks client. {env_url!r} request failed, status_code: {resp.status_code}."
-            )
-            return None
-        env = resp.json()
-        props = env["sparkProperties"]
+
+        env_url = f"{apps_url}/{apps[0].get('id')}/environment"
+        resp = None
+        try:
+            resp = requests.get(env_url, timeout=REQUEST_TIMEOUT)
+            env = resp.json()
+        except Exception as e:
+            # No reason for any exception, `environment` uri should be accessible if we have running apps.
+            if resp:
+                raise SparkJobNameDiscoverException(f"Environment request failed. response={resp!r}") from e
+            else:
+                raise SparkJobNameDiscoverException(f"Environment request failed. env_url={env_url!r}") from e
+        props = env.get("sparkProperties", [])
+        if not props:
+            raise SparkJobNameDiscoverException(f"sparkProperties was not found in env={env!r}")
         for prop in props:
             if prop[0] == CLUSTER_TAGS_KEY:
-                for tag in json.loads(prop[1]):
+                try:
+                    all_tags_value = json.loads(prop[1])
+                except Exception as e:
+                    raise SparkJobNameDiscoverException(f"Failed to parse prop={prop!r}") from e
+                for tag in all_tags_value:
                     if tag["key"] == JOB_NAME_KEY:
                         return str(tag["value"])
         return None
