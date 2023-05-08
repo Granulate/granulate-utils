@@ -7,10 +7,10 @@ import json
 import logging
 import time
 from typing import Optional
-from granulate_utils.exceptions import SparkJobNameDiscoverException
-
 
 import requests
+
+from granulate_utils.exceptions import SparkJobNameDiscoverException
 
 HOST_KEY_NAME = "*.sink.ganglia.host"
 DATABRICKS_METRICS_PROP_PATH = "/databricks/spark/conf/metrics.properties"
@@ -20,8 +20,6 @@ SPARKUI_APPS_URL = "http://{}/api/v1/applications"
 REQUEST_TIMEOUT = 5
 DEFAULT_WEBUI_PORT = 40001
 MAX_RETRIES = 20
-
-
 
 
 class DatabricksClient:
