@@ -77,7 +77,7 @@ class CriClient(ContainersClientInterface):
             with RuntimeServiceWrapper(path) as stub:
                 for container in stub.ListContainers(api_pb2.ListContainersRequest()).containers:
                     if all_info:
-                        status_response = self._get_container_status(stub, container, verbose=all_info)
+                        status_response = self._get_container_status(stub, container.id, verbose=all_info)
                         assert status_response is not None, "container went down"
                         pid: Optional[int] = json.loads(status_response.info.get("info", "{}")).get("pid")
                         containers.append(self._create_container(status_response.status, rt, pid))
@@ -87,13 +87,9 @@ class CriClient(ContainersClientInterface):
         return containers
 
     def _get_container_status(
-        self, stub: RuntimeServiceStub, container: Union[api_pb2.Container, str], *, verbose: bool
+        self, stub: RuntimeServiceStub, container_id: str, *, verbose: bool
     ) -> Optional[api_pb2.ContainerStatusResponse]:
         try:
-            if isinstance(container, str):
-                container_id = container
-            else:
-                container_id = container.id
             return stub.ContainerStatus(api_pb2.ContainerStatusRequest(container_id=container_id, verbose=verbose))
         except grpc._channel._InactiveRpcError as e:
             if e.code() == grpc.StatusCode.NOT_FOUND:
