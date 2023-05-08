@@ -77,7 +77,8 @@ class CriClient(ContainersClientInterface):
             with RuntimeServiceWrapper(path) as stub:
                 for container in stub.ListContainers(api_pb2.ListContainersRequest()).containers:
                     if all_info:
-                        status_response = self._container_status_request(stub, container.id, verbose=all_info)
+                        # need verbose=True to get the info which contains the PID
+                        status_response = self._container_status_request(stub, container.id, verbose=True)
                         if not status_response:
                             # container probably went down
                             continue
