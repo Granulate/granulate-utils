@@ -5,10 +5,34 @@
 # (C) Datadog, Inc. 2018-present. All rights reserved.
 # Licensed under a 3-clause BSD style license (see LICENSE.bsd3).
 #
-from typing import Any, Dict
-from urllib.parse import urljoin
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, Iterable, Tuple, Union
+from urllib.parse import urljoin, urlparse
 
 import requests
+
+
+@dataclass
+class Sample:
+    # The field names match the schema expected by the server one-to-one, so we can get a JSON-able
+    # dict simply by accessing __dict__.
+    labels: Dict[str, str]
+    name: str  # metric name
+    value: Union[int, float]
+
+
+class Collector(ABC):
+    @abstractmethod
+    def collect(self) -> Iterable[Sample]:
+        pass
+
+
+@dataclass
+class MetricsSnapshot:
+    timestamp: datetime
+    samples: Tuple[Sample, ...]
 
 
 def rest_request(url: str, **kwargs: Any) -> requests.Response:
@@ -28,9 +52,22 @@ def json_request(url: str, **kwargs) -> Any:
     return rest_request(url, **kwargs).json()
 
 
-def rest_request_to_json(url: str, object_path: str, *args: Any, **kwargs: Any) -> Any:
+def get_request_url(address, url: str) -> str:
     """
-    Query url/object_path/args/... and return the JSON response
+    Get the request address, build with proxy if necessary
+    """
+    parsed = urlparse(url)
+
+    _url = url
+    if not (parsed.netloc and parsed.scheme):
+        _url = urljoin(address, parsed.path)
+
+    return _url
+
+
+def bake_url(url: str, object_path: str, *args: Any) -> str:
+    """
+    Bakes the given url with the given object_path and args
     """
     if object_path:
         url = join_url_dir(url, object_path)
@@ -40,7 +77,23 @@ def rest_request_to_json(url: str, object_path: str, *args: Any, **kwargs: Any) 
         for directory in args:
             url = join_url_dir(url, directory)
 
+    return url
+
+
+def rest_request_to_json(url: str, object_path: str, *args: Any, **kwargs: Any) -> Any:
+    """
+    Query url/object_path/args/... and return the JSON response
+    """
+    url = bake_url(url, object_path, *args)
     return json_request(url, **kwargs)
+
+
+def rest_request_raw(url: str, object_path: str, *args: Any, **kwargs: Any) -> requests.Response:
+    """
+    Query the given URL and return the response in it's raw format
+    """
+    url = bake_url(url, object_path, *args)
+    return rest_request(url, **kwargs)
 
 
 def join_url_dir(url: str, *args: Any) -> str:
@@ -85,3 +138,17 @@ def set_metrics_from_json(
     for field_name, metric_name in metrics.items():
         metric_value = metrics_json.get(field_name)
         set_individual_metric(collected_metrics, metric_name, metric_value, labels)
+
+
+def samples_from_json(
+    labels: Dict[str, str], response_json: Dict[Any, Any], metrics: Dict[str, str]
+) -> Iterable[Sample]:
+    """
+    Extract metrics values from JSON response and return as Samples.
+    """
+    if response_json is None:
+        return
+
+    for field_name, metric_name in metrics.items():
+        if (value := response_json.get(field_name)) is not None:
+            yield Sample(labels, metric_name, value)
