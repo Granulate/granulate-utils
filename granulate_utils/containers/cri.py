@@ -77,8 +77,10 @@ class CriClient(ContainersClientInterface):
             with RuntimeServiceWrapper(path) as stub:
                 for container in stub.ListContainers(api_pb2.ListContainersRequest()).containers:
                     if all_info:
-                        status_response = self._get_container_status(stub, container.id, verbose=all_info)
-                        assert status_response is not None, "container went down"
+                        status_response = self._container_status_request(stub, container.id, verbose=all_info)
+                        if not status_response:
+                            # container probably went down
+                            continue
                         pid: Optional[int] = json.loads(status_response.info.get("info", "{}")).get("pid")
                         containers.append(self._create_container(status_response.status, rt, pid))
                     else:
@@ -86,7 +88,7 @@ class CriClient(ContainersClientInterface):
 
         return containers
 
-    def _get_container_status(
+    def _container_status_request(
         self, stub: RuntimeServiceStub, container_id: str, *, verbose: bool
     ) -> Optional[api_pb2.ContainerStatusResponse]:
         try:
@@ -99,7 +101,7 @@ class CriClient(ContainersClientInterface):
     def get_container(self, container_id: str, all_info: bool) -> Container:
         for rt, path in self._runtimes.items():
             with RuntimeServiceWrapper(path) as stub:
-                status_response = self._get_container_status(stub, container_id, verbose=all_info)
+                status_response = self._container_status_request(stub, container_id, verbose=all_info)
                 if not status_response:
                     continue
                 pid: Optional[int] = json.loads(status_response.info.get("info", "{}")).get("pid")
