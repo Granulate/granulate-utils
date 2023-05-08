@@ -11,6 +11,7 @@ from typing import Optional
 import requests
 
 from granulate_utils.exceptions import SparkJobNameDiscoverException
+from granulate_utils.metadata import Metadata
 
 HOST_KEY_NAME = "*.sink.ganglia.host"
 DATABRICKS_METRICS_PROP_PATH = "/databricks/spark/conf/metrics.properties"
@@ -50,20 +51,37 @@ class DatabricksClient:
         # Retry in case of a connection error, as the metrics server might not be up yet.
         for i in range(MAX_RETRIES):
             try:
-                if job_name := self._get_job_name_impl():
+                if cluster_metadata := self._cluster_all_tags_metadata():
                     # Got the job name, no need to retry.
-                    return job_name
+                    name = self._get_name_from_metadata(cluster_metadata)
+                    if name:
+                        self.logger.debug("Found name from metadata.", name=name)
+                        return name
+                    else:
+                        self.logger.debug("Failed to find data from metadata.")
+                        return None
                 else:
                     # No job name yet, retry.
                     time.sleep(15)
             except SparkJobNameDiscoverException as e:
                 self.logger.exception("Failed to get Databricks job name.", exception=e)
+                return None
             except Exception as e:
                 self.logger.exception("Generic exception was raise during spark job name discovery.", exception=e)
+                return None
         self.logger.info("Databricks get job name timeout, continuing...")
         return None
 
-    def _get_job_name_impl(self) -> Optional[str]:
+    @staticmethod
+    def _get_name_from_metadata(metadata: Metadata) -> Optional[str]:
+        if "RunName" in metadata:
+            return str(metadata["RunName"])
+        return None
+
+    def _cluster_all_tags_metadata(self) -> Optional[Metadata]:
+        """
+        Returns `Metadata` object, which includes spark.databricks.clusterUsageTags.clusterAllTags tags.
+        """
         webui = self.get_webui_address()
         # The API used: https://spark.apache.org/docs/latest/monitoring.html#rest-api
         apps_url = SPARKUI_APPS_URL.format(webui)
@@ -102,7 +120,7 @@ class DatabricksClient:
                     all_tags_value = json.loads(prop[1])
                 except Exception as e:
                     raise SparkJobNameDiscoverException(f"Failed to parse prop={prop!r}") from e
-                for tag in all_tags_value:
-                    if tag["key"] == JOB_NAME_KEY:
-                        return str(tag["value"])
+                return Metadata(
+                    {clusterUsageTag["key"]: clusterUsageTag["value"] for clusterUsageTag in all_tags_value}
+                )
         return None
