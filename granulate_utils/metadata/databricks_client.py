@@ -90,15 +90,15 @@ class DatabricksClient:
         apps_url = SPARKUI_APPS_URL.format(webui)
         self.logger.debug(f"Databricks SparkUI address: {apps_url}.")
         try:
-            resp = self._request_get(apps_url)
+            response = self._request_get(apps_url)
         except requests.exceptions.RequestException:
             # Request might fail in cases where the cluster is still initializing, retrying.
             return None
         try:
-            apps = resp.json()
+            apps = response.json()
         except Exception as e:
             raise DatabricksJobNameDiscoverException(
-                f"Failed to parse apps url response, query response={resp!r}"
+                f"Failed to parse apps url response, query {response=}"
             ) from e
         if len(apps) == 0:
             # apps might be empty because of initialization, retrying.
@@ -106,24 +106,24 @@ class DatabricksClient:
             return None
 
         env_url = f"{apps_url}/{apps[0].get('id')}/environment"
-        resp = None
+        response = None
         try:
-            resp = requests.get(env_url, timeout=REQUEST_TIMEOUT)
-            env = resp.json()
+            response = requests.get(env_url, timeout=REQUEST_TIMEOUT)
+            env = response.json()
         except Exception as e:
             # No reason for any exception, `environment` uri should be accessible if we have running apps.
-            if resp:
-                raise DatabricksJobNameDiscoverException(f"Environment request failed. response={resp!r}") from e
+            if response:
+                raise DatabricksJobNameDiscoverException(f"Environment request failed. {response=}") from e
             else:
-                raise DatabricksJobNameDiscoverException(f"Environment request failed. env_url={env_url!r}") from e
+                raise DatabricksJobNameDiscoverException(f"Environment request failed. {env_url=}") from e
         props = env.get("sparkProperties", [])
         if not props:
-            raise DatabricksJobNameDiscoverException(f"sparkProperties was not found in env={env!r}")
+            raise DatabricksJobNameDiscoverException(f"sparkProperties was not found in {env=}")
         for prop in props:
             if prop[0] == CLUSTER_TAGS_KEY:
                 try:
                     all_tags_value = json.loads(prop[1])
                 except Exception as e:
-                    raise DatabricksJobNameDiscoverException(f"Failed to parse prop={prop!r}") from e
+                    raise DatabricksJobNameDiscoverException(f"Failed to parse {prop=}") from e
                 return {clusterUsageTag["key"]: clusterUsageTag["value"] for clusterUsageTag in all_tags_value}
         return None
