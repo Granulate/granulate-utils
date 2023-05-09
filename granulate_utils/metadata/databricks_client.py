@@ -97,9 +97,7 @@ class DatabricksClient:
         try:
             apps = response.json()
         except Exception as e:
-            raise DatabricksJobNameDiscoverException(
-                f"Failed to parse apps url response, query {response=}"
-            ) from e
+            raise DatabricksJobNameDiscoverException(f"Failed to parse apps url response, query {response=}") from e
         if len(apps) == 0:
             # apps might be empty because of initialization, retrying.
             self.logger.debug("No apps yet, retrying.")
