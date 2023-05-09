@@ -120,7 +120,5 @@ class DatabricksClient:
                     all_tags_value = json.loads(prop[1])
                 except Exception as e:
                     raise SparkJobNameDiscoverException(f"Failed to parse prop={prop!r}") from e
-                return Metadata(
-                    {clusterUsageTag["key"]: clusterUsageTag["value"] for clusterUsageTag in all_tags_value}
-                )
+                return {clusterUsageTag["key"]: clusterUsageTag["value"] for clusterUsageTag in all_tags_value}
         return None
