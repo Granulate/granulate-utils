@@ -5,6 +5,7 @@
 
 import json
 import logging
+import os
 import time
 from typing import Optional
 
@@ -16,7 +17,6 @@ from granulate_utils.metadata import Metadata
 HOST_KEY_NAME = "*.sink.ganglia.host"
 DATABRICKS_METRICS_PROP_PATH = "/databricks/spark/conf/metrics.properties"
 CLUSTER_TAGS_KEY = "spark.databricks.clusterUsageTags.clusterAllTags"
-JOB_NAME_KEY = "RunName"
 SPARKUI_APPS_URL = "http://{}/api/v1/applications"
 REQUEST_TIMEOUT = 5
 DEFAULT_WEBUI_PORT = 40001
@@ -86,6 +86,9 @@ class DatabricksClient:
         """
         Returns `includes spark.databricks.clusterUsageTags.clusterAllTags` tags as `Dict`.
         """
+        if not os.path.isfile(DATABRICKS_METRICS_PROP_PATH):
+            # We want to retry in case the cluster is still initializing, and the file is not yet deployed.
+            return None
         webui = self.get_webui_address()
         # The API used: https://spark.apache.org/docs/latest/monitoring.html#rest-api
         apps_url = SPARKUI_APPS_URL.format(webui)
