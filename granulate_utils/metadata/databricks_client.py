@@ -66,11 +66,11 @@ class DatabricksClient:
                 else:
                     # No job name yet, retry.
                     time.sleep(RETRY_INTERVAL_S)
-            except DatabricksJobNameDiscoverException as e:
-                self.logger.exception("Failed to get Databricks job name", exception=e)
+            except DatabricksJobNameDiscoverException:
+                self.logger.exception("Failed to get Databricks job name")
                 return None
-            except Exception as e:
-                self.logger.exception("Generic exception was raise during spark job name discovery", exception=e)
+            except Exception:
+                self.logger.exception("Generic exception was raise during spark job name discovery")
                 return None
         self.logger.info("Databricks get job name timeout, continuing...")
         return None
