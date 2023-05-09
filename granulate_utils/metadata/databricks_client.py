@@ -84,7 +84,7 @@ class DatabricksClient:
 
     def _cluster_all_tags_metadata(self) -> Optional[Metadata]:
         """
-        Return `Dict` of `includes spark.databricks.clusterUsageTags.clusterAllTags` tags.
+        Returns `includes spark.databricks.clusterUsageTags.clusterAllTags` tags as `Dict`.
         """
         webui = self.get_webui_address()
         # The API used: https://spark.apache.org/docs/latest/monitoring.html#rest-api
