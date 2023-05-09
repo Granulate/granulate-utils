@@ -35,7 +35,7 @@ class DatabricksClient:
         else:
             self.logger.debug(f"Got Databricks job name: {self.job_name}")
 
-    def _request_get(self, url: str):
+    def _request_get(self, url: str) -> requests.Response:
         resp = requests.get(url, timeout=REQUEST_TIMEOUT)
         resp.raise_for_status()
         return resp
@@ -104,16 +104,15 @@ class DatabricksClient:
             return None
 
         env_url = f"{apps_url}/{apps[0].get('id')}/environment"
-        response = None
         try:
-            response = requests.get(env_url, timeout=REQUEST_TIMEOUT)
-            env = response.json()
+            response = self._request_get(env_url)
         except Exception as e:
             # No reason for any exception, `environment` uri should be accessible if we have running apps.
-            if response:
-                raise DatabricksJobNameDiscoverException(f"Environment request failed {response=}") from e
-            else:
-                raise DatabricksJobNameDiscoverException(f"Environment request failed {env_url=}") from e
+            raise DatabricksJobNameDiscoverException(f"Environment request failed {env_url=}") from e
+        try:
+            env = response.json()
+        except Exception as e:
+            raise DatabricksJobNameDiscoverException(f"Environment request failed {response=}") from e
         props = env.get("sparkProperties", [])
         if not props:
             raise DatabricksJobNameDiscoverException(f"sparkProperties was not found in {env=}")
