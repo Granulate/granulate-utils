@@ -116,8 +116,8 @@ class DatabricksClient:
             env = response.json()
         except Exception as e:
             raise DatabricksJobNameDiscoverException(f"Environment request failed {response=}") from e
-        props = env.get("sparkProperties", [])
-        if not props:
+        props = env.get("sparkProperties")
+        if props is None:
             raise DatabricksJobNameDiscoverException(f"sparkProperties was not found in {env=}")
         for prop in props:
             if prop[0] == CLUSTER_TAGS_KEY:
