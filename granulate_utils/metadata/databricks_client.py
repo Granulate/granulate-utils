@@ -76,6 +76,10 @@ class DatabricksClient:
     def _get_name_from_metadata(metadata: Metadata) -> Optional[str]:
         if "RunName" in metadata:
             return str(metadata["RunName"])
+        elif "Name" in metadata:
+            return str(metadata["Name"])
+        elif "ClusterName" in metadata:
+            return str(metadata["ClusterName"])
         return None
 
     def _cluster_all_tags_metadata(self) -> Optional[Metadata]:
