@@ -55,10 +55,10 @@ class DatabricksClient:
                     # Got the job name, no need to retry.
                     name = self._get_name_from_metadata(cluster_metadata)
                     if name:
-                        self.logger.debug("Found name from metadata.", name=name)
+                        self.logger.debug("Found name in metadata.", name=name)
                         return name
                     else:
-                        self.logger.debug("Failed to get name from metadata.", cluster_metadata=cluster_metadata)
+                        self.logger.debug("Failed to extract name from metadata.", cluster_metadata=cluster_metadata)
                         return None
                 else:
                     # No job name yet, retry.
