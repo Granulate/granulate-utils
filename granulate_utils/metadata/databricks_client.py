@@ -26,7 +26,7 @@ MAX_RETRIES = 20
 class DatabricksClient:
     def __init__(self, logger: logging.LoggerAdapter) -> None:
         self.logger = logger
-        self.logger.debug("Getting Databricks job name.")
+        self.logger.debug("Getting Databricks job name")
         self.job_name = self.get_job_name()
         if self.job_name is None:
             self.logger.warning(
@@ -55,19 +55,19 @@ class DatabricksClient:
                     # Got the job name, no need to retry.
                     name = self._get_name_from_metadata(cluster_metadata)
                     if name:
-                        self.logger.debug("Found name in metadata.", job_name=name, cluster_metadata=cluster_metadata)
+                        self.logger.debug("Found name in metadata", job_name=name, cluster_metadata=cluster_metadata)
                         return name
                     else:
-                        self.logger.debug("Failed to extract name from metadata.", cluster_metadata=cluster_metadata)
+                        self.logger.debug("Failed to extract name from metadata", cluster_metadata=cluster_metadata)
                         return None
                 else:
                     # No job name yet, retry.
                     time.sleep(15)
             except DatabricksJobNameDiscoverException as e:
-                self.logger.exception("Failed to get Databricks job name.", exception=e)
+                self.logger.exception("Failed to get Databricks job name", exception=e)
                 return None
             except Exception as e:
-                self.logger.exception("Generic exception was raise during spark job name discovery.", exception=e)
+                self.logger.exception("Generic exception was raise during spark job name discovery", exception=e)
                 return None
         self.logger.info("Databricks get job name timeout, continuing...")
         return None
@@ -88,7 +88,7 @@ class DatabricksClient:
         webui = self.get_webui_address()
         # The API used: https://spark.apache.org/docs/latest/monitoring.html#rest-api
         apps_url = SPARKUI_APPS_URL.format(webui)
-        self.logger.debug(f"Databricks SparkUI address: {apps_url}.")
+        self.logger.debug(f"Databricks SparkUI address: {apps_url}")
         try:
             response = self._request_get(apps_url)
         except requests.exceptions.RequestException:
@@ -111,9 +111,9 @@ class DatabricksClient:
         except Exception as e:
             # No reason for any exception, `environment` uri should be accessible if we have running apps.
             if response:
-                raise DatabricksJobNameDiscoverException(f"Environment request failed. {response=}") from e
+                raise DatabricksJobNameDiscoverException(f"Environment request failed {response=}") from e
             else:
-                raise DatabricksJobNameDiscoverException(f"Environment request failed. {env_url=}") from e
+                raise DatabricksJobNameDiscoverException(f"Environment request failed {env_url=}") from e
         props = env.get("sparkProperties", [])
         if not props:
             raise DatabricksJobNameDiscoverException(f"sparkProperties was not found in {env=}")
