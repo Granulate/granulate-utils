@@ -42,7 +42,7 @@ class DatabricksClient:
         return resp
 
     @staticmethod
-    def get_webui_address() -> Optional[str]:
+    def get_webui_address() -> str:
         with open(DATABRICKS_METRICS_PROP_PATH) as f:
             properties = f.read()
         host = dict([line.split("=", 1) for line in properties.splitlines()])[HOST_KEY_NAME]
