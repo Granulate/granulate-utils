@@ -103,6 +103,7 @@ class DatabricksClient:
         except Exception as e:
             if "Spark is starting up. Please wait a while until it's ready" in response.text:
                 # Spark is still initializing, retrying.
+                # https://github.com/apache/spark/blob/38c41c/core/src/main/scala/org/apache/spark/ui/SparkUI.scala#L64
                 return None
             else:
                 raise DatabricksJobNameDiscoverException(
