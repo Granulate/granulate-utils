@@ -106,7 +106,7 @@ class DatabricksClient:
             self.logger.debug("No apps yet, retrying.")
             return None
 
-        env_url = f"{apps_url}/{apps[0].get('id')}/environment"
+        env_url = f"{apps_url}/{apps[0]['id']}/environment"
         try:
             response = self._request_get(env_url)
         except Exception as e:
