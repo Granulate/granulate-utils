@@ -20,7 +20,7 @@ CLUSTER_TAGS_KEY = "spark.databricks.clusterUsageTags.clusterAllTags"
 SPARKUI_APPS_URL = "http://{}/api/v1/applications"
 REQUEST_TIMEOUT = 5
 DEFAULT_WEBUI_PORT = 40001
-MAX_RETRIES = 300
+DATABRICKS_JOBNAME_TIMEOUT_S = 2 * 60
 RETRY_INTERVAL_S = 1
 
 
@@ -50,9 +50,8 @@ class DatabricksClient:
 
     def get_job_name(self) -> Optional[str]:
         # Retry in case of a connection error, as the metrics server might not be up yet.
-        retries = 0
-        while retries < MAX_RETRIES:
-            retries += 1
+        start_time = time.monotonic()
+        while time.monotonic() - start_time < DATABRICKS_JOBNAME_TIMEOUT_S:
             try:
                 if cluster_metadata := self._cluster_all_tags_metadata():
                     name = self._get_name_from_metadata(cluster_metadata)
