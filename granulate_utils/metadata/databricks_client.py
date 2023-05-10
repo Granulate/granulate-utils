@@ -7,12 +7,11 @@ import json
 import logging
 import os
 import time
-from typing import Optional
+from typing import Dict, Optional
 
 import requests
 
 from granulate_utils.exceptions import DatabricksJobNameDiscoverException
-from granulate_utils.metadata import Metadata
 
 HOST_KEY_NAME = "*.sink.ganglia.host"
 DATABRICKS_METRICS_PROP_PATH = "/databricks/spark/conf/metrics.properties"
@@ -75,12 +74,12 @@ class DatabricksClient:
         return None
 
     @staticmethod
-    def _get_name_from_metadata(metadata: Metadata) -> Optional[str]:
+    def _get_name_from_metadata(metadata: Dict[str, str]) -> Optional[str]:
         if JOB_NAME_KEY in metadata:
             return str(metadata[JOB_NAME_KEY]).replace(" ", "-").lower()
         return None
 
-    def _cluster_all_tags_metadata(self) -> Optional[Metadata]:
+    def _cluster_all_tags_metadata(self) -> Optional[Dict[str, str]]:
         """
         Returns `includes spark.databricks.clusterUsageTags.clusterAllTags` tags as `Dict`.
         """
