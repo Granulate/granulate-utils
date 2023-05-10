@@ -98,6 +98,9 @@ class DatabricksClient:
         try:
             apps = response.json()
         except Exception as e:
+            if "Spark is starting up. Please wait a while until it's ready" in response.text:
+                # Spark is still initializing, retrying.
+                return None
             raise DatabricksJobNameDiscoverException(
                 f"Failed to parse apps url response, query {response.text=}"
             ) from e
