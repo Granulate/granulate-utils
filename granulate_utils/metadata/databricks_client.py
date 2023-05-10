@@ -48,7 +48,7 @@ class DatabricksClient:
         try:
             host = dict([line.split("=", 1) for line in properties.splitlines()])[HOST_KEY_NAME]
         except KeyError as e:
-            if str(e) == HOST_KEY_NAME:
+            if str(e) == f"'{HOST_KEY_NAME}'":
                 # Might happen while provisioning the cluster, retry.
                 return None
             else:
