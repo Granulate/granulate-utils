@@ -42,13 +42,19 @@ class DatabricksClient:
         return resp
 
     @staticmethod
-    def get_webui_address() -> str:
+    def get_webui_address() -> Optional[str]:
         with open(DATABRICKS_METRICS_PROP_PATH) as f:
             properties = f.read()
         try:
             host = dict([line.split("=", 1) for line in properties.splitlines()])[HOST_KEY_NAME]
-        except Exception:
-            raise DatabricksJobNameDiscoverException(f"Failed to get Databricks webui address {properties=}")
+        except KeyError as e:
+            if str(e) == HOST_KEY_NAME:
+                # Might happen while provisioning the cluster, retry.
+                return None
+            else:
+                raise DatabricksJobNameDiscoverException(f"Failed to get Databricks webui address {properties=}") from e
+        except Exception as e:
+            raise DatabricksJobNameDiscoverException(f"Failed to get Databricks webui address {properties=}") from e
         return f"{host}:{DEFAULT_WEBUI_PORT}"
 
     def get_job_name(self) -> Optional[str]:
@@ -90,6 +96,9 @@ class DatabricksClient:
             # We want to retry in case the cluster is still initializing, and the file is not yet deployed.
             return None
         webui = self.get_webui_address()
+        if webui is None:
+            # retry
+            return None
         # The API used: https://spark.apache.org/docs/latest/monitoring.html#rest-api
         apps_url = SPARKUI_APPS_URL.format(webui)
         self.logger.debug("Databricks SparkUI address", apps_url=apps_url)
