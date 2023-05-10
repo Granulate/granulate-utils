@@ -53,8 +53,7 @@ class DatabricksClient:
                 if sys.last_value.args[0] == HOST_KEY_NAME:
                     # Might happen while provisioning the cluster, retry.
                     return None
-            else:
-                raise DatabricksJobNameDiscoverException(f"Failed to get Databricks webui address {properties=}") from e
+            raise DatabricksJobNameDiscoverException(f"Failed to get Databricks webui address {properties=}") from e
         except Exception as e:
             raise DatabricksJobNameDiscoverException(f"Failed to get Databricks webui address {properties=}") from e
         return f"{host}:{DEFAULT_WEBUI_PORT}"
