@@ -101,9 +101,10 @@ class DatabricksClient:
             if "Spark is starting up. Please wait a while until it's ready" in response.text:
                 # Spark is still initializing, retrying.
                 return None
-            raise DatabricksJobNameDiscoverException(
-                f"Failed to parse apps url response, query {response.text=}"
-            ) from e
+            else:
+                raise DatabricksJobNameDiscoverException(
+                    f"Failed to parse apps url response, query {response.text=}"
+                ) from e
         if len(apps) == 0:
             # apps might be empty because of initialization, retrying.
             self.logger.debug("No apps yet, retrying.")
