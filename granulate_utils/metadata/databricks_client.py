@@ -123,5 +123,5 @@ class DatabricksClient:
                     all_tags_value = json.loads(prop[1])
                 except Exception as e:
                     raise DatabricksJobNameDiscoverException(f"Failed to parse {prop=}") from e
-                return {cluster_usage_tag["key"]: cluster_usage_tag["value"] for cluster_usage_tag in all_tags_value}
+                return {cluster_all_tag["key"]: cluster_all_tag["value"] for cluster_all_tag in all_tags_value}
         return None
