@@ -19,6 +19,7 @@ DATABRICKS_METRICS_PROP_PATH = "/databricks/spark/conf/metrics.properties"
 CLUSTER_TAGS_KEY = "spark.databricks.clusterUsageTags.clusterAllTags"
 SPARKUI_APPS_URL = "http://{}/api/v1/applications"
 REQUEST_TIMEOUT = 5
+JOB_NAME_KEY = "RunName"
 DEFAULT_WEBUI_PORT = 40001
 DATABRICKS_JOBNAME_TIMEOUT_S = 2 * 60
 RETRY_INTERVAL_S = 1
@@ -75,8 +76,8 @@ class DatabricksClient:
 
     @staticmethod
     def _get_name_from_metadata(metadata: Metadata) -> Optional[str]:
-        if "RunName" in metadata:
-            return str(metadata["RunName"]).replace(" ", "-").lower()
+        if JOB_NAME_KEY in metadata:
+            return str(metadata[JOB_NAME_KEY]).replace(" ", "-").lower()
         return None
 
     def _cluster_all_tags_metadata(self) -> Optional[Metadata]:
