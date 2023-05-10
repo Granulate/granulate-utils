@@ -98,7 +98,9 @@ class DatabricksClient:
         try:
             apps = response.json()
         except Exception as e:
-            raise DatabricksJobNameDiscoverException(f"Failed to parse apps url response, query {response=}") from e
+            raise DatabricksJobNameDiscoverException(
+                f"Failed to parse apps url response, query {response.text=}"
+            ) from e
         if len(apps) == 0:
             # apps might be empty because of initialization, retrying.
             self.logger.debug("No apps yet, retrying.")
@@ -113,7 +115,7 @@ class DatabricksClient:
         try:
             env = response.json()
         except Exception as e:
-            raise DatabricksJobNameDiscoverException(f"Environment request failed {response=}") from e
+            raise DatabricksJobNameDiscoverException(f"Environment request failed {response.text=}") from e
         props = env.get("sparkProperties")
         if props is None:
             raise DatabricksJobNameDiscoverException(f"sparkProperties was not found in {env=}")
