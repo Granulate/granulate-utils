@@ -79,7 +79,7 @@ class CriClient(ContainersClientInterface):
                     if all_info:
                         # need verbose=True to get the info which contains the PID
                         status_response = self._container_status_request(stub, container.id, verbose=True)
-                        if not status_response:
+                        if status_response is None:
                             # container probably went down
                             continue
                         pid: Optional[int] = json.loads(status_response.info.get("info", "{}")).get("pid")
