@@ -89,7 +89,7 @@ class DatabricksClient:
         webui = self.get_webui_address()
         # The API used: https://spark.apache.org/docs/latest/monitoring.html#rest-api
         apps_url = SPARKUI_APPS_URL.format(webui)
-        self.logger.debug(f"Databricks SparkUI address: {apps_url}")
+        self.logger.debug("Databricks SparkUI address", apps_url=apps_url)
         try:
             response = self._request_get(apps_url)
         except requests.exceptions.RequestException:
