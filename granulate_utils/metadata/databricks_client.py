@@ -49,8 +49,8 @@ class DatabricksClient:
         try:
             host = dict([line.split("=", 1) for line in properties.splitlines()])[HOST_KEY_NAME]
         except KeyError as e:
-            if sys.last_value is not None:
-                if sys.last_value.args[0] == HOST_KEY_NAME:
+            if (last_value := sys.exc_info()[1]) is not None:
+                if last_value.args[0] == HOST_KEY_NAME:
                     # Might happen while provisioning the cluster, retry.
                     return None
             raise DatabricksJobNameDiscoverException(f"Failed to get Databricks webui address {properties=}") from e
