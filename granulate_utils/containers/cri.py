@@ -103,7 +103,7 @@ class CriClient(ContainersClientInterface):
         for rt, path in self._runtimes.items():
             with RuntimeServiceWrapper(path) as stub:
                 status_response = self._container_status_request(stub, container_id, verbose=all_info)
-                if not status_response:
+                if status_response is None:
                     continue
                 pid: Optional[int] = json.loads(status_response.info.get("info", "{}")).get("pid")
                 return self._create_container(status_response.status, rt, pid)
