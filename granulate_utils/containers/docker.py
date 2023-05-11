@@ -46,11 +46,11 @@ class DockerClient(ContainersClientInterface):
     @classmethod
     def _create_container(cls, container: docker.models.containers.Container) -> Container:
         pid: Optional[int] = container.attrs["State"].get("Pid")
+        if pid == 0:  # Docker returns 0 for dead containers
+            pid = None
         created = cls._parse_docker_ts(container.attrs["Created"])
         assert created is not None
         started_at = cls._parse_docker_ts(container.attrs["State"]["StartedAt"])
-        if pid == 0:  # Docker returns 0 for dead containers
-            pid = None
         time_info = TimeInfo(create_time=created, start_time=started_at)
         return Container(
             runtime="docker",
