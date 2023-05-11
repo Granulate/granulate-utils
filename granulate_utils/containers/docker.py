@@ -39,7 +39,7 @@ class DockerClient(ContainersClientInterface):
     @staticmethod
     def _parse_docker_ts(ts: str) -> Optional[datetime]:
         assert ts.endswith("Z")  # assert UTC
-        if ts.startswith("0001"):
+        if ts.startswith("0001"):  # None-value timestamp in docker is represented as "0001-01-01T00:00:00Z".
             return None
         return isoparse(ts)
 
