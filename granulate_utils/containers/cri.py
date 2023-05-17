@@ -83,9 +83,9 @@ class CriClient(ContainersClientInterface):
                             # container probably went down
                             continue
                         pid: Optional[int] = json.loads(status_response.info.get("info", "{}")).get("pid")
-                        containers.append(self._create_container(status_response.status, rt, pid))
+                        containers.append(self._create_container(status_response.status, pid, rt))
                     else:
-                        containers.append(self._create_container(container, rt, None))
+                        containers.append(self._create_container(container, None, rt))
 
         return containers
 
@@ -106,7 +106,7 @@ class CriClient(ContainersClientInterface):
                 if status_response is None:
                     continue
                 pid: Optional[int] = json.loads(status_response.info.get("info", "{}")).get("pid")
-                return self._create_container(status_response.status, rt, pid)
+                return self._create_container(status_response.status, pid, rt)
 
         raise ContainerNotFound(container_id)
 
@@ -117,8 +117,8 @@ class CriClient(ContainersClientInterface):
     def _create_container(
         cls,
         container: Union[api_pb2.Container, api_pb2.ContainerStatus],
+        pid: Optional[int],
         runtime: str,
-        pid: Optional[int] = None,
     ) -> Container:
         time_info: Optional[TimeInfo] = None
         if isinstance(container, api_pb2.ContainerStatus):
