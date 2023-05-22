@@ -10,7 +10,8 @@ from typing import Optional
 from psutil import NoSuchProcess, Process
 
 from granulate_utils.linux.elf import read_elf_symbol, read_elf_va
-from granulate_utils.linux.process import is_kernel_thread
+from granulate_utils.linux.ns import get_mnt_ns_ancestor
+from granulate_utils.linux.process import is_kernel_thread, process_exe
 
 
 def is_golang_process(process: Process) -> bool:
@@ -19,7 +20,8 @@ def is_golang_process(process: Process) -> bool:
 
 @functools.lru_cache(maxsize=4096)
 def get_process_golang_version(process: Process) -> Optional[str]:
-    elf_path = f"/proc/{process.pid}/exe"
+    exe = process_exe(process)
+    elf_path = f"/proc/{get_mnt_ns_ancestor(process).pid}/root{exe}"
     try:
         symbol_data = read_elf_symbol(elf_path, "runtime.buildVersion", 16)
     except FileNotFoundError:
