@@ -121,13 +121,10 @@ class SparkRunningApps:
         # https://github.com/apache/spark/blob/67a254c7ed8c5c3321e8bed06294bc2c9a2603de/core/src/main/scala/org/apache/spark/deploy/JsonProtocol.scala#L202
         metrics_json = rest_request_to_json(self._master_address, SPARK_MASTER_STATE_PATH)
         running_apps = {}
-        current_running_apps = []
 
-        try:
-            current_running_apps = metrics_json["activeapps"]
-        except KeyError:
-            # Log the exception where the activeapps key is not found, and log the response
-            self._logger.warning("No activeapps in metrics!", metrics_json=metrics_json)
+        current_running_apps = metrics_json.get("activeapps", [])
+        if current_running_apps == []:
+            self._logger.warning("No active apps found in Spark master state", metrics_json=metrics_json)
 
         for app in current_running_apps:
             try:
