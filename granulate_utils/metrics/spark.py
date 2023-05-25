@@ -256,9 +256,6 @@ class SparkApplicationMetricsCollector(Collector):
                 break
 
             aggregated_metrics = dict.fromkeys(SPARK_AGGREGATED_STAGE_METRICS.keys(), 0)
-            self.logger.debug(
-                "Collecting metrics for each stage in app", app_id=app_id, app_name=app_name, num_stages=len(response)
-            )
             for stage in response:
                 curr_stage_status = stage["status"]
                 aggregated_metrics["failed_tasks"] += stage["numFailedTasks"]
@@ -279,18 +276,11 @@ class SparkApplicationMetricsCollector(Collector):
             try:
                 base_url = get_request_url(self.master_address, tracking_url)
                 executors = rest_request_to_json(base_url, SPARK_APPS_PATH, app_id, "executors")
-                number_of_executors = len(executors) - 1  # Spark reports the driver as an executor, we discount it.
-                self.logger.debug(
-                    "Number of executors in app",
-                    app_id=app_id,
-                    app_name=app_name,
-                    num_executors=number_of_executors,
-                )
                 labels = {"app_name": app_name, "app_id": app_id}
                 yield from samples_from_json(
                     labels,
                     {
-                        "count": number_of_executors,
+                        "count": len(executors) - 1,  # Spark reports the driver as an executor, we discount it.
                         "activeCount": len([executor for executor in executors if executor["activeTasks"] > 0]),
                     },
                     SPARK_EXECUTORS_METRICS,
