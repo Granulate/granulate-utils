@@ -281,7 +281,7 @@ class SparkApplicationMetricsCollector(Collector):
                 executors = rest_request_to_json(base_url, SPARK_APPS_PATH, app_id, "executors")
                 number_of_executors = len(executors) - 1  # Spark reports the driver as an executor, we discount it.
                 self.logger.debug(
-                    "Number of executors in app is known",
+                    "Number of executors in app",
                     app_id=app_id,
                     app_name=app_name,
                     num_executors=number_of_executors,
