@@ -148,10 +148,6 @@ class SparkRunningApps:
             except Exception:
                 self._logger.exception("Error was found while iterating applications.")
 
-        self._logger.debug(
-            "Standalone applications found", current_running_apps=current_running_apps, running_apps=running_apps
-        )
-
         return running_apps
 
     def _get_standalone_app_url(self, app_id: str) -> Any:
