@@ -150,11 +150,10 @@ class SparkRunningApps:
                     pass
             except Exception:
                 self._logger.exception("Error was found while iterating applications.")
-        else:
-            if running_apps == {}:
-                self._logger.debug("running_apps is empty", metrics_json=metrics_json)
-            if current_running_apps == []:
-                self._logger.debug("current_running_apps is empty", metrics_json=metrics_json)
+
+        self._logger.debug(
+            "Standalone applications found", current_running_apps=current_running_apps, running_apps=running_apps
+        )
 
         return running_apps
 
