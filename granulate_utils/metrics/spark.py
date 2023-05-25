@@ -127,7 +127,7 @@ class SparkRunningApps:
             current_running_apps = metrics_json["activeapps"]
         except KeyError:
             # Log the exception where the activeapps key is not found, and log the response
-            self._logger.exception("Could not find 'activeapps' in metrics_json", metrics_json=metrics_json)
+            self._logger.warning("No activeapps in metrics!", metrics_json=metrics_json)
 
         for app in current_running_apps:
             try:
