@@ -121,8 +121,15 @@ class SparkRunningApps:
         # https://github.com/apache/spark/blob/67a254c7ed8c5c3321e8bed06294bc2c9a2603de/core/src/main/scala/org/apache/spark/deploy/JsonProtocol.scala#L202
         metrics_json = rest_request_to_json(self._master_address, SPARK_MASTER_STATE_PATH)
         running_apps = {}
+        current_running_apps = []
 
-        for app in metrics_json.get("activeapps", []):
+        try:
+            current_running_apps = metrics_json["activeapps"]
+        except KeyError:
+            # Log the exception where the activeapps key is not found, and log the response
+            self._logger.exception("Could not find 'activeapps' in metrics_json", metrics_json=metrics_json)
+
+        for app in current_running_apps:
             try:
                 app_id = app["id"]
                 app_name = app["name"]
@@ -143,6 +150,11 @@ class SparkRunningApps:
                     pass
             except Exception:
                 self._logger.exception("Error was found while iterating applications.")
+        else:
+            if running_apps == {}:
+                self._logger.debug("running_apps is empty.", metrics_json=metrics_json)
+            if current_running_apps == []:
+                self._logger.debug("current_running_apps is empty.", metrics_json=metrics_json)
 
         return running_apps
 
@@ -245,6 +257,9 @@ class SparkApplicationMetricsCollector(Collector):
                 break
 
             aggregated_metrics = dict.fromkeys(SPARK_AGGREGATED_STAGE_METRICS.keys(), 0)
+            self.logger.debug(
+                "Collecting metrics for each stage in app", app_id=app_id, app_name=app_name, num_stages=len(response)
+            )
             for stage in response:
                 curr_stage_status = stage["status"]
                 aggregated_metrics["failed_tasks"] += stage["numFailedTasks"]
@@ -265,11 +280,18 @@ class SparkApplicationMetricsCollector(Collector):
             try:
                 base_url = get_request_url(self.master_address, tracking_url)
                 executors = rest_request_to_json(base_url, SPARK_APPS_PATH, app_id, "executors")
+                number_of_executors = len(executors) - 1  # Spark reports the driver as an executor, we discount it.
+                self.logger.debug(
+                    "Number of executors in app is known",
+                    app_id=app_id,
+                    app_name=app_name,
+                    num_executors=number_of_executors,
+                )
                 labels = {"app_name": app_name, "app_id": app_id}
                 yield from samples_from_json(
                     labels,
                     {
-                        "count": len(executors) - 1,  # Spark reports the driver as an executor, we discount it.
+                        "count": number_of_executors,
                         "activeCount": len([executor for executor in executors if executor["activeTasks"] > 0]),
                     },
                     SPARK_EXECUTORS_METRICS,
