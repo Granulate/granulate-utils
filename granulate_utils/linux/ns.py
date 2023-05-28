@@ -200,6 +200,39 @@ def _get_process_ns_inode(process: Process, nstype: str):
 
     return ns_inode
 
+def _sort_and_validate_nstypes(nstypes: List[str]) -> List[str]:
+    for ns in nstypes:
+        assert_ns_str(ns)
+    # make sure "mnt" is last, once we change it our /proc is gone
+    return sorted(nstypes, key=lambda ns: 1 if ns == "mnt" else 0)
+
+def _switch_to_single_ns(nstype: str, target_pid: int) -> None:
+    global libc
+    if libc is None:
+        libc = ctypes.CDLL("libc.so.6")
+
+    if is_same_ns(target_pid, nstype):
+        return
+    flag = NsType[nstype].value
+    if libc.unshare(flag) != 0:
+        raise ValueError(f"Failed to unshare({nstype})")
+    with open(f"/proc/{target_pid}/ns/{nstype}", "r") as nsf:
+        if libc.setns(nsf.fileno(), flag) != 0:
+            raise ValueError(f"Failed to setns({nstype}) (to pid {target_pid})")
+
+def switch_to_ns(nstypes: List[str], target_pid: int = 1) -> None:
+    """
+    Switches to a set of the namespaces of a target process
+    This should probably always be done in new process or thread as it might be irreversible.
+
+    By default, switches to init NS. You can pass 'target_pid' to switch to the namespace of that process.
+    """
+
+    nstypes = _sort_and_validate_nstypes(nstypes)
+
+    for nstype in nstypes:
+        _switch_to_single_ns(nstype, target_pid)
+
 
 def run_in_ns(
     nstypes: List[str],
@@ -219,29 +252,15 @@ def run_in_ns(
     By default, run stuff in init NS. You can pass 'target_pid' to run in the namespace of that process.
     """
 
-    for ns in nstypes:
-        assert_ns_str(ns)
-    # make sure "mnt" is last, once we change it our /proc is gone
-    nstypes = sorted(nstypes, key=lambda ns: 1 if ns == "mnt" else 0)
+    nstypes = _sort_and_validate_nstypes(nstypes)
 
     ret: Union[T, _Sentinel] = _SENTINEL
     exc: Optional[BaseException] = None
 
     def _switch_and_run():
         try:
-            global libc
-            if libc is None:
-                libc = ctypes.CDLL("libc.so.6")
-
             for nstype in nstypes:
-                if not is_same_ns(target_pid, nstype):
-                    flag = NsType[nstype].value
-                    if libc.unshare(flag) != 0:
-                        raise ValueError(f"Failed to unshare({nstype})")
-
-                    with open(f"/proc/{target_pid}/ns/{nstype}", "r") as nsf:
-                        if libc.setns(nsf.fileno(), flag) != 0:
-                            raise ValueError(f"Failed to setns({nstype}) (to pid {target_pid})")
+                _switch_to_single_ns(nstype, target_pid)
 
             nonlocal ret
             ret = callback()
@@ -338,3 +357,5 @@ def get_host_pid(nspid: int, container_id: str) -> Optional[int]:
             continue
 
     return None
+
+
