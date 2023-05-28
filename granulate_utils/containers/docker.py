@@ -3,13 +3,15 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 
+from datetime import datetime
 from typing import List, Optional
 
 import docker
 import docker.errors
 import docker.models.containers
+from dateutil.parser import isoparse
 
-from granulate_utils.containers.container import Container, ContainersClientInterface
+from granulate_utils.containers.container import Container, ContainersClientInterface, TimeInfo
 from granulate_utils.exceptions import ContainerNotFound
 from granulate_utils.linux import ns
 
@@ -35,10 +37,21 @@ class DockerClient(ContainersClientInterface):
         return ["docker"]
 
     @staticmethod
-    def _create_container(container: docker.models.containers.Container) -> Container:
+    def _parse_docker_ts(ts: str) -> Optional[datetime]:
+        assert ts.endswith("Z")  # assert UTC
+        if ts.startswith("0001"):  # None-value timestamp in docker is represented as "0001-01-01T00:00:00Z".
+            return None
+        return isoparse(ts)
+
+    @classmethod
+    def _create_container(cls, container: docker.models.containers.Container) -> Container:
         pid: Optional[int] = container.attrs["State"].get("Pid")
         if pid == 0:  # Docker returns 0 for dead containers
             pid = None
+        created = cls._parse_docker_ts(container.attrs["Created"])
+        assert created is not None
+        started_at = cls._parse_docker_ts(container.attrs["State"]["StartedAt"])
+        time_info = TimeInfo(create_time=created, start_time=started_at)
         return Container(
             runtime="docker",
             name=container.name,
@@ -46,4 +59,5 @@ class DockerClient(ContainersClientInterface):
             labels=container.labels,
             running=container.status == "running",
             pid=pid,
+            time_info=time_info,
         )

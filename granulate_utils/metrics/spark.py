@@ -122,7 +122,11 @@ class SparkRunningApps:
         metrics_json = rest_request_to_json(self._master_address, SPARK_MASTER_STATE_PATH)
         running_apps = {}
 
-        for app in metrics_json.get("activeapps", []):
+        activeapps = metrics_json.get("activeapps", [])
+        if activeapps == []:
+            self._logger.warning("No active apps found in Spark master state", metrics_json=metrics_json)
+
+        for app in activeapps:
             try:
                 app_id = app["id"]
                 app_name = app["name"]
