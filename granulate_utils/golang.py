@@ -15,30 +15,34 @@ from granulate_utils.linux.process import is_kernel_thread, process_exe
 
 
 def is_golang_process(process: Process) -> bool:
-    return not is_kernel_thread(process) and get_process_golang_version(process.create_time()) is not None
+    return not is_kernel_thread(process) and get_process_golang_version(process) is not None
 
 
 @functools.lru_cache(maxsize=4096)
-def get_process_golang_version(process_start_time: float) -> Optional[str]:
-    process = None
-    for pid in pids():
-        if Process(pid).create_time() == process_start_time:
-            process = Process(pid)
-
-    if process is None:
-        raise NoSuchProcess(process_start_time)
+def get_process_golang_version(process: Process) -> Optional[str]:
     try:
         exe = process_exe(process)
     except:
         return None
     elf_path = f"/proc/{get_mnt_ns_ancestor(process).pid}/root{exe}"
+    return get_version_hidden_in_exe(elf_path, process.create_time())
+
+
+
+@functools.lru_cache(maxsize=4096)
+def get_version_hidden_in_exe(elf_path: str, process_start_time: float) -> Optional[str]:
+    process = None
+    for pid in pids():
+        if Process(pid).create_time() == process_start_time:
+            process = Process(pid)
+    if process is None:
+        raise NoSuchProcess(process)
     try:
         symbol_data = read_elf_symbol(elf_path, "runtime.buildVersion", 16)
     except FileNotFoundError:
         raise NoSuchProcess(process.pid)
     if symbol_data is None:
         return None
-
     # Declaration of go string type:
     # type stringStruct struct {
     # 	str unsafe.Pointer
