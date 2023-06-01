@@ -7,6 +7,8 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import Optional, Union
 
+from psutil import Process
+
 from granulate_utils.exceptions import CgroupInterfaceNotSupported
 from granulate_utils.linux.cgroups.base_controller import BaseController
 from granulate_utils.linux.cgroups.cgroup import CgroupCore, ControllerType
@@ -98,7 +100,8 @@ class MemoryControllerV2(MemoryController):
 
 class MemoryControllerFactory:
     @staticmethod
-    def get_memory_controller(cgroup_core: CgroupCore) -> MemoryController:
+    def get_memory_controller(cgroup: Optional[Union[CgroupCore, Path, Process]]) -> MemoryController:
+        cgroup_core = MemoryController.get_cgroup_core(cgroup)
         if cgroup_core.is_v1:
             return MemoryControllerV1(cgroup_core)
         return MemoryControllerV2(cgroup_core)

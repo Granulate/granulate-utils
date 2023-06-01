@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional, Union
 
+from psutil import Process
+
 from granulate_utils.linux.cgroups.base_controller import BaseController
 from granulate_utils.linux.cgroups.cgroup import CgroupCore, ControllerType
 
@@ -102,13 +104,14 @@ class CpuControllerV2(CpuController):
 
 class CpuControllerFactory:
     @staticmethod
-    def get_cpu_controller(cgroup_core: CgroupCore) -> CpuController:
+    def get_cpu_controller(cgroup: Optional[Union[CgroupCore, Path, Process]]) -> CpuController:
+        cgroup_core = CpuController.get_cgroup_core(cgroup)
         if cgroup_core.is_v1:
             return CpuControllerV1(cgroup_core)
         return CpuControllerV2(cgroup_core)
 
     @classmethod
-    def get_sub_cpu_controller(
+    def create_sub_cpu_controller(
         cls, new_cgroup_name: str, parent_cgroup: Optional[Union[Path, CgroupCore]] = None
     ) -> CpuController:
         current_cgroup = CpuController.get_cgroup_core(parent_cgroup)

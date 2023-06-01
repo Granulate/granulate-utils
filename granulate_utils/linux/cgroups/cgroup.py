@@ -7,9 +7,10 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from pathlib import Path
-from typing import List, Literal, Mapping, Optional, cast
+from typing import List, Literal, Mapping, Optional, Union, cast
 
 import psutil
+from psutil import Process
 
 from granulate_utils.exceptions import CgroupControllerNotMounted
 from granulate_utils.linux import ns
@@ -275,7 +276,7 @@ def get_cgroup_mount_checked(controller: ControllerType) -> CgroupCore:
     return cgroup_mount
 
 
-def create_cgroup_from_path(controller: ControllerType, cgroup_path_or_full_path: Path) -> CgroupCore:
+def get_cgroup_from_path(controller: ControllerType, cgroup_path_or_full_path: Path) -> CgroupCore:
     cgroup_mount = get_cgroup_mount_checked(controller)
 
     try:
@@ -311,3 +312,17 @@ def get_cgroup_for_process(controller: ControllerType, process: Optional[psutil.
                 cgroup_mount_v2.cgroup_mount_point,
             )
     raise Exception(f"{controller!r} not found")
+
+
+def get_cgroup_core(
+    controller: ControllerType, cgroup: Optional[Union[Path, CgroupCore, Process]] = None
+) -> CgroupCore:
+    if cgroup is None or isinstance(cgroup, Process):
+        # return current CgroupCore
+        return get_cgroup_for_process(controller, cgroup)
+    elif isinstance(cgroup, Path):
+        # create CgroupCore from path
+        cgroup = get_cgroup_from_path(controller, cgroup)
+
+    assert isinstance(cgroup, CgroupCore), f"Unable to get CgroupCore from given input type {type(cgroup)}"
+    return cgroup
