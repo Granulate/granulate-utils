@@ -71,14 +71,16 @@ OpenJDK 64-Bit Server VM (build 24.251-b02, mixed mode)""",
             """java version "1.8.0_312"
 Java Runtime Environment (Zing 21.12.0.0-b2-linux64) (build 1.8.0_312-b2)
 Zing 64-Bit Tiered VM (Zing 21.12.0.0-b2-linux64) (build 1.8.0_312-zing_21.12.0.0-b3-product-linux-X86_64, mixed mode)""",  # noqa
-            JvmVersion(Version("8.312"), 2, "Zing 64-Bit Tiered VM (Zing 21.12.0.0-b2-linux64)", "Zing", 21),
+            JvmVersion(
+                Version("8.312"), 2, "Zing 64-Bit Tiered VM (Zing 21.12.0.0-b2-linux64)", "Zing", Version("21.12.0")
+            ),
         ),
         # zing 22 & java 15
         (
             """java version "15.0.8" 2022-08-04
 Java Runtime Environment Zing22.07.1.0+1 (build 15.0.8+4-MTS)
 Zing 64-Bit Tiered VM Zing22.07.1.0+1 (build 15.0.8-zing_22.07.1.0-b1-product-linux-X86_64, mixed mode)""",
-            JvmVersion(Version("15.0.8"), 4, "Zing 64-Bit Tiered VM Zing22.07.1.0+1", "Zing", 22),
+            JvmVersion(Version("15.0.8"), 4, "Zing 64-Bit Tiered VM Zing22.07.1.0+1", "Zing", Version("22.07.1")),
         ),
         # open j9
         (
@@ -97,7 +99,7 @@ JCL      - 0b8b8af39a based on jdk8u332-b09)
 Zing Runtime Environment for Java Applications (build 1.8.0-zing_20.03.0.0-b1)
 Zing 64-Bit Tiered VM (build 1.8.0-zing_20.03.0.0-b1-product-linux-X86_64, mixed mode)
 """,
-            JvmVersion(Version("8"), 1, "Zing 64-Bit Tiered VM", "Zing", 20),
+            JvmVersion(Version("8"), 1, "Zing 64-Bit Tiered VM", "Zing", Version("20.03.0")),
         ),
         # zing 19 (zing-jdk1.8.0-19.12.103.0-3 on CentOS)
         (
@@ -105,7 +107,7 @@ Zing 64-Bit Tiered VM (build 1.8.0-zing_20.03.0.0-b1-product-linux-X86_64, mixed
 Zing Runtime Environment for Java Applications (build 1.8.0-zing_19.12.103.0-b3)
 Zing 64-Bit Tiered VM (build 1.8.0-zing_19.12.103.0-b3-product-linux-X86_64, mixed mode)
 """,
-            JvmVersion(Version("8"), 3, "Zing 64-Bit Tiered VM", "Zing", 19),
+            JvmVersion(Version("8"), 3, "Zing 64-Bit Tiered VM", "Zing", Version("19.12.103")),
         ),
         # TODO: add error cases here
     ],

@@ -51,3 +51,8 @@ class CgroupInterfaceNotSupported(Exception):
 class CgroupControllerNotMounted(Exception):
     def __init__(self, controller_name: str):
         super(CgroupControllerNotMounted, self).__init__(f"Controller {controller_name} is not mounted on the system")
+
+
+class DatabricksJobNameDiscoverException(Exception):
+    def __init__(self, msg: str) -> None:
+        super().__init__(msg)
