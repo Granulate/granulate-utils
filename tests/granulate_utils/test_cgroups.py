@@ -34,7 +34,7 @@ def test_cgroup_v1(tmp_path_factory: TempPathFactory):
 
     cpu_procs.write_text("1 2 3")
 
-    cgroup_v1 = CgroupCoreV1(cgroup_dir)
+    cgroup_v1 = CgroupCoreV1(cgroup_dir, tmp_dir)
 
     assert cgroup_v1.get_pids_in_cgroup() == set([1, 2, 3])
     cgroup_v1.assign_process_to_cgroup(4)
@@ -110,7 +110,9 @@ def test_get_cgroup_current_process():
     cgroup_path = "/dummy"
     full_path = Path("/root_path/dummy")
 
-    with patch("granulate_utils.linux.cgroups.cgroup.get_cgroup_mount", return_value=CgroupCoreV1(root_path)):
+    with patch(
+        "granulate_utils.linux.cgroups.cgroup.get_cgroup_mount", return_value=CgroupCoreV1(root_path, Path("."))
+    ):
         with patch(
             "granulate_utils.linux.cgroups.cgroup.read_proc_file",
             return_value=f"1:{DUMMY_CONTROLLER}:{cgroup_path}\n".encode(),
@@ -152,7 +154,7 @@ def test_cpu_controller_v1(tmp_path_factory: TempPathFactory):
     cpu_quota.write_text("50")
     cpu_stat.write_text("stat_value 1")
 
-    cgroup_v1 = CgroupCoreV1(cpu_controller_dir)
+    cgroup_v1 = CgroupCoreV1(cpu_controller_dir, tmp_dir)
     cpu_controller = CpuControllerFactory.get_cpu_controller(cgroup_v1)
     assert cpu_controller.get_cpu_limit_cores() == 0.5
     stat_data = cpu_controller.get_stat()
@@ -208,7 +210,7 @@ def test_memory_controller_v1(tmp_path_factory: TempPathFactory):
     max_bytes_usage.write_text("400")
     usage_in_bytes.write_text("500")
 
-    cgroup_v1 = CgroupCoreV1(memory_controller_dir)
+    cgroup_v1 = CgroupCoreV1(memory_controller_dir, tmp_dir)
     memory_controller = MemoryControllerFactory.get_memory_controller(cgroup_v1)
     assert memory_controller.get_memory_limit() == 128
     assert memory_controller.get_max_usage_in_bytes() == 400
@@ -265,6 +267,6 @@ def test_cpuacct_controller(tmp_path_factory: TempPathFactory):
     cpuacct_usage = cpuacct_controller_dir / "cpuacct.usage"
     cpuacct_usage.write_text("128")
 
-    cgroup_v1 = CgroupCoreV1(cpuacct_controller_dir)
+    cgroup_v1 = CgroupCoreV1(cpuacct_controller_dir, tmp_dir)
     cpuacct_controller = CpuAcctController(cgroup_v1)
     assert cpuacct_controller.get_cpu_time_ns() == 128
