@@ -100,14 +100,14 @@ class MemoryControllerV2(MemoryController):
 
 class MemoryControllerFactory:
     @staticmethod
-    def get_memory_controller(cgroup: Optional[Union[CgroupCore, Path, Process]]) -> MemoryController:
+    def get_memory_controller(cgroup: Optional[Union[CgroupCore, Path, Process]] = None) -> MemoryController:
         cgroup_core = MemoryController.get_cgroup_core(cgroup)
         if cgroup_core.is_v1:
             return MemoryControllerV1(cgroup_core)
         return MemoryControllerV2(cgroup_core)
 
     @classmethod
-    def get_sub_memory_controller(
+    def create_sub_memory_controller(
         cls, new_cgroup_name: str, parent_cgroup: Optional[Union[Path, CgroupCore]] = None
     ) -> MemoryController:
         current_cgroup = MemoryController.get_cgroup_core(parent_cgroup)

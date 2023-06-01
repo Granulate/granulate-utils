@@ -104,7 +104,7 @@ class CpuControllerV2(CpuController):
 
 class CpuControllerFactory:
     @staticmethod
-    def get_cpu_controller(cgroup: Optional[Union[CgroupCore, Path, Process]]) -> CpuController:
+    def get_cpu_controller(cgroup: Optional[Union[CgroupCore, Path, Process]] = None) -> CpuController:
         cgroup_core = CpuController.get_cgroup_core(cgroup)
         if cgroup_core.is_v1:
             return CpuControllerV1(cgroup_core)
