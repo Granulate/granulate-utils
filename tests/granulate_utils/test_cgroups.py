@@ -118,7 +118,7 @@ def test_get_cgroup_current_process():
             return_value=f"1:{DUMMY_CONTROLLER}:{cgroup_path}\n".encode(),
         ):
             cgroup = get_cgroup_for_process(DUMMY_CONTROLLER)
-            assert cgroup.cgroup_full_path == full_path
+            assert cgroup.cgroup_abs_path == full_path
 
     with patch(
         "granulate_utils.linux.cgroups.cgroup.get_cgroup_mount", return_value=CgroupCoreV2(root_path, root_path)
@@ -128,7 +128,7 @@ def test_get_cgroup_current_process():
             return_value=f"0::{cgroup_path}\n".encode(),
         ):
             cgroup = get_cgroup_for_process(DUMMY_CONTROLLER)
-            assert cgroup.cgroup_full_path == full_path
+            assert cgroup.cgroup_abs_path == full_path
 
     with pytest.raises(Exception) as exception:
         with patch(
