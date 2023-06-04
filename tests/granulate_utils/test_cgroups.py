@@ -51,8 +51,8 @@ def test_cgroup_v1(tmp_path_factory: TempPathFactory):
     assert sub_cgroup.get_pids_in_cgroup() == set([5])
     assert sub_cgroup_procs.read_text() == "5"
 
-    same_cgroup = sub_cgroup.get_subcgroup(DUMMY_CONTROLLER, sub_cgroup.cgroup_full_path.name)
-    assert same_cgroup.cgroup_full_path == sub_cgroup.cgroup_full_path
+    same_cgroup = sub_cgroup.get_subcgroup(DUMMY_CONTROLLER, sub_cgroup.cgroup_abs_path.name)
+    assert same_cgroup.cgroup_abs_path == sub_cgroup.cgroup_abs_path
 
 
 def test_cgroup_v2(tmp_path_factory: TempPathFactory):
@@ -73,7 +73,7 @@ def test_cgroup_v2(tmp_path_factory: TempPathFactory):
 
     cgroup = CgroupCoreV2(current_leaf, root_cgroup)
     sub_cgroup = cgroup.get_subcgroup(DUMMY_CONTROLLER, SUB_CGROUP_NAME)
-    assert sub_cgroup_dir.absolute() == sub_cgroup.cgroup_full_path.absolute()
+    assert sub_cgroup_dir.absolute() == sub_cgroup.cgroup_abs_path.absolute()
     assert parent_delegated_controllers.read_text().strip() == f"+{DUMMY_CONTROLLER}"
 
     with pytest.raises(AssertionError) as exception:
@@ -101,7 +101,7 @@ def test_cgroup_v2_fallback_to_root(tmp_path_factory: TempPathFactory):
 
     cgroup = CgroupCoreV2(current_leaf, root_cgroup)
     sub_cgroup = cgroup.get_subcgroup(DUMMY_CONTROLLER, SUB_CGROUP_NAME)
-    assert sub_cgroup_dir.absolute() == sub_cgroup.cgroup_full_path.absolute()
+    assert sub_cgroup_dir.absolute() == sub_cgroup.cgroup_abs_path.absolute()
     assert root_delegated_controllers.read_text().strip() == f"+{DUMMY_CONTROLLER}"
 
 

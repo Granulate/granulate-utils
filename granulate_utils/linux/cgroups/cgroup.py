@@ -39,10 +39,10 @@ CGROUP_V2_UNBOUNDED_VALUE = "max"
 
 class ProcCgroupLine:
     """
-    The format of the line:  hierarchy-ID:controller-list:cgroup-path
+    The format of the line:  hierarchy-ID:controller-list:relative-path
     Example line: 1:cpu:/custom_cgroup
 
-    cgroup-path - the cgroup the process belongs to, relative to the hierarchy mount point
+    relative-path - the path of the cgroup the process belongs to, relative to the hierarchy mount point
     e.g. /sys/fs/cgroup/memory on v1 or just the cgroups v2 mount on v2 e.g /sys/fs/cgroup.
     """
 
@@ -74,7 +74,7 @@ def find_v1_hierarchies() -> Mapping[str, str]:
     """
     hierarchies = {}
     for mount in iter_mountinfo(1):
-        if mount.mount_source != "cgroup" or mount.filesystem_type != "cgroup":
+        if mount.filesystem_type != "cgroup":
             continue
         controllers = set(mount.super_options) & CONTROLLERS
         if controllers:
@@ -105,20 +105,22 @@ CGROUP_PROCS_FILE = "cgroup.procs"
 
 class CgroupCore:
     """
-    This object handles the general operations for Cgroup management:
-    hierarchy management, controllers management, assigning processes.
-    cgroup_full_path: The full path for this CGroupCore object
+    This object abstracts the general operations for CGroups for both v1 and v2:
+    - Getting processes that belong to the cgroup or assigning processes to the cgroup.
+    - Reading from or writing to interface files.
+    - Creating CGroups under the hierarchy.
+    cgroup_abs_path: The absolute path for this CGroupCore object
     """
 
-    cgroup_full_path: Path
+    cgroup_abs_path: Path
     cgroup_mount_path: Path
 
-    def __init__(self, cgroup_full_path: Path, cgroup_mount_path: Path):
-        self.cgroup_full_path = cgroup_full_path
+    def __init__(self, cgroup_abs_path: Path, cgroup_mount_path: Path):
+        self.cgroup_abs_path = cgroup_abs_path
         self.cgroup_mount_path = cgroup_mount_path
 
     def _create_subcgroup(self, cgroup_name: str) -> Path:
-        new_cgroup_path = self.cgroup_full_path / cgroup_name
+        new_cgroup_path = self.cgroup_abs_path / cgroup_name
         new_cgroup_path.mkdir(exist_ok=True)
         return new_cgroup_path
 
@@ -134,11 +136,11 @@ class CgroupCore:
         self.write_to_interface_file(CGROUP_PROCS_FILE, str(pid))
 
     def read_from_interface_file(self, interface_name: str) -> str:
-        interface_path = self.cgroup_full_path / interface_name
+        interface_path = self.cgroup_abs_path / interface_name
         return interface_path.read_text()
 
     def write_to_interface_file(self, interface_name: str, data: str) -> None:
-        interface_path = self.cgroup_full_path / interface_name
+        interface_path = self.cgroup_abs_path / interface_name
         interface_path.write_text(data)
 
     @abstractmethod
@@ -170,7 +172,7 @@ class CgroupCoreV1(CgroupCore):
     def get_subcgroup(self, controller: ControllerType, cgroup_name: str) -> CgroupCore:
         assert controller in CONTROLLERS
 
-        if self.cgroup_full_path.name == cgroup_name:
+        if self.cgroup_abs_path.name == cgroup_name:
             return self
 
         return CgroupCoreV1(self._create_subcgroup(cgroup_name), self.cgroup_mount_path)
@@ -194,15 +196,15 @@ class CgroupCoreV2(CgroupCore):
 
         assert self.is_controller_supported(
             controller
-        ), f"Controller '{controller}' is not supported under {self.cgroup_full_path}"
+        ), f"Controller '{controller}' is not supported under {self.cgroup_abs_path}"
         self.write_to_interface_file(CGROUP_V2_DELEGATED_CONTROLLERS, f"+{controller}")
 
     def is_controller_delegated(self, controller: ControllerType):
         return controller in self.read_from_interface_file(CGROUP_V2_DELEGATED_CONTROLLERS).split()
 
     def _get_parent_cgroup_for_controller(self, controller: ControllerType) -> CgroupCoreV2:
-        if self.cgroup_full_path != self.cgroup_mount_path:
-            parent_cgroup = CgroupCoreV2(self.cgroup_full_path.parent, self.cgroup_mount_path)
+        if self.cgroup_abs_path != self.cgroup_mount_path:
+            parent_cgroup = CgroupCoreV2(self.cgroup_abs_path.parent, self.cgroup_mount_path)
             # If controller can't be delegated - fallback to root cGroup
             if parent_cgroup.is_controller_supported(controller):
                 return parent_cgroup
@@ -215,10 +217,10 @@ class CgroupCoreV2(CgroupCore):
         2. Current cGroup isn't the root cGroup - in this case, we create a cGroup under the parent of the
            current cGroup.
         """
-        if self.cgroup_full_path.name == cgroup_name:
+        if self.cgroup_abs_path.name == cgroup_name:
             parent_cgroup = self._get_parent_cgroup_for_controller(controller)
             assert (
-                parent_cgroup.cgroup_full_path != self.cgroup_full_path.parent
+                parent_cgroup.cgroup_abs_path != self.cgroup_abs_path.parent
             ), "current cGroup doesn't support '{controller}' Controller"
             parent_cgroup._delegate_controller(controller)
             return self
@@ -276,17 +278,18 @@ def get_cgroup_from_path(controller: ControllerType, cgroup_path_or_full_path: P
     cgroup_mount = get_cgroup_mount_checked(controller)
 
     try:
-        cgroup_path_or_full_path.relative_to(cgroup_mount.cgroup_full_path)
+        cgroup_path_or_full_path.relative_to(cgroup_mount.cgroup_abs_path)
         # it's a full path
-        cgroup_full_path = cgroup_path_or_full_path
+        cgroup_abs_path = cgroup_path_or_full_path
     except ValueError:
+        cgroup_path_or_full_path = Path(cgroup_path_or_full_path.as_posix().lstrip("/"))
         # it's a path relative to controller mount point
-        cgroup_full_path = cgroup_mount.cgroup_full_path / cgroup_path_or_full_path
+        cgroup_abs_path = cgroup_mount.cgroup_abs_path / cgroup_path_or_full_path
 
     if cgroup_mount.is_v1:
-        return CgroupCoreV1(cgroup_full_path, cgroup_mount.cgroup_mount_path)
+        return CgroupCoreV1(cgroup_abs_path, cgroup_mount.cgroup_mount_path)
     else:
-        return CgroupCoreV2(cgroup_full_path, cgroup_mount.cgroup_mount_path)
+        return CgroupCoreV2(cgroup_abs_path, cgroup_mount.cgroup_mount_path)
 
 
 def get_cgroup_for_process(controller: ControllerType, process: Optional[psutil.Process] = None) -> CgroupCore:
@@ -299,12 +302,12 @@ def get_cgroup_for_process(controller: ControllerType, process: Optional[psutil.
         if cgroup_mount.is_v1 and controller in process_cgroup.controllers:
             assert process_cgroup.hier_id != "0"
             return CgroupCoreV1(
-                cgroup_mount.cgroup_full_path / process_cgroup.relative_path.lstrip("/"), cgroup_mount.cgroup_mount_path
+                cgroup_mount.cgroup_abs_path / process_cgroup.relative_path.lstrip("/"), cgroup_mount.cgroup_mount_path
             )
         elif cgroup_mount.is_v2:
             assert process_cgroup.hier_id == "0"
             return CgroupCoreV2(
-                cgroup_mount.cgroup_full_path / process_cgroup.relative_path.lstrip("/"),
+                cgroup_mount.cgroup_abs_path / process_cgroup.relative_path.lstrip("/"),
                 cgroup_mount.cgroup_mount_path,
             )
     raise Exception(f"{controller!r} not found")
