@@ -37,8 +37,8 @@ class Sender:
         auth_token: str,
         server_address: str,
         *,
-        auth_token_type: str = "gprofiler",
         scheme: str = "https",
+        auth_token_type: str = "",
         send_interval: float = 30.0,
         send_threshold: float = 0.8,
         send_min_interval: float = 10.0,
@@ -50,7 +50,7 @@ class Sender:
 
         :param application_name: Unique identifier requests coming from this handler.
         :param auth_token: Token for authenticating requests to the server.
-        :param auth_token_type: Type of authentication-token ('gprofiler' or 'aws').
+        :param auth_token_type: Type of authentication-token.
         :param server_address: Address of server where to send messages.
         :param scheme: The scheme to use as string ('http' or 'https')
         :param send_interval: Seconds between sending batches.
