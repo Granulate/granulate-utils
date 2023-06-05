@@ -167,6 +167,10 @@ class CgroupCore:
     def convert_inner_value_to_outer(cls, val: str) -> int:
         return int(val)
 
+    @classmethod
+    def build_object(cls, cgroup_abs_path: Path, mount_point: Path):
+        return cls(cgroup_abs_path, mount_point)
+
 
 class CgroupCoreV1(CgroupCore):
     def get_subcgroup(self, controller: ControllerType, cgroup_name: str) -> CgroupCore:
@@ -286,10 +290,7 @@ def get_cgroup_from_path(controller: ControllerType, cgroup_path_or_full_path: P
         # it's a path relative to controller mount point
         cgroup_abs_path = cgroup_mount.cgroup_abs_path / cgroup_path_or_full_path
 
-    if cgroup_mount.is_v1:
-        return CgroupCoreV1(cgroup_abs_path, cgroup_mount.cgroup_mount_path)
-    else:
-        return CgroupCoreV2(cgroup_abs_path, cgroup_mount.cgroup_mount_path)
+    return cgroup_mount.build_object(cgroup_abs_path, cgroup_mount.cgroup_mount_path)
 
 
 def get_cgroup_for_process(controller: ControllerType, process: Optional[psutil.Process] = None) -> CgroupCore:
@@ -299,16 +300,11 @@ def get_cgroup_for_process(controller: ControllerType, process: Optional[psutil.
     cgroup_mount = get_cgroup_mount_checked(controller)
 
     for process_cgroup in get_process_cgroups(process):
-        if cgroup_mount.is_v1 and controller in process_cgroup.controllers:
-            assert process_cgroup.hier_id != "0"
-            return CgroupCoreV1(
+        if (cgroup_mount.is_v1 and controller in process_cgroup.controllers) or cgroup_mount.is_v2:
+            # Validate hier == 0 only when cgroup is v2
+            assert cgroup_mount.is_v1 ^ (process_cgroup.hier_id == "0")
+            return cgroup_mount.build_object(
                 cgroup_mount.cgroup_abs_path / process_cgroup.relative_path.lstrip("/"), cgroup_mount.cgroup_mount_path
-            )
-        elif cgroup_mount.is_v2:
-            assert process_cgroup.hier_id == "0"
-            return CgroupCoreV2(
-                cgroup_mount.cgroup_abs_path / process_cgroup.relative_path.lstrip("/"),
-                cgroup_mount.cgroup_mount_path,
             )
     raise Exception(f"{controller!r} not found")
 

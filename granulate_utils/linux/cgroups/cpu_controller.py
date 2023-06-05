@@ -29,7 +29,7 @@ class CpuController(BaseController):
 
     def set_cpu_limit_cores(self, cores: float) -> None:
         period = self.get_cpu_limit_period()
-        self.set_cpu_limit_quota(int(period * cores))
+        self.set_cpu_limit(quota=int(period * cores))
 
     def get_cpu_limit_cores(self) -> float:
         """
@@ -40,7 +40,7 @@ class CpuController(BaseController):
         return cpu_limit_params.quota / cpu_limit_params.period if cpu_limit_params.quota != -1 else -1.0
 
     def reset_cpu_limit(self) -> None:
-        self.set_cpu_limit_quota(-1)
+        self.set_cpu_limit(quota=-1)
 
     def get_stat(self) -> Dict[str, int]:
         stat_text = self.read_from_interface_file(self.CPU_STAT_FILE)
@@ -59,7 +59,7 @@ class CpuController(BaseController):
         pass
 
     @abstractmethod
-    def set_cpu_limit_quota(self, quota: int) -> None:
+    def set_cpu_limit(self, quota: Optional[int] = None, period: Optional[int] = None) -> None:
         pass
 
 
@@ -77,8 +77,11 @@ class CpuControllerV1(CpuController):
     def get_cpu_limit_params(self) -> CpuLimitParams:
         return CpuLimitParams(self.get_cpu_limit_period(), self.get_cpu_limit_quota())
 
-    def set_cpu_limit_quota(self, quota: int) -> None:
-        self.cgroup.write_to_interface_file(self.CPU_QUOTA_FILE, str(quota))
+    def set_cpu_limit(self, quota: Optional[int] = None, period: Optional[int] = None) -> None:
+        if quota is not None:
+            self.cgroup.write_to_interface_file(self.CPU_QUOTA_FILE, str(quota))
+        if period is not None:
+            self.cgroup.write_to_interface_file(self.CPU_PERIOD_FILE, str(period))
 
 
 class CpuControllerV2(CpuController):
@@ -96,8 +99,13 @@ class CpuControllerV2(CpuController):
         # If quota is unbounded ('max') we return -1 to be API consistent with CgroupV1
         return CpuLimitParams(period=int(cpu_limit[1]), quota=self.cgroup.convert_inner_value_to_outer(cpu_limit[0]))
 
-    def set_cpu_limit_quota(self, quota: int) -> None:
-        period = self.get_cpu_limit_period()
+    def set_cpu_limit(self, quota: Optional[int] = None, period: Optional[int] = None) -> None:
+        cpu_limit_params = self.get_cpu_limit_params()
+        if quota is None:
+            quota = cpu_limit_params.quota
+        if period is None:
+            period = cpu_limit_params.period
+
         quota_str = self.cgroup.convert_outer_value_to_inner(quota)
         self.cgroup.write_to_interface_file(self.CPU_LIMIT_FILE, f"{quota_str} {period}")
 
