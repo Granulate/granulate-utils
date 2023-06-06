@@ -38,7 +38,7 @@ class Sender:
         server_address: str,
         *,
         scheme: str = "https",
-        auth_token_type: str = "",
+        auth_secret: str = "",
         send_interval: float = 30.0,
         send_threshold: float = 0.8,
         send_min_interval: float = 10.0,
@@ -50,7 +50,7 @@ class Sender:
 
         :param application_name: Unique identifier requests coming from this handler.
         :param auth_token: Token for authenticating requests to the server.
-        :param auth_token_type: Type of authentication-token.
+        :param auth_secret: Secret token.
         :param server_address: Address of server where to send messages.
         :param scheme: The scheme to use as string ('http' or 'https')
         :param send_interval: Seconds between sending batches.
@@ -61,7 +61,7 @@ class Sender:
 
         self.application_name = application_name
         self.auth_token = auth_token
-        self.auth_token_type = auth_token_type
+        self.auth_secret = auth_secret
         self.server_address = server_address
         self.send_interval = send_interval
         self.send_threshold = send_threshold
@@ -165,7 +165,7 @@ class Sender:
             "Content-Type": "application/json",
             "X-Application-Name": self.application_name,
             "X-Token": self.auth_token,
-            "X-Token-Type": self.auth_token_type,
+            "X-Secret": self.auth_secret,
         }
 
         # Default compression level (9) is slowest. Level 6 trades a bit of compression for speed.
