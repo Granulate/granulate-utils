@@ -300,7 +300,9 @@ def _get_cgroup_for_process(controller: ControllerType, process: Optional[psutil
     cgroup_mount = _get_cgroup_mount_checked(controller)
 
     for process_cgroup in get_process_cgroups(process):
-        if (cgroup_mount.is_v1 and controller in process_cgroup.controllers) or cgroup_mount.is_v2:
+        if (cgroup_mount.is_v1 and controller in process_cgroup.controllers) or (
+            cgroup_mount.is_v2 and process_cgroup.hier_id == "0"
+        ):
             # Validate hier == 0 only when cgroup is v2
             assert cgroup_mount.is_v1 ^ (process_cgroup.hier_id == "0")
             return cgroup_mount.build_object(
