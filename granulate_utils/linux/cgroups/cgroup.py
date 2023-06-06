@@ -67,7 +67,7 @@ def get_process_cgroups(process: Optional[psutil.Process] = None) -> List[ProcCg
     return [ProcCgroupLine(line) for line in text.splitlines()]
 
 
-def find_v1_hierarchies() -> Mapping[str, str]:
+def _find_v1_hierarchies() -> Mapping[str, str]:
     """
     Finds all the mounted hierarchies for all currently enabled cgroup v1 controllers.
     :return: A mapping from cgroup controller names to their respective hierarchies.
@@ -85,7 +85,7 @@ def find_v1_hierarchies() -> Mapping[str, str]:
     return hierarchies
 
 
-def find_v2_hierarchy() -> Optional[str]:
+def _find_v2_hierarchy() -> Optional[str]:
     """
     Finds the mounted unified hierarchy for cgroup v2 controllers.
     """
@@ -251,14 +251,14 @@ class CgroupCoreV2(CgroupCore):
         return True
 
 
-def get_cgroup_mount(controller: ControllerType) -> Optional[CgroupCore]:
+def _get_cgroup_mount(controller: ControllerType) -> Optional[CgroupCore]:
     """
     Returns a CgroupCore object for requested controller, or None if no such controller mount was found.
     If no v1 mount was found for the requested controller and there is a v2 mount (either unified or hybrid),
     a CgroupCoreV2 is returned (as all controllers share the same hierarchy in v2)
     """
-    v1_paths = find_v1_hierarchies()
-    v2_path = find_v2_hierarchy()
+    v1_paths = _find_v1_hierarchies()
+    v2_path = _find_v2_hierarchy()
     if controller in v1_paths:
         # Either v1 or hybrid with the requested controller bound to a v1 hierarchy
         return CgroupCoreV1(Path(v1_paths[controller]), Path(v1_paths[controller]))
@@ -271,15 +271,15 @@ def get_cgroup_mount(controller: ControllerType) -> Optional[CgroupCore]:
     return None
 
 
-def get_cgroup_mount_checked(controller: ControllerType) -> CgroupCore:
-    cgroup_mount = get_cgroup_mount(controller)
+def _get_cgroup_mount_checked(controller: ControllerType) -> CgroupCore:
+    cgroup_mount = _get_cgroup_mount(controller)
     if cgroup_mount is None:
         raise CgroupControllerNotMounted(controller_name=controller)
     return cgroup_mount
 
 
-def get_cgroup_from_path(controller: ControllerType, cgroup_path_or_full_path: Path) -> CgroupCore:
-    cgroup_mount = get_cgroup_mount_checked(controller)
+def _get_cgroup_from_path(controller: ControllerType, cgroup_path_or_full_path: Path) -> CgroupCore:
+    cgroup_mount = _get_cgroup_mount_checked(controller)
 
     try:
         cgroup_path_or_full_path.relative_to(cgroup_mount.cgroup_abs_path)
@@ -293,11 +293,11 @@ def get_cgroup_from_path(controller: ControllerType, cgroup_path_or_full_path: P
     return cgroup_mount.build_object(cgroup_abs_path, cgroup_mount.cgroup_mount_path)
 
 
-def get_cgroup_for_process(controller: ControllerType, process: Optional[psutil.Process] = None) -> CgroupCore:
+def _get_cgroup_for_process(controller: ControllerType, process: Optional[psutil.Process] = None) -> CgroupCore:
     """
     Get a CgrouopCore object for a given process. If process is None return for current process.
     """
-    cgroup_mount = get_cgroup_mount_checked(controller)
+    cgroup_mount = _get_cgroup_mount_checked(controller)
 
     for process_cgroup in get_process_cgroups(process):
         if (cgroup_mount.is_v1 and controller in process_cgroup.controllers) or cgroup_mount.is_v2:
@@ -314,10 +314,10 @@ def get_cgroup_core(
 ) -> CgroupCore:
     if cgroup is None or isinstance(cgroup, Process):
         # return current CgroupCore
-        return get_cgroup_for_process(controller, cgroup)
+        return _get_cgroup_for_process(controller, cgroup)
     elif isinstance(cgroup, Path):
         # create CgroupCore from path
-        cgroup = get_cgroup_from_path(controller, cgroup)
+        cgroup = _get_cgroup_from_path(controller, cgroup)
 
     assert isinstance(cgroup, CgroupCore), f"Unable to get CgroupCore from given input type {type(cgroup)}"
     return cgroup
