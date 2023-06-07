@@ -171,7 +171,9 @@ class Sender:
             "Content-Type": "application/json",
             "X-Application-Name": self.application_name,
             "X-Token": self.auth_token,
-            "X-Secret": self.auth_secret,
+            "X-Auth-Type": self.x_auth_type,
+            "X-Auth-Access-Key-Id": self.x_auth_access_key_id,
+            "X-Auth-Secret-Access-Key": self.x_auth_secret_access_key,
         }
 
         # Default compression level (9) is slowest. Level 6 trades a bit of compression for speed.
