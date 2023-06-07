@@ -32,20 +32,20 @@ class Sender:
     request_timeout: Union[float, Tuple[float, float]] = (1.5, 10)
 
     def __init__(
-            self,
-            application_name: str,
-            auth_token: str,
-            server_address: str,
-            *,
-            scheme: str = "https",
-            x_auth_type: str = None,
-            x_auth_access_key_id: str = None,
-            x_auth_secret_access_key: str = None,
-            send_interval: float = 30.0,
-            send_threshold: float = 0.8,
-            send_min_interval: float = 10.0,
-            max_send_tries: int = 3,
-            verify: bool = True,
+        self,
+        application_name: str,
+        auth_token: str,
+        server_address: str,
+        *,
+        scheme: str = "https",
+        x_auth_type: str = None,
+        x_auth_access_key_id: str = None,
+        x_auth_secret_access_key: str = None,
+        send_interval: float = 30.0,
+        send_threshold: float = 0.8,
+        send_min_interval: float = 10.0,
+        max_send_tries: int = 3,
+        verify: bool = True,
     ):
         """
         Create a new Sender and start flushing log messages in a background thread.
@@ -124,7 +124,7 @@ class Sender:
 
         time_since_last_send = time.monotonic() - self.last_send_time
         return self.messages_buffer.count > 0 and (
-            (self.messages_buffer.utilized >= self.send_threshold) or (time_since_last_send >= self.send_interval)
+                (self.messages_buffer.utilized >= self.send_threshold) or (time_since_last_send >= self.send_interval)
         )
 
     def send(self) -> None:
