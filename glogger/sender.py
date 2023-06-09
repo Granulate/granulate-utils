@@ -32,20 +32,20 @@ class Sender:
     request_timeout: Union[float, Tuple[float, float]] = (1.5, 10)
 
     def __init__(
-        self,
-        application_name: str,
-        auth_token: str,
-        server_address: str,
-        *,
-        scheme: str = "https",
-        x_auth_type: str = None,
-        x_auth_access_key_id: str = None,
-        x_auth_secret_access_key: str = None,
-        send_interval: float = 30.0,
-        send_threshold: float = 0.8,
-        send_min_interval: float = 10.0,
-        max_send_tries: int = 3,
-        verify: bool = True,
+            self,
+            application_name: str,
+            auth_token: str,
+            server_address: str,
+            *,
+            scheme: str = "https",
+            x_auth_type: str = "",
+            x_auth_access_key_id: str = "",
+            x_auth_secret_access_key: str = "",
+            send_interval: float = 30.0,
+            send_threshold: float = 0.8,
+            send_min_interval: float = 10.0,
+            max_send_tries: int = 3,
+            verify: bool = True,
     ):
         """
         Create a new Sender and start flushing log messages in a background thread.
@@ -165,16 +165,22 @@ class Sender:
 
         return batch
 
-    def _send_once_to_server(self, data: bytes) -> None:
+    def _prepare_headers(self) -> Dict[str, str]:
         headers = {
             "Content-Encoding": "gzip",
             "Content-Type": "application/json",
             "X-Application-Name": self.application_name,
             "X-Token": self.auth_token,
-            "X-Auth-Type": self.x_auth_type,
-            "X-Auth-Access-Key-Id": self.x_auth_access_key_id,
-            "X-Auth-Secret-Access-Key": self.x_auth_secret_access_key,
         }
+
+        conditional_headers = [("X-Auth-Type", self.x_auth_type),
+                               ("X-Auth-Access-Key-Id", self.x_auth_access_key_id),
+                               ("X-Auth-Secret-Access-Key", self.x_auth_secret_access_key)]
+
+        return {**headers, **{k: v for k, v in conditional_headers if v and v != ('',)}}
+
+    def _send_once_to_server(self, data: bytes) -> None:
+        headers = self._prepare_headers()
 
         # Default compression level (9) is slowest. Level 6 trades a bit of compression for speed.
         data = gzip.compress(data, compresslevel=6)
