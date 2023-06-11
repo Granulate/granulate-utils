@@ -7,7 +7,7 @@ import json
 import logging
 import os
 import time
-from typing import Dict, Optional, Any
+from typing import Any, Dict, Optional
 
 import requests
 
