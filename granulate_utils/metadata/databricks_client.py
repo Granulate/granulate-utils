@@ -8,7 +8,7 @@ import logging
 import os
 import re
 import time
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
 import requests
 
@@ -32,7 +32,6 @@ RUN_ID_REGEX = "run-\\d+-"
 class DatabricksClient:
     def __init__(self, logger: logging.LoggerAdapter) -> None:
         self.logger = logger
-        self.all_props: Optional[Dict[Any, Any]] = None
         self.logger.debug("Getting Databricks job name")
         self.job_name = self.get_job_name()
         if self.job_name is None:
@@ -145,7 +144,6 @@ class DatabricksClient:
         except Exception as e:
             raise DatabricksJobNameDiscoverException(f"Environment request failed {response.text=}") from e
         props = env.get("sparkProperties")
-        self.all_props = props
         if props is None:
             raise DatabricksJobNameDiscoverException(f"sparkProperties was not found in {env=}")
         # Creating a dict of the relevant properties and their values.
