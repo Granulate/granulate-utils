@@ -89,13 +89,12 @@ class DatabricksClient:
     @staticmethod
     def _get_name_from_metadata(metadata: Dict[str, str]) -> Optional[str]:
         if JOB_NAME_KEY in metadata:
-            return str(metadata[JOB_NAME_KEY]).replace(" ", "-").lower()
+            return f'job-{str(metadata[JOB_NAME_KEY]).replace(" ", "-").lower()}'
         elif CLUSTER_NAME_KEY in metadata:
             cluster_name_value = str(metadata[CLUSTER_NAME_KEY]).replace(" ", "-").lower()
             # We've tackled cases where the cluster name includes Run ID, we want to remove it.
             cluster_name_value = re.sub(RUN_ID_REGEX, "", cluster_name_value)
             return cluster_name_value
-
         return None
 
     def _cluster_all_tags_metadata(self) -> Optional[Dict[str, str]]:
