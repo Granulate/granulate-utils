@@ -6,8 +6,8 @@
 import json
 import logging
 import os
-import time
 import re
+import time
 from typing import Any, Dict, Optional
 
 import requests
@@ -27,6 +27,7 @@ DATABRICKS_JOBNAME_TIMEOUT_S = 2 * 60
 RETRY_INTERVAL_S = 1
 
 RUN_ID_REGEX = "run-\\d+-"
+
 
 class DatabricksClient:
     def __init__(self, logger: logging.LoggerAdapter) -> None:
@@ -152,8 +153,9 @@ class DatabricksClient:
         if len(relevant_props_dict) == 0:
             raise DatabricksJobNameDiscoverException(f"Failed to create dict of relevant properties {env=}")
         # First, trying to extract `CLUSTER_TAGS_KEY` property.
-        if (cluster_all_tags_value := relevant_props_dict.get(CLUSTER_TAGS_KEY)) is not None \
-                and "redacted" not in cluster_all_tags_value:
+        if (
+            cluster_all_tags_value := relevant_props_dict.get(CLUSTER_TAGS_KEY)
+        ) is not None and "redacted" not in cluster_all_tags_value:
             try:
                 cluster_all_tags_value_json = json.loads(cluster_all_tags_value)
             except Exception as e:
@@ -163,4 +165,6 @@ class DatabricksClient:
         elif (cluster_name_value := relevant_props_dict.get(CLUSTER_NAME_PROP)) is not None:
             return {CLUSTER_NAME_KEY: cluster_name_value}
         else:
-            raise DatabricksJobNameDiscoverException(f"Failed to extract {CLUSTER_TAGS_KEY} or {CLUSTER_NAME_PROP} from {props=}")
+            raise DatabricksJobNameDiscoverException(
+                f"Failed to extract {CLUSTER_TAGS_KEY} or {CLUSTER_NAME_PROP} from {props=}"
+            )
