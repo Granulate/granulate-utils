@@ -150,7 +150,7 @@ class DatabricksClient:
         relevant_props_dict = {prop[0]: prop[1] for prop in props if [CLUSTER_TAGS_KEY, CLUSTER_NAME_PROP] in prop[0]}
         if len(relevant_props_dict) == 0:
             raise DatabricksJobNameDiscoverException(f"Failed to create dict of relevant properties {env=}")
-        # First, trying to extract `CLUSTER_TAGS_KEY` property.
+        # First, trying to extract `CLUSTER_TAGS_KEY` property, in case not redacted.
         if (
             cluster_all_tags_value := relevant_props_dict.get(CLUSTER_TAGS_KEY)
         ) is not None and "redacted" not in cluster_all_tags_value:
