@@ -10,16 +10,16 @@ import pytest
 from pytest import TempPathFactory
 
 from granulate_utils.exceptions import CgroupInterfaceNotSupported
-from granulate_utils.linux.cgroups.cgroup import (
+from granulate_utils.linux.cgroups_v2.cgroup import (
     CGROUP_PROCS_FILE,
     CgroupCoreV1,
     CgroupCoreV2,
     ControllerType,
     get_cgroup_core,
 )
-from granulate_utils.linux.cgroups.cpu_controller import CpuControllerFactory
-from granulate_utils.linux.cgroups.cpuacct_controller import CpuAcctController
-from granulate_utils.linux.cgroups.memory_controller import MemoryControllerFactory
+from granulate_utils.linux.cgroups_v2.cpu_controller import CpuControllerFactory
+from granulate_utils.linux.cgroups_v2.cpuacct_controller import CpuAcctController
+from granulate_utils.linux.cgroups_v2.memory_controller import MemoryControllerFactory
 
 DUMMY_CONTROLLER: ControllerType = "cpu"
 DUMMY2_CONTROLLER: ControllerType = "memory"
@@ -111,20 +111,20 @@ def test_get_cgroup_current_process():
     full_path = Path("/root_path/dummy")
 
     with patch(
-        "granulate_utils.linux.cgroups.cgroup._get_cgroup_mount", return_value=CgroupCoreV1(root_path, Path("."))
+        "granulate_utils.linux.cgroups_v2.cgroup._get_cgroup_mount", return_value=CgroupCoreV1(root_path, Path("."))
     ):
         with patch(
-            "granulate_utils.linux.cgroups.cgroup.read_proc_file",
+            "granulate_utils.linux.cgroups_v2.cgroup.read_proc_file",
             return_value=f"1:{DUMMY_CONTROLLER}:{cgroup_path}\n".encode(),
         ):
             cgroup = get_cgroup_core(DUMMY_CONTROLLER)
             assert cgroup.cgroup_abs_path == full_path
 
     with patch(
-        "granulate_utils.linux.cgroups.cgroup._get_cgroup_mount", return_value=CgroupCoreV2(root_path, root_path)
+        "granulate_utils.linux.cgroups_v2.cgroup._get_cgroup_mount", return_value=CgroupCoreV2(root_path, root_path)
     ):
         with patch(
-            "granulate_utils.linux.cgroups.cgroup.read_proc_file",
+            "granulate_utils.linux.cgroups_v2.cgroup.read_proc_file",
             return_value=f"0::{cgroup_path}\n".encode(),
         ):
             cgroup = get_cgroup_core(DUMMY_CONTROLLER)
@@ -132,10 +132,10 @@ def test_get_cgroup_current_process():
 
     with pytest.raises(Exception) as exception:
         with patch(
-            "granulate_utils.linux.cgroups.cgroup._get_cgroup_mount", return_value=CgroupCoreV2(root_path, root_path)
+            "granulate_utils.linux.cgroups_v2.cgroup._get_cgroup_mount", return_value=CgroupCoreV2(root_path, root_path)
         ):
             with patch(
-                "granulate_utils.linux.cgroups.cgroup.read_proc_file",
+                "granulate_utils.linux.cgroups_v2.cgroup.read_proc_file",
                 return_value="".encode(),
             ):
                 cgroup = get_cgroup_core(DUMMY_CONTROLLER)

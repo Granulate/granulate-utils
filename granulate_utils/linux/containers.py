@@ -23,8 +23,8 @@ def get_process_container_id(process: Process) -> Optional[str]:
     Gets the container ID of a running process, or None if not in a container.
     :raises NoSuchProcess: If the process doesn't or no longer exists
     """
-    for proc_cgroup in cgroups.get_process_cgroups(process):
-        found = CONTAINER_ID_PATTERN.findall(proc_cgroup.relative_path)
+    for _, _, cgpath in cgroups.get_cgroups(process):
+        found = CONTAINER_ID_PATTERN.findall(cgpath)
         if found:
             return found[-1]
 

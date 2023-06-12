@@ -12,6 +12,11 @@ class UnsupportedNamespaceError(Exception):
         self.nstype = nstype
 
 
+class UnsupportedCGroupV2(Exception):
+    def __init__(self):
+        super().__init__("cgroup v2 is not supported by granulate-utils")
+
+
 class CouldNotAcquireMutex(Exception):
     def __init__(self, name) -> None:
         super().__init__(f"Could not acquire mutex {name!r}. Another process might be holding it.")
@@ -41,6 +46,16 @@ class MissingExePath(Exception):
         super(MissingExePath, self).__init__(f"No exe path was found for {process}, threads: {process.threads()}")
 
 
+class AlreadyInCgroup(Exception):
+    def __init__(self, subsystem: str, cgroup: str) -> None:
+        super().__init__(f"{subsystem!r} subsystem is already in a predefined cgroup: {cgroup!r}")
+
+
+class DatabricksJobNameDiscoverException(Exception):
+    def __init__(self, msg: str) -> None:
+        super().__init__(msg)
+
+
 class CgroupInterfaceNotSupported(Exception):
     def __init__(self, interface_name: str, cgroup_version: str):
         super(CgroupInterfaceNotSupported, self).__init__(
@@ -51,8 +66,3 @@ class CgroupInterfaceNotSupported(Exception):
 class CgroupControllerNotMounted(Exception):
     def __init__(self, controller_name: str):
         super(CgroupControllerNotMounted, self).__init__(f"Controller {controller_name} is not mounted on the system")
-
-
-class DatabricksJobNameDiscoverException(Exception):
-    def __init__(self, msg: str) -> None:
-        super().__init__(msg)

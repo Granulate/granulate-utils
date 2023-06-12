@@ -6,8 +6,8 @@
 from pathlib import Path
 from typing import Optional, Union
 
-from granulate_utils.linux.cgroups.base_controller import BaseController
-from granulate_utils.linux.cgroups.cgroup import CgroupCore, ControllerType
+from granulate_utils.linux.cgroups_v2.base_controller import BaseController
+from granulate_utils.linux.cgroups_v2.cgroup import CgroupCore, ControllerType
 
 
 class CpuAcctController(BaseController):

@@ -10,7 +10,7 @@ from typing import Optional, Set, Union
 
 from psutil import Process
 
-from granulate_utils.linux.cgroups.cgroup import CgroupCore, ControllerType, get_cgroup_core
+from granulate_utils.linux.cgroups_v2.cgroup import CgroupCore, ControllerType, get_cgroup_core
 
 
 class BaseController:
