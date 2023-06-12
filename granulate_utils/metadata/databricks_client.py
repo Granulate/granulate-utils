@@ -133,6 +133,7 @@ class DBXWebUIEnvWrapper:
             prop[0]: prop[1] for prop in props if (CLUSTER_TAGS_KEY == prop[0] or CLUSTER_NAME_PROP == prop[0])
         }
         if len(relevant_props_dict) == 0:
+            # We expect at least one of the properties to be present.
             raise DatabricksJobNameDiscoverException(f"Failed to create dict of relevant properties {env=}")
         # First, trying to extract `CLUSTER_TAGS_KEY` property, in case not redacted.
         if (
