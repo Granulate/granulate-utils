@@ -69,7 +69,7 @@ class DatabricksClient:
             try:
                 if cluster_all_props := self._cluster_all_tags_metadata():
                     self.all_props_dict = cluster_all_props
-                    name = self._get_name_from_metadata(self.all_props_dict)
+                    name = get_name_from_metadata(self.all_props_dict)
                     if name:
                         self.logger.debug("Found name in metadata", job_name=name, cluster_metadata=self.all_props_dict)
                         return name
@@ -89,15 +89,19 @@ class DatabricksClient:
         return None
 
     @staticmethod
-    def _get_name_from_metadata(metadata: Dict[str, str]) -> Optional[str]:
+    def _enforce_pattern(metadata: Dict[str, str]) -> Dict[str, str]:
+        """
+        This function is used to enforce certain regex and other patterns on some metadata values, on which we
+        know problematic to include in service names.
+        """
         if JOB_NAME_KEY in metadata:
-            return f'job-{str(metadata[JOB_NAME_KEY]).replace(" ", "-").lower()}'
-        elif CLUSTER_NAME_KEY in metadata:
-            cluster_name_value = str(metadata[CLUSTER_NAME_KEY]).replace(" ", "-").lower()
+            metadata[JOB_NAME_KEY] = re.sub(RUN_ID_REGEX, "", metadata[JOB_NAME_KEY])
+            metadata[JOB_NAME_KEY] = metadata[JOB_NAME_KEY].replace(" ", "-").lower()
+        if CLUSTER_NAME_PROP in metadata:
             # We've tackled cases where the cluster name includes Run ID, we want to remove it.
-            cluster_name_value = re.sub(RUN_ID_REGEX, "", cluster_name_value)
-            return cluster_name_value
-        return None
+            metadata[CLUSTER_NAME_PROP] = re.sub(RUN_ID_REGEX, "", metadata[CLUSTER_NAME_PROP])
+            metadata[CLUSTER_NAME_PROP] = metadata[CLUSTER_NAME_PROP].replace(" ", "-").lower()
+        return metadata
 
     def _cluster_all_tags_metadata(self) -> Optional[Dict[str, str]]:
         """
@@ -155,17 +159,26 @@ class DatabricksClient:
             raise DatabricksJobNameDiscoverException(f"Failed to create dict of relevant properties {env=}")
         # First, trying to extract `CLUSTER_TAGS_KEY` property, in case not redacted.
         if (
-            cluster_all_tags_value := relevant_props_dict.get(CLUSTER_TAGS_KEY)
+                cluster_all_tags_value := relevant_props_dict.get(CLUSTER_TAGS_KEY)
         ) is not None and "redacted" not in cluster_all_tags_value:
             try:
                 cluster_all_tags_value_json = json.loads(cluster_all_tags_value)
             except Exception as e:
                 raise DatabricksJobNameDiscoverException(f"Failed to parse {cluster_all_tags_value}") from e
-            return {cluster_all_tag["key"]: cluster_all_tag["value"] for cluster_all_tag in cluster_all_tags_value_json}
+            return self._enforce_pattern(
+                {cluster_all_tag["key"]: cluster_all_tag["value"] for cluster_all_tag in cluster_all_tags_value_json})
         # As a fallback, trying to extract `CLUSTER_NAME_PROP` property.
         elif (cluster_name_value := relevant_props_dict.get(CLUSTER_NAME_PROP)) is not None:
-            return {CLUSTER_NAME_KEY: cluster_name_value}
+            return self._enforce_pattern({CLUSTER_NAME_KEY: cluster_name_value})
         else:
             raise DatabricksJobNameDiscoverException(
                 f"Failed to extract {CLUSTER_TAGS_KEY} or {CLUSTER_NAME_PROP} from {props=}"
             )
+
+
+def get_name_from_metadata(metadata: Dict[str, str]) -> Optional[str]:
+    if JOB_NAME_KEY in metadata:
+        return f'job-{metadata[JOB_NAME_KEY]}'
+    elif CLUSTER_NAME_KEY in metadata:
+        return metadata[CLUSTER_NAME_KEY]
+    return None
