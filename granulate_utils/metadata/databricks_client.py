@@ -159,14 +159,15 @@ class DatabricksClient:
             raise DatabricksJobNameDiscoverException(f"Failed to create dict of relevant properties {env=}")
         # First, trying to extract `CLUSTER_TAGS_KEY` property, in case not redacted.
         if (
-                cluster_all_tags_value := relevant_props_dict.get(CLUSTER_TAGS_KEY)
+            cluster_all_tags_value := relevant_props_dict.get(CLUSTER_TAGS_KEY)
         ) is not None and "redacted" not in cluster_all_tags_value:
             try:
                 cluster_all_tags_value_json = json.loads(cluster_all_tags_value)
             except Exception as e:
                 raise DatabricksJobNameDiscoverException(f"Failed to parse {cluster_all_tags_value}") from e
             return self._enforce_pattern(
-                {cluster_all_tag["key"]: cluster_all_tag["value"] for cluster_all_tag in cluster_all_tags_value_json})
+                {cluster_all_tag["key"]: cluster_all_tag["value"] for cluster_all_tag in cluster_all_tags_value_json}
+            )
         # As a fallback, trying to extract `CLUSTER_NAME_PROP` property.
         elif (cluster_name_value := relevant_props_dict.get(CLUSTER_NAME_PROP)) is not None:
             return self._enforce_pattern({CLUSTER_NAME_KEY: cluster_name_value})
@@ -178,7 +179,7 @@ class DatabricksClient:
 
 def get_name_from_metadata(metadata: Dict[str, str]) -> Optional[str]:
     if JOB_NAME_KEY in metadata:
-        return f'job-{metadata[JOB_NAME_KEY]}'
+        return f"job-{metadata[JOB_NAME_KEY]}"
     elif CLUSTER_NAME_KEY in metadata:
         return metadata[CLUSTER_NAME_KEY]
     return None
