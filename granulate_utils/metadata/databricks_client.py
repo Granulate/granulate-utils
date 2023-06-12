@@ -16,7 +16,7 @@ from granulate_utils.exceptions import DatabricksJobNameDiscoverException
 
 HOST_KEY_NAME = "*.sink.ganglia.host"
 DATABRICKS_METRICS_PROP_PATH = "/databricks/spark/conf/metrics.properties"
-CLUSTER_TAGS_KEY = "spark.databricks.clusterUsageTags.clusterAllTags"
+CLUSTER_ALL_TAGS_PROP = "spark.databricks.clusterUsageTags.clusterAllTags"
 CLUSTER_NAME_PROP = "spark.databricks.clusterUsageTags.clusterName"
 SPARKUI_APPS_URL = "http://{}/api/v1/applications"
 REQUEST_TIMEOUT = 5
@@ -130,14 +130,14 @@ class DBXWebUIEnvWrapper:
             raise DatabricksJobNameDiscoverException(f"sparkProperties was not found in {env=}")
         # Creating a dict of the relevant properties and their values.
         relevant_props_dict = {
-            prop[0]: prop[1] for prop in props if (CLUSTER_TAGS_KEY == prop[0] or CLUSTER_NAME_PROP == prop[0])
+            prop[0]: prop[1] for prop in props if (CLUSTER_ALL_TAGS_PROP == prop[0] or CLUSTER_NAME_PROP == prop[0])
         }
         if len(relevant_props_dict) == 0:
             # We expect at least one of the properties to be present.
             raise DatabricksJobNameDiscoverException(f"Failed to create dict of relevant properties {env=}")
         # First, trying to extract `CLUSTER_TAGS_KEY` property, in case not redacted.
         if (
-            cluster_all_tags_value := relevant_props_dict.get(CLUSTER_TAGS_KEY)
+            cluster_all_tags_value := relevant_props_dict.get(CLUSTER_ALL_TAGS_PROP)
         ) is not None and "redacted" not in cluster_all_tags_value:
             try:
                 cluster_all_tags_value_json = json.loads(cluster_all_tags_value)
@@ -151,7 +151,7 @@ class DBXWebUIEnvWrapper:
             return self._enforce_pattern({CLUSTER_NAME_KEY: cluster_name_value})
         else:
             raise DatabricksJobNameDiscoverException(
-                f"Failed to extract {CLUSTER_TAGS_KEY} or {CLUSTER_NAME_PROP} from {props=}"
+                f"Failed to extract {CLUSTER_ALL_TAGS_PROP} or {CLUSTER_NAME_PROP} from {props=}"
             )
 
     @staticmethod
