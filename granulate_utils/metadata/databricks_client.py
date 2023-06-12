@@ -29,18 +29,15 @@ RETRY_INTERVAL_S = 1
 RUN_ID_REGEX = "run-\\d+-"
 
 
-class DatabricksClient:
+class DBXWebUIEnvWrapper:
     def __init__(self, logger: logging.LoggerAdapter) -> None:
         self.logger = logger
         self.logger.debug("Getting Databricks job name")
-        self.all_props_dict: Dict[str, str] = {}
-        self.job_name = self.get_job_name()
-        if self.job_name is None:
+        self.all_props_dict: Optional[Dict[str, str]] = self.extract_relevant_metadata()
+        if self.all_props_dict is None:
             self.logger.warning(
                 "Failed initializing Databricks client. Databricks job name will not be included in ephemeral clusters."
             )
-        else:
-            self.logger.debug(f"Got Databricks job name: {self.job_name}")
 
     def _request_get(self, url: str) -> requests.Response:
         resp = requests.get(url, timeout=REQUEST_TIMEOUT)
@@ -62,20 +59,15 @@ class DatabricksClient:
             raise DatabricksJobNameDiscoverException(f"Failed to get Databricks webui address {properties=}") from e
         return f"{host}:{DEFAULT_WEBUI_PORT}"
 
-    def get_job_name(self) -> Optional[str]:
+    def extract_relevant_metadata(self) -> Optional[Dict[str, str]]:
         # Retry in case of a connection error, as the metrics server might not be up yet.
         start_time = time.monotonic()
         while time.monotonic() - start_time < DATABRICKS_JOBNAME_TIMEOUT_S:
             try:
                 if cluster_all_props := self._cluster_all_tags_metadata():
-                    self.all_props_dict = cluster_all_props
-                    name = get_name_from_metadata(self.all_props_dict)
-                    if name:
-                        self.logger.debug("Found name in metadata", job_name=name, cluster_metadata=self.all_props_dict)
-                        return name
-                    else:
-                        self.logger.debug("Failed to extract name from metadata", cluster_metadata=self.all_props_dict)
-                        return None
+                    self.logger.info("Successfully got relevant cluster tags metadata",
+                                     cluster_all_props=cluster_all_props)
+                    return cluster_all_props
                 else:
                     # No job name yet, retry.
                     time.sleep(RETRY_INTERVAL_S)
