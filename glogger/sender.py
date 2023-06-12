@@ -124,7 +124,7 @@ class Sender:
 
         time_since_last_send = time.monotonic() - self.last_send_time
         return self.messages_buffer.count > 0 and (
-                (self.messages_buffer.utilized >= self.send_threshold) or (time_since_last_send >= self.send_interval)
+            (self.messages_buffer.utilized >= self.send_threshold) or (time_since_last_send >= self.send_interval)
         )
 
     def send(self) -> None:
