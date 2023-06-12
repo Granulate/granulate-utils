@@ -27,6 +27,7 @@ DATABRICKS_JOBNAME_TIMEOUT_S = 2 * 60
 RETRY_INTERVAL_S = 1
 RUN_ID_REGEX = "run-\\d+-"
 
+
 class DBXWebUIEnvWrapper:
     def __init__(self, logger: logging.LoggerAdapter) -> None:
         self.logger = logger
