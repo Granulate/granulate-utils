@@ -69,7 +69,7 @@ class DBXWebUIEnvWrapper:
                     )
                     return cluster_all_props
                 else:
-                    # No job name yet, retry.
+                    # No environment metadata yet, retry.
                     time.sleep(RETRY_INTERVAL_S)
             except DatabricksJobNameDiscoverException:
                 self.logger.exception("Failed to get Databricks job name")
