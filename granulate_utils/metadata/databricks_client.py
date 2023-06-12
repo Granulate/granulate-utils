@@ -65,8 +65,9 @@ class DBXWebUIEnvWrapper:
         while time.monotonic() - start_time < DATABRICKS_JOBNAME_TIMEOUT_S:
             try:
                 if cluster_all_props := self._cluster_all_tags_metadata():
-                    self.logger.info("Successfully got relevant cluster tags metadata",
-                                     cluster_all_props=cluster_all_props)
+                    self.logger.info(
+                        "Successfully got relevant cluster tags metadata", cluster_all_props=cluster_all_props
+                    )
                     return cluster_all_props
                 else:
                     # No job name yet, retry.
