@@ -33,6 +33,7 @@ class DatabricksClient:
     def __init__(self, logger: logging.LoggerAdapter) -> None:
         self.logger = logger
         self.logger.debug("Getting Databricks job name")
+        self.all_props_dict: Dict[str, str] = {}
         self.job_name = self.get_job_name()
         if self.job_name is None:
             self.logger.warning(
@@ -66,13 +67,14 @@ class DatabricksClient:
         start_time = time.monotonic()
         while time.monotonic() - start_time < DATABRICKS_JOBNAME_TIMEOUT_S:
             try:
-                if cluster_metadata := self._cluster_all_tags_metadata():
-                    name = self._get_name_from_metadata(cluster_metadata)
+                if cluster_all_props := self._cluster_all_tags_metadata():
+                    self.all_props_dict = cluster_all_props
+                    name = self._get_name_from_metadata(self.all_props_dict)
                     if name:
-                        self.logger.debug("Found name in metadata", job_name=name, cluster_metadata=cluster_metadata)
+                        self.logger.debug("Found name in metadata", job_name=name, cluster_metadata=self.all_props_dict)
                         return name
                     else:
-                        self.logger.debug("Failed to extract name from metadata", cluster_metadata=cluster_metadata)
+                        self.logger.debug("Failed to extract name from metadata", cluster_metadata=self.all_props_dict)
                         return None
                 else:
                     # No job name yet, retry.
