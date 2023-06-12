@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import time
+import re
 from typing import Any, Dict, Optional
 
 import requests
@@ -16,13 +17,16 @@ from granulate_utils.exceptions import DatabricksJobNameDiscoverException
 HOST_KEY_NAME = "*.sink.ganglia.host"
 DATABRICKS_METRICS_PROP_PATH = "/databricks/spark/conf/metrics.properties"
 CLUSTER_TAGS_KEY = "spark.databricks.clusterUsageTags.clusterAllTags"
+CLUSTER_NAME_PROP = "spark.databricks.clusterUsageTags.clusterName"
 SPARKUI_APPS_URL = "http://{}/api/v1/applications"
 REQUEST_TIMEOUT = 5
 JOB_NAME_KEY = "RunName"
+CLUSTER_NAME_KEY = "ClusterName"
 DEFAULT_WEBUI_PORT = 40001
 DATABRICKS_JOBNAME_TIMEOUT_S = 2 * 60
 RETRY_INTERVAL_S = 1
 
+RUN_ID_REGEX = "run-\\d+-"
 
 class DatabricksClient:
     def __init__(self, logger: logging.LoggerAdapter) -> None:
@@ -86,6 +90,12 @@ class DatabricksClient:
     def _get_name_from_metadata(metadata: Dict[str, str]) -> Optional[str]:
         if JOB_NAME_KEY in metadata:
             return str(metadata[JOB_NAME_KEY]).replace(" ", "-").lower()
+        elif CLUSTER_NAME_KEY in metadata:
+            cluster_name_value = str(metadata[CLUSTER_NAME_KEY]).replace(" ", "-").lower()
+            # We've tackled cases where the cluster name includes Run ID, we want to remove it.
+            cluster_name_value = re.sub(RUN_ID_REGEX, "", cluster_name_value)
+            return cluster_name_value
+
         return None
 
     def _cluster_all_tags_metadata(self) -> Optional[Dict[str, str]]:
@@ -137,12 +147,20 @@ class DatabricksClient:
         self.all_props = props
         if props is None:
             raise DatabricksJobNameDiscoverException(f"sparkProperties was not found in {env=}")
-        for prop in props:
-            if prop[0] == CLUSTER_TAGS_KEY:
-                try:
-                    all_tags_value = json.loads(prop[1])
-                except Exception as e:
-                    raise DatabricksJobNameDiscoverException(f"Failed to parse {prop=}") from e
-                return {cluster_all_tag["key"]: cluster_all_tag["value"] for cluster_all_tag in all_tags_value}
+        # Creating a dict of the relevant properties and their values.
+        relevant_props_dict = {prop[0]: prop[1] for prop in props if [CLUSTER_TAGS_KEY, CLUSTER_NAME_PROP] in prop[0]}
+        if len(relevant_props_dict) == 0:
+            raise DatabricksJobNameDiscoverException(f"Failed to create dict of relevant properties {env=}")
+        # First, trying to extract `CLUSTER_TAGS_KEY` property.
+        if (cluster_all_tags_value := relevant_props_dict.get(CLUSTER_TAGS_KEY)) is not None \
+                and "redacted" not in cluster_all_tags_value:
+            try:
+                cluster_all_tags_value_json = json.loads(cluster_all_tags_value)
+            except Exception as e:
+                raise DatabricksJobNameDiscoverException(f"Failed to parse {cluster_all_tags_value}") from e
+            return {cluster_all_tag["key"]: cluster_all_tag["value"] for cluster_all_tag in cluster_all_tags_value_json}
+        # As a fallback, trying to extract `CLUSTER_NAME_PROP` property.
+        elif (cluster_name_value := relevant_props_dict.get(CLUSTER_NAME_PROP)) is not None:
+            return {CLUSTER_NAME_KEY: cluster_name_value}
         else:
-            raise DatabricksJobNameDiscoverException(f"Failed to find {CLUSTER_TAGS_KEY=} in {props=}")
+            raise DatabricksJobNameDiscoverException(f"Failed to extract {CLUSTER_TAGS_KEY} or {CLUSTER_NAME_PROP} from {props=}")
