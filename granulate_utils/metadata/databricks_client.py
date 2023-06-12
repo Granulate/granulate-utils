@@ -80,20 +80,6 @@ class DBXWebUIEnvWrapper:
         self.logger.info("Databricks get job name timeout, continuing...")
         return None
 
-    @staticmethod
-    def _enforce_pattern(metadata: Dict[str, str]) -> Dict[str, str]:
-        """
-        This function is used to enforce certain regex and other patterns on some metadata values, on which we
-        know problematic to include in service names.
-        """
-        if JOB_NAME_KEY in metadata:
-            metadata[JOB_NAME_KEY] = metadata[JOB_NAME_KEY].replace(" ", "-").lower()
-        if CLUSTER_NAME_KEY in metadata:
-            # We've tackled cases where the cluster name includes Run ID, we want to remove it.
-            metadata[CLUSTER_NAME_KEY] = re.sub(RUN_ID_REGEX, "", metadata[CLUSTER_NAME_KEY])
-            metadata[CLUSTER_NAME_KEY] = metadata[CLUSTER_NAME_KEY].replace(" ", "-").lower()
-        return metadata
-
     def _cluster_all_tags_metadata(self) -> Optional[Dict[str, str]]:
         """
         Returns `includes spark.databricks.clusterUsageTags.clusterAllTags` tags as `Dict`.
@@ -166,6 +152,20 @@ class DBXWebUIEnvWrapper:
             raise DatabricksJobNameDiscoverException(
                 f"Failed to extract {CLUSTER_TAGS_KEY} or {CLUSTER_NAME_PROP} from {props=}"
             )
+
+    @staticmethod
+    def _enforce_pattern(metadata: Dict[str, str]) -> Dict[str, str]:
+        """
+        This function is used to enforce certain regex and other patterns on some metadata values, on which we
+        know problematic to include in service names.
+        """
+        if JOB_NAME_KEY in metadata:
+            metadata[JOB_NAME_KEY] = metadata[JOB_NAME_KEY].replace(" ", "-").lower()
+        if CLUSTER_NAME_KEY in metadata:
+            # We've tackled cases where the cluster name includes Run ID, we want to remove it.
+            metadata[CLUSTER_NAME_KEY] = re.sub(RUN_ID_REGEX, "", metadata[CLUSTER_NAME_KEY])
+            metadata[CLUSTER_NAME_KEY] = metadata[CLUSTER_NAME_KEY].replace(" ", "-").lower()
+        return metadata
 
 
 def get_name_from_metadata(metadata: Dict[str, str]) -> Optional[str]:
