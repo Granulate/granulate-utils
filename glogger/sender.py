@@ -65,9 +65,9 @@ class Sender:
 
         self.application_name = application_name
         self.auth_token = auth_token
-        self.x_auth_type = x_auth_type,
-        self.x_auth_access_key_id = x_auth_access_key_id,
-        self.x_auth_secret_access_key = x_auth_secret_access_key,
+        self.x_auth_type = x_auth_type
+        self.x_auth_access_key_id = x_auth_access_key_id
+        self.x_auth_secret_access_key = x_auth_secret_access_key
         self.server_address = server_address
         self.send_interval = send_interval
         self.send_threshold = send_threshold
@@ -165,22 +165,16 @@ class Sender:
 
         return batch
 
-    def _prepare_headers(self) -> Dict[str, str]:
+    def _send_once_to_server(self, data: bytes) -> None:
         headers = {
             "Content-Encoding": "gzip",
             "Content-Type": "application/json",
             "X-Application-Name": self.application_name,
             "X-Token": self.auth_token,
+            "X-Auth-Type": self.x_auth_type,
+            "X-Auth-Access-Key-Id": self.x_auth_access_key_id,
+            "X-Auth-Secret-Access-Key": self.x_auth_secret_access_key,
         }
-
-        conditional_headers = [("X-Auth-Type", self.x_auth_type),
-                               ("X-Auth-Access-Key-Id", self.x_auth_access_key_id),
-                               ("X-Auth-Secret-Access-Key", self.x_auth_secret_access_key)]
-
-        return {**headers, **{k: v for k, v in conditional_headers if v and v != ('',)}}
-
-    def _send_once_to_server(self, data: bytes) -> None:
-        headers = self._prepare_headers()
 
         # Default compression level (9) is slowest. Level 6 trades a bit of compression for speed.
         data = gzip.compress(data, compresslevel=6)
