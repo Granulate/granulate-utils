@@ -148,7 +148,7 @@ class DatabricksClient:
         if props is None:
             raise DatabricksJobNameDiscoverException(f"sparkProperties was not found in {env=}")
         # Creating a dict of the relevant properties and their values.
-        relevant_props_dict = {prop[0]: prop[1] for prop in props if [CLUSTER_TAGS_KEY, CLUSTER_NAME_PROP] in prop[0]}
+        relevant_props_dict = {prop[0]: prop[1] for prop in props if (CLUSTER_TAGS_KEY == prop[0] or CLUSTER_NAME_PROP == prop[0])}
         if len(relevant_props_dict) == 0:
             raise DatabricksJobNameDiscoverException(f"Failed to create dict of relevant properties {env=}")
         # First, trying to extract `CLUSTER_TAGS_KEY` property, in case not redacted.
