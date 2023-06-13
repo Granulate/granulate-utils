@@ -31,7 +31,7 @@ RUN_ID_REGEX = "run-\\d+-"
 class DBXWebUIEnvWrapper:
     def __init__(self, logger: logging.LoggerAdapter) -> None:
         self.logger = logger
-        self._web_ui_address: Optional[str] = None
+        self._apps_url: Optional[str] = None
         self.logger.debug("Getting Databricks job name")
         self.all_props_dict: Optional[Dict[str, str]] = self.extract_relevant_metadata()
         if self.all_props_dict is None:
@@ -88,15 +88,15 @@ class DBXWebUIEnvWrapper:
         if not os.path.isfile(DATABRICKS_METRICS_PROP_PATH):
             # We want to retry in case the cluster is still initializing, and the file is not yet deployed.
             return None
-        if self._web_ui_address is None:
-            # We store WebUI to avoid logging the WebUI every retry.
-            self._web_ui_address = self.get_webui_address()
+        if (web_ui_address := self.get_webui_address()) is None:
             return None
-        # The API used: https://spark.apache.org/docs/latest/monitoring.html#rest-api
-        apps_url = SPARKUI_APPS_URL.format(self._web_ui_address)
-        self.logger.debug("Databricks SparkUI address", apps_url=apps_url)
+        if self._apps_url is None:
+            # We store WebUI to avoid logging the WebUI every retry.
+            # The API used: https://spark.apache.org/docs/latest/monitoring.html#rest-api
+            self._apps_url = SPARKUI_APPS_URL.format(web_ui_address)
+            self.logger.debug("Databricks SparkUI address", apps_url=self._apps_url)
         try:
-            response = self._request_get(apps_url)
+            response = self._request_get(self._apps_url)
         except requests.exceptions.RequestException:
             # Request might fail in cases where the cluster is still initializing, retrying.
             return None
@@ -116,7 +116,7 @@ class DBXWebUIEnvWrapper:
             self.logger.debug("No apps yet, retrying.")
             return None
 
-        env_url = f"{apps_url}/{apps[0]['id']}/environment"
+        env_url = f"{self._apps_url}/{apps[0]['id']}/environment"
         try:
             response = self._request_get(env_url)
         except Exception as e:
