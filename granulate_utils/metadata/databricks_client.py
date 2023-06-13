@@ -32,7 +32,7 @@ class DBXWebUIEnvWrapper:
     def __init__(self, logger: logging.LoggerAdapter) -> None:
         self.logger = logger
         self._apps_url: Optional[str] = None
-        self.logger.debug("Getting Databricks job name")
+        self.logger.debug("Getting DBX environment properties")
         self.all_props_dict: Optional[Dict[str, str]] = self.extract_relevant_metadata()
         if self.all_props_dict is None:
             self.logger.warning(
@@ -73,7 +73,7 @@ class DBXWebUIEnvWrapper:
                     # No environment metadata yet, retry.
                     time.sleep(RETRY_INTERVAL_S)
             except DatabricksJobNameDiscoverException:
-                self.logger.exception("Failed to get Databricks job name")
+                self.logger.exception("Failed to get DBX environment properties")
                 return None
             except Exception:
                 self.logger.exception("Generic exception was raise during spark job name discovery")
