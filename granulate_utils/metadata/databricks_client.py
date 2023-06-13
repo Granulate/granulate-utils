@@ -172,10 +172,10 @@ class DBXWebUIEnvWrapper:
             metadata[CLUSTER_NAME_KEY] = metadata[CLUSTER_NAME_KEY].replace(" ", "-").lower()
         return metadata
 
-
-def get_name_from_metadata(metadata: Dict[str, str]) -> Optional[str]:
-    if JOB_NAME_KEY in metadata:
-        return f"job-{metadata[JOB_NAME_KEY]}"
-    elif CLUSTER_NAME_KEY in metadata:
-        return metadata[CLUSTER_NAME_KEY]
-    return None
+    @property
+    def get_name_from_metadata(self) -> Optional[str]:
+        if job_name := self.all_props_dict.get(JOB_NAME_KEY):
+            return f"job-{job_name}"
+        elif cluster_name := self.all_props_dict.get(CLUSTER_NAME_KEY):
+            return cluster_name
+        return None
