@@ -174,6 +174,7 @@ class DBXWebUIEnvWrapper:
 
     @property
     def get_name_from_metadata(self) -> Optional[str]:
+        assert self.all_props_dict is not None, "all_props_dict is None, can't get name from metadata"
         if job_name := self.all_props_dict.get(JOB_NAME_KEY):
             return f"job-{job_name}"
         elif cluster_name := self.all_props_dict.get(CLUSTER_NAME_KEY):
