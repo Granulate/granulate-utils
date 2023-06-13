@@ -158,8 +158,11 @@ class DBXWebUIEnvWrapper:
     @staticmethod
     def _apply_pattern(metadata: Dict[str, str]) -> Dict[str, str]:
         """
-        This function is used to enforce certain regex and other patterns on some metadata values, on which we
-        know problematic to include in service names.
+        Applies certain patterns on the metadata values.
+        We mostly use the metadata values as service names, so we want to make sure the metadata values
+        match some service name requirements.
+
+        e.g.: Job Name might include spaces, we want to replace them with dashes.
         """
         if JOB_NAME_KEY in metadata:
             metadata[JOB_NAME_KEY] = metadata[JOB_NAME_KEY].replace(" ", "-").lower()
