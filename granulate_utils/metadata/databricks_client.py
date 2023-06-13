@@ -31,11 +31,12 @@ RUN_ID_REGEX = "run-\\d+-"
 class DBXWebUIEnvWrapper:
     def __init__(self, logger: logging.LoggerAdapter) -> None:
         self.logger = logger
+        self._web_ui_address: Optional[str] = None
         self.logger.debug("Getting Databricks job name")
         self.all_props_dict: Optional[Dict[str, str]] = self.extract_relevant_metadata()
         if self.all_props_dict is None:
             self.logger.warning(
-                "Failed initializing Databricks client. Databricks job name will not be included in ephemeral clusters."
+                "DBXWebUIEnvWrapper failed to get relevant metadata, service name will not include metadata from DBX"
             )
 
     def _request_get(self, url: str) -> requests.Response:
