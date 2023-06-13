@@ -89,7 +89,7 @@ class DBXWebUIEnvWrapper:
             # We want to retry in case the cluster is still initializing, and the file is not yet deployed.
             return None
         if self._web_ui_address is None:
-            # We store WebUI to avoid logging every retry.
+            # We store WebUI to avoid logging the WebUI every retry.
             self._web_ui_address = self.get_webui_address()
             return None
         # The API used: https://spark.apache.org/docs/latest/monitoring.html#rest-api
