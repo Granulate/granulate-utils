@@ -144,19 +144,19 @@ class DBXWebUIEnvWrapper:
                 cluster_all_tags_value_json = json.loads(cluster_all_tags_value)
             except Exception as e:
                 raise DatabricksJobNameDiscoverException(f"Failed to parse {cluster_all_tags_value}") from e
-            return self._enforce_pattern(
+            return self._apply_pattern(
                 {cluster_all_tag["key"]: cluster_all_tag["value"] for cluster_all_tag in cluster_all_tags_value_json}
             )
         # As a fallback, trying to extract `CLUSTER_NAME_PROP` property.
         elif (cluster_name_value := service_name_prop_candidates.get(CLUSTER_NAME_PROP)) is not None:
-            return self._enforce_pattern({CLUSTER_NAME_KEY: cluster_name_value})
+            return self._apply_pattern({CLUSTER_NAME_KEY: cluster_name_value})
         else:
             raise DatabricksJobNameDiscoverException(
                 f"Failed to extract {CLUSTER_ALL_TAGS_PROP} or {CLUSTER_NAME_PROP} from {props=}"
             )
 
     @staticmethod
-    def _enforce_pattern(metadata: Dict[str, str]) -> Dict[str, str]:
+    def _apply_pattern(metadata: Dict[str, str]) -> Dict[str, str]:
         """
         This function is used to enforce certain regex and other patterns on some metadata values, on which we
         know problematic to include in service names.
