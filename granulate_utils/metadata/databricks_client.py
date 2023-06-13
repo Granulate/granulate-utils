@@ -130,15 +130,15 @@ class DBXWebUIEnvWrapper:
         if props is None:
             raise DatabricksJobNameDiscoverException(f"sparkProperties was not found in {env=}")
         # Creating a dict of the relevant properties and their values.
-        relevant_props_dict = {
+        service_name_prop_candidates = {
             prop[0]: prop[1] for prop in props if (CLUSTER_ALL_TAGS_PROP == prop[0] or CLUSTER_NAME_PROP == prop[0])
         }
-        if len(relevant_props_dict) == 0:
+        if len(service_name_prop_candidates) == 0:
             # We expect at least one of the properties to be present.
             raise DatabricksJobNameDiscoverException(f"Failed to create dict of relevant properties {env=}")
         # First, trying to extract `CLUSTER_TAGS_KEY` property, in case not redacted.
         if (
-            cluster_all_tags_value := relevant_props_dict.get(CLUSTER_ALL_TAGS_PROP)
+            cluster_all_tags_value := service_name_prop_candidates.get(CLUSTER_ALL_TAGS_PROP)
         ) is not None and "redacted" not in cluster_all_tags_value:
             try:
                 cluster_all_tags_value_json = json.loads(cluster_all_tags_value)
@@ -148,7 +148,7 @@ class DBXWebUIEnvWrapper:
                 {cluster_all_tag["key"]: cluster_all_tag["value"] for cluster_all_tag in cluster_all_tags_value_json}
             )
         # As a fallback, trying to extract `CLUSTER_NAME_PROP` property.
-        elif (cluster_name_value := relevant_props_dict.get(CLUSTER_NAME_PROP)) is not None:
+        elif (cluster_name_value := service_name_prop_candidates.get(CLUSTER_NAME_PROP)) is not None:
             return self._enforce_pattern({CLUSTER_NAME_KEY: cluster_name_value})
         else:
             raise DatabricksJobNameDiscoverException(
