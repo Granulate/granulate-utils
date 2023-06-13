@@ -88,12 +88,12 @@ class DBXWebUIEnvWrapper:
         if not os.path.isfile(DATABRICKS_METRICS_PROP_PATH):
             # We want to retry in case the cluster is still initializing, and the file is not yet deployed.
             return None
-        webui = self.get_webui_address()
-        if webui is None:
-            # retry
+        if self._web_ui_address is None:
+            # We store WebUI to avoid logging every retry.
+            self._web_ui_address = self.get_webui_address()
             return None
         # The API used: https://spark.apache.org/docs/latest/monitoring.html#rest-api
-        apps_url = SPARKUI_APPS_URL.format(webui)
+        apps_url = SPARKUI_APPS_URL.format(self._web_ui_address)
         self.logger.debug("Databricks SparkUI address", apps_url=apps_url)
         try:
             response = self._request_get(apps_url)
