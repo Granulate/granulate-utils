@@ -29,8 +29,12 @@ RUN_ID_REGEX = "run-\\d+-"
 
 
 class DBXWebUIEnvWrapper:
-    def __init__(self, logger: logging.LoggerAdapter) -> None:
+    def __init__(self, logger: logging.LoggerAdapter, enable_retries: bool = True) -> None:
+        """
+        When `enable_retries` is True, the wrapper will retry the request to the webui until it succeeds or until
+        """
         self.logger = logger
+        self.enable_retries = enable_retries
         self._apps_url: Optional[str] = None
         self.logger.debug("Getting DBX environment properties")
         self.all_props_dict: Optional[Dict[str, str]] = self.extract_relevant_metadata()
@@ -78,6 +82,8 @@ class DBXWebUIEnvWrapper:
             except Exception:
                 self.logger.exception("Generic exception was raise during DBX environment properties discovery")
                 return None
+            if not self.enable_retries:
+                break
         self.logger.info("Databricks get job name timeout, continuing...")
         return None
 
