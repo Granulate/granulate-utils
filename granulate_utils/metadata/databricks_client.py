@@ -133,7 +133,7 @@ class DBXWebUIEnvWrapper:
         return env
 
     @staticmethod
-    def _extract_service_name_candidates(spark_properties: Any) -> Dict[str, Any]:
+    def _extract_service_name_candidates(spark_properties: Any) -> Dict[str, str]:
         # Creating a dict of the relevant properties and their values.
         relevant_props = [CLUSTER_ALL_TAGS_PROP, CLUSTER_NAME_PROP]
         service_name_prop_candidates = {prop[0]: prop[1] for prop in spark_properties if prop[0] in relevant_props}
