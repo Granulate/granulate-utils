@@ -8,7 +8,7 @@ import logging
 import os
 import re
 import time
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 import requests
 
@@ -81,21 +81,25 @@ class DBXWebUIEnvWrapper:
         self.logger.info("Databricks get job name timeout, continuing...")
         return None
 
-    def _cluster_all_tags_metadata(self) -> Optional[Dict[str, str]]:
+    def _discover_apps_url(self) -> bool:
         """
-        Returns `includes spark.databricks.clusterUsageTags.clusterAllTags` tags as `Dict`.
-        In any case this function returns `None`, a retry is required.
+        Discovers the SparkUI apps url, and setting it to `self._apps_url`.
+        Returns `True` if the url was discovered, `False` otherwise.
         """
-        if not os.path.isfile(DATABRICKS_METRICS_PROP_PATH):
-            # We want to retry in case the cluster is still initializing, and the file is not yet deployed.
-            return None
-        if (web_ui_address := self.get_webui_address()) is None:
-            return None
-        if self._apps_url is None:
-            # We store WebUI to avoid logging the WebUI every retry.
-            # The API used: https://spark.apache.org/docs/latest/monitoring.html#rest-api
+        if self._is_apps_url_discovered() is True:
+            return True
+        else:
+            if (web_ui_address := self.get_webui_address()) is None:
+                return False
             self._apps_url = SPARKUI_APPS_URL.format(web_ui_address)
             self.logger.debug("Databricks SparkUI address", apps_url=self._apps_url)
+            return True
+
+    def _is_apps_url_discovered(self):
+        return self._apps_url is not None
+
+    def _spark_apps_json(self) -> Any:
+        assert self._apps_url, "SparkUI apps url was not discovered"
         try:
             response = self._request_get(self._apps_url)
         except requests.exceptions.RequestException:
@@ -112,12 +116,11 @@ class DBXWebUIEnvWrapper:
                 raise DatabricksJobNameDiscoverException(
                     f"Failed to parse apps url response, query {response.text=}"
                 ) from e
-        if len(apps) == 0:
-            # apps might be empty because of initialization, retrying.
-            self.logger.debug("No apps yet, retrying.")
-            return None
+        return apps
 
-        env_url = f"{self._apps_url}/{apps[0]['id']}/environment"
+    def _spark_app_env_json(self, app_id: str) -> Any:
+        assert self._is_apps_url_discovered(), "SparkUI apps url was not discovered"
+        env_url = f"{self._apps_url}/{app_id}/environment"
         try:
             response = self._request_get(env_url)
         except Exception as e:
@@ -127,17 +130,48 @@ class DBXWebUIEnvWrapper:
             env = response.json()
         except Exception as e:
             raise DatabricksJobNameDiscoverException(f"Environment request failed {response.text=}") from e
-        props = env.get("sparkProperties")
-        if props is None:
-            raise DatabricksJobNameDiscoverException(f"sparkProperties was not found in {env=}")
+        return env
+
+    @staticmethod
+    def _extract_service_name_candidates(spark_properties: Any) -> Dict[str, Any]:
         # Creating a dict of the relevant properties and their values.
         relevant_props = [CLUSTER_ALL_TAGS_PROP, CLUSTER_NAME_PROP]
-        service_name_prop_candidates = {
-            prop[0]: prop[1] for prop in props if prop[0] in relevant_props
-        }
+        service_name_prop_candidates = {prop[0]: prop[1] for prop in spark_properties if prop[0] in relevant_props}
         if len(service_name_prop_candidates) == 0:
             # We expect at least one of the properties to be present.
-            raise DatabricksJobNameDiscoverException(f"Failed to create dict of relevant properties {env=}")
+            raise DatabricksJobNameDiscoverException(
+                f"Failed to create dict of relevant properties {spark_properties=}"
+            )
+        return service_name_prop_candidates
+
+    def _cluster_all_tags_metadata(self) -> Optional[Dict[str, str]]:
+        """
+        Returns `includes spark.databricks.clusterUsageTags.clusterAllTags` tags as `Dict`.
+        In any case this function returns `None`, a retry is required.
+        """
+        if not os.path.isfile(DATABRICKS_METRICS_PROP_PATH):
+            # We want to retry in case the cluster is still initializing, and the file is not yet deployed.
+            return None
+        # Discovering SparkUI apps url.
+        self._discover_apps_url()
+        if self._is_apps_url_discovered() is False:
+            # SparkUI apps url was not discovered, retrying.
+            return None
+
+        # Getting spark apps in JSON format.
+        apps = self._spark_apps_json()
+        if len(apps) == 0:
+            # apps might be empty because of initialization, retrying.
+            self.logger.debug("No apps yet, retrying.")
+            return None
+
+        # Extracting for the first app the "sparkProperties" table of the application environment.
+        full_spark_app_env = self._spark_app_env_json(apps[0]["id"])
+        spark_properties = full_spark_app_env.get("sparkProperties")
+        if spark_properties is None:
+            raise DatabricksJobNameDiscoverException(f"sparkProperties was not found in {full_spark_app_env=}")
+        service_name_prop_candidates = self._extract_service_name_candidates(spark_properties)
+
         # First, trying to extract `CLUSTER_TAGS_KEY` property, in case not redacted.
         if (
             cluster_all_tags_value := service_name_prop_candidates.get(CLUSTER_ALL_TAGS_PROP)
@@ -154,7 +188,7 @@ class DBXWebUIEnvWrapper:
             return self._apply_pattern({CLUSTER_NAME_KEY: cluster_name_value})
         else:
             raise DatabricksJobNameDiscoverException(
-                f"Failed to extract {CLUSTER_ALL_TAGS_PROP} or {CLUSTER_NAME_PROP} from {props=}"
+                f"Failed to extract {CLUSTER_ALL_TAGS_PROP} or {CLUSTER_NAME_PROP} from {spark_properties=}"
             )
 
     @staticmethod
