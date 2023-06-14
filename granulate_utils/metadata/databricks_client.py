@@ -84,6 +84,7 @@ class DBXWebUIEnvWrapper:
     def _cluster_all_tags_metadata(self) -> Optional[Dict[str, str]]:
         """
         Returns `includes spark.databricks.clusterUsageTags.clusterAllTags` tags as `Dict`.
+        In any case this function returns `None`, a retry is required.
         """
         if not os.path.isfile(DATABRICKS_METRICS_PROP_PATH):
             # We want to retry in case the cluster is still initializing, and the file is not yet deployed.
