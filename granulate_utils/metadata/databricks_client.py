@@ -76,7 +76,7 @@ class DBXWebUIEnvWrapper:
                 self.logger.exception("Failed to get DBX environment properties")
                 return None
             except Exception:
-                self.logger.exception("Generic exception was raise during spark job name discovery")
+                self.logger.exception("Generic exception was raise during DBX environment properties discovery")
                 return None
         self.logger.info("Databricks get job name timeout, continuing...")
         return None
