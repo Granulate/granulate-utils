@@ -154,7 +154,7 @@ class DBXWebUIEnvWrapper:
             return None
         # Discovering SparkUI apps url.
         self._discover_apps_url()
-        if self._is_apps_url_discovered() is False:
+        if not self._is_apps_url_discovered():
             # SparkUI apps url was not discovered, retrying.
             return None
 
