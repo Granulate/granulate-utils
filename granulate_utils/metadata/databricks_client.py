@@ -159,7 +159,8 @@ class DBXWebUIEnvWrapper:
             return None
 
         # Getting spark apps in JSON format.
-        apps = self._spark_apps_json()
+        if (apps := self._spark_apps_json()) is None:
+            return None
         if len(apps) == 0:
             # apps might be empty because of initialization, retrying.
             self.logger.debug("No apps yet, retrying.")
