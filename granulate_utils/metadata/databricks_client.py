@@ -130,8 +130,9 @@ class DBXWebUIEnvWrapper:
         if props is None:
             raise DatabricksJobNameDiscoverException(f"sparkProperties was not found in {env=}")
         # Creating a dict of the relevant properties and their values.
+        relevant_props = [CLUSTER_ALL_TAGS_PROP, CLUSTER_NAME_PROP]
         service_name_prop_candidates = {
-            prop[0]: prop[1] for prop in props if (CLUSTER_ALL_TAGS_PROP == prop[0] or CLUSTER_NAME_PROP == prop[0])
+            prop[0]: prop[1] for prop in props if prop[0] in relevant_props
         }
         if len(service_name_prop_candidates) == 0:
             # We expect at least one of the properties to be present.
