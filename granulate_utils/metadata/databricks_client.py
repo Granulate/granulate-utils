@@ -174,7 +174,7 @@ class DBXWebUIEnvWrapper:
 
         # First, trying to extract `CLUSTER_TAGS_KEY` property, in case not redacted.
         if (
-                cluster_all_tags_value := service_name_prop_candidates.get(CLUSTER_ALL_TAGS_PROP)
+            cluster_all_tags_value := service_name_prop_candidates.get(CLUSTER_ALL_TAGS_PROP)
         ) is not None and "redacted" not in cluster_all_tags_value:
             try:
                 cluster_all_tags_value_json = json.loads(cluster_all_tags_value)
