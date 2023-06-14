@@ -81,7 +81,7 @@ class DBXWebUIEnvWrapper:
         self.logger.info("Databricks get job name timeout, continuing...")
         return None
 
-    def _discover_apps_url(self) -> bool:
+    def _discover_apps_url(self):
         """
         Discovers the SparkUI apps url, and setting it to `self._apps_url`.
         Returns `True` if the url was discovered, `False` otherwise.
