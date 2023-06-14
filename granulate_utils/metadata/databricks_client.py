@@ -174,7 +174,7 @@ class DBXWebUIEnvWrapper:
 
         # First, trying to extract `CLUSTER_TAGS_KEY` property, in case not redacted.
         if (
-            cluster_all_tags_value := service_name_prop_candidates.get(CLUSTER_ALL_TAGS_PROP)
+                cluster_all_tags_value := service_name_prop_candidates.get(CLUSTER_ALL_TAGS_PROP)
         ) is not None and "redacted" not in cluster_all_tags_value:
             try:
                 cluster_all_tags_value_json = json.loads(cluster_all_tags_value)
@@ -208,11 +208,11 @@ class DBXWebUIEnvWrapper:
             metadata[CLUSTER_NAME_KEY] = metadata[CLUSTER_NAME_KEY].replace(" ", "-").lower()
         return metadata
 
-    @property
-    def name(self) -> Optional[str]:
-        assert self.all_props_dict is not None, "all_props_dict is None, can't get name from metadata"
-        if job_name := self.all_props_dict.get(JOB_NAME_KEY):
-            return f"job-{job_name}"
-        elif cluster_name := self.all_props_dict.get(CLUSTER_NAME_KEY):
-            return cluster_name
-        return None
+
+def get_name_from_metadata(metadata: Dict[str, str]) -> Optional[str]:
+    assert metadata is not None, "all_props_dict is None, can't get name from metadata"
+    if job_name := metadata.get(JOB_NAME_KEY):
+        return f"job-{job_name}"
+    elif cluster_name := metadata.get(CLUSTER_NAME_KEY):
+        return cluster_name
+    return None
