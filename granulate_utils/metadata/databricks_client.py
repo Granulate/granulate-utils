@@ -87,7 +87,7 @@ class DBXWebUIEnvWrapper:
         self.logger.info("Databricks get DBX environment metadata timeout, continuing...")
         return None
 
-    def _discover_apps_url(self):
+    def _discover_apps_url(self) -> bool:
         """
         Discovers the SparkUI apps url, and setting it to `self._apps_url`.
         Returns `True` if the url was discovered, `False` otherwise.
@@ -156,8 +156,7 @@ class DBXWebUIEnvWrapper:
             # We want to retry in case the cluster is still initializing, and the file is not yet deployed.
             return None
         # Discovering SparkUI apps url.
-        self._discover_apps_url()
-        if self._apps_url is None:
+        if self._discover_apps_url() is False:
             # SparkUI apps url was not discovered, retrying.
             return None
 
