@@ -92,7 +92,7 @@ class DBXWebUIEnvWrapper:
         Discovers the SparkUI apps url, and setting it to `self._apps_url`.
         Returns `True` if the url was discovered, `False` otherwise.
         """
-        if self._is_apps_url_discovered() is True:
+        if self._apps_url is not None:  # Validating that the url was already discovered.
             return True
         else:
             if (web_ui_address := self.get_webui_address()) is None:
@@ -100,9 +100,6 @@ class DBXWebUIEnvWrapper:
             self._apps_url = SPARKUI_APPS_URL.format(web_ui_address)
             self.logger.debug("Databricks SparkUI address", apps_url=self._apps_url)
             return True
-
-    def _is_apps_url_discovered(self):
-        return self._apps_url is not None
 
     def _spark_apps_json(self) -> Any:
         assert self._apps_url, "SparkUI apps url was not discovered"
@@ -125,7 +122,7 @@ class DBXWebUIEnvWrapper:
         return apps
 
     def _spark_app_env_json(self, app_id: str) -> Any:
-        assert self._is_apps_url_discovered(), "SparkUI apps url was not discovered"
+        assert self._apps_url is not None, "SparkUI apps url was not discovered"
         env_url = f"{self._apps_url}/{app_id}/environment"
         try:
             response = self._request_get(env_url)
@@ -160,7 +157,7 @@ class DBXWebUIEnvWrapper:
             return None
         # Discovering SparkUI apps url.
         self._discover_apps_url()
-        if not self._is_apps_url_discovered():
+        if self._apps_url is None:
             # SparkUI apps url was not discovered, retrying.
             return None
 
