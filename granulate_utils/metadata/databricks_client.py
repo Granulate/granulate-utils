@@ -90,9 +90,11 @@ class DBXWebUIEnvWrapper:
     def _discover_apps_url(self):
         """
         Discovers the SparkUI apps url, and setting it to `self._apps_url`.
+        Returns `True` if the url was discovered, `False` otherwise.
         """
-        # Discover process is irrelevant in case we're already discovered.
-        if self._apps_url is None:
+        if self._apps_url is not None:  # Checks if the url was already discovered.
+            return True
+        else:
             if (web_ui_address := self.get_webui_address()) is None:
                 return False
             self._apps_url = SPARKUI_APPS_URL.format(web_ui_address)
