@@ -84,7 +84,7 @@ class DBXWebUIEnvWrapper:
                 return None
             if not self.enable_retries:
                 break
-        self.logger.info("Databricks get job name timeout, continuing...")
+        self.logger.info("Databricks get DBX environment metadata timeout, continuing...")
         return None
 
     def _discover_apps_url(self):
