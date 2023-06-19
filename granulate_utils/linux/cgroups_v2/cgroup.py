@@ -137,7 +137,7 @@ class CgroupCore:
 
     def read_from_interface_file(self, interface_name: str) -> str:
         interface_path = self.cgroup_abs_path / interface_name
-        return interface_path.read_text()
+        return interface_path.read_text().strip()
 
     def write_to_interface_file(self, interface_name: str, data: str) -> None:
         interface_path = self.cgroup_abs_path / interface_name
