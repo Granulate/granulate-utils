@@ -18,11 +18,9 @@ class CpuAcctController(BaseController):
         return int(self.read_from_interface_file(self.CPUACCT_USAGE_FILE))
 
 
-class CpuAcctControllerFactory:
-    @staticmethod
-    def create_sub_cpu_controller(
-        new_cgroup_name: str, parent_cgroup: Optional[Union[Path, CgroupCore]] = None
-    ) -> CpuAcctController:
-        current_cgroup = CpuAcctController.get_cgroup_core(parent_cgroup)
-        subcgroup_core = current_cgroup.get_subcgroup(CpuAcctController.CONTROLLER, new_cgroup_name)
-        return CpuAcctController(subcgroup_core)
+def create_sub_cpu_controller(
+    new_cgroup_name: str, parent_cgroup: Optional[Union[Path, CgroupCore]] = None
+) -> CpuAcctController:
+    current_cgroup = CpuAcctController.get_cgroup_core(parent_cgroup)
+    subcgroup_core = current_cgroup.get_subcgroup(CpuAcctController.CONTROLLER, new_cgroup_name)
+    return CpuAcctController(subcgroup_core)

@@ -152,12 +152,16 @@ class CgroupCore:
         pass
 
     @property
+    def filesystem_type(self) -> str:
+        return ""
+
+    @property
     def is_v1(self) -> bool:
-        return False
+        return self.filesystem_type == "cgroup"
 
     @property
     def is_v2(self) -> bool:
-        return False
+        return self.filesystem_type == "cgroup2"
 
     @classmethod
     def convert_outer_value_to_inner(cls, val: int) -> str:
@@ -182,8 +186,8 @@ class CgroupCoreV1(CgroupCore):
         return CgroupCoreV1(self._create_subcgroup(cgroup_name), self.cgroup_mount_path)
 
     @property
-    def is_v1(self) -> bool:
-        return True
+    def filesystem_type(self) -> str:
+        return "cgroup"
 
 
 CGROUP_V2_SUPPORTED_CONTROLLERS = "cgroup.controllers"
@@ -247,8 +251,8 @@ class CgroupCoreV2(CgroupCore):
         return super().convert_inner_value_to_outer(val)
 
     @property
-    def is_v2(self) -> bool:
-        return True
+    def filesystem_type(self) -> str:
+        return "cgroup2"
 
 
 def _get_cgroup_mount(controller: ControllerType) -> Optional[CgroupCore]:
@@ -303,8 +307,6 @@ def _get_cgroup_for_process(controller: ControllerType, process: Optional[psutil
         if (cgroup_mount.is_v1 and controller in process_cgroup.controllers) or (
             cgroup_mount.is_v2 and process_cgroup.hier_id == "0"
         ):
-            # Validate hier == 0 only when cgroup is v2
-            assert cgroup_mount.is_v1 ^ (process_cgroup.hier_id == "0")
             return cgroup_mount.build_object(
                 cgroup_mount.cgroup_abs_path / process_cgroup.relative_path.lstrip("/"), cgroup_mount.cgroup_mount_path
             )
