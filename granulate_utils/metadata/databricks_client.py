@@ -46,9 +46,7 @@ RUN_ID_REGEX = "run-\\d+-"
 
 
 class DBXWebUIEnvWrapper:
-    def __init__(
-        self, logger: logging.LoggerAdapter, enable_retries: bool = True
-    ) -> None:
+    def __init__(self, logger: logging.LoggerAdapter, enable_retries: bool = True) -> None:
         """
         When `enable_retries` is True, the wrapper will retry the request to the webui until it succeeds or until
         """
@@ -72,20 +70,14 @@ class DBXWebUIEnvWrapper:
         with open(DATABRICKS_METRICS_PROP_PATH) as f:
             properties = f.read()
         try:
-            host = dict([line.split("=", 1) for line in properties.splitlines()])[
-                HOST_KEY_NAME
-            ]
+            host = dict([line.split("=", 1) for line in properties.splitlines()])[HOST_KEY_NAME]
         except KeyError as e:
             if e.args[0] == HOST_KEY_NAME:
                 # Might happen while provisioning the cluster, retry.
                 return None
-            raise DatabricksJobNameDiscoverException(
-                f"Failed to get Databricks webui address {properties=}"
-            ) from e
+            raise DatabricksJobNameDiscoverException(f"Failed to get Databricks webui address {properties=}") from e
         except Exception as e:
-            raise DatabricksJobNameDiscoverException(
-                f"Failed to get Databricks webui address {properties=}"
-            ) from e
+            raise DatabricksJobNameDiscoverException(f"Failed to get Databricks webui address {properties=}") from e
         return f"{host}:{DEFAULT_WEBUI_PORT}"
 
     def extract_relevant_metadata(self) -> Optional[Dict[str, str]]:
@@ -106,15 +98,11 @@ class DBXWebUIEnvWrapper:
                 self.logger.exception("Failed to get DBX environment properties")
                 return None
             except Exception:
-                self.logger.exception(
-                    "Generic exception was raise during DBX environment properties discovery"
-                )
+                self.logger.exception("Generic exception was raise during DBX environment properties discovery")
                 return None
             if not self.enable_retries:
                 break
-        self.logger.info(
-            "Databricks get DBX environment metadata timeout, continuing..."
-        )
+        self.logger.info("Databricks get DBX environment metadata timeout, continuing...")
         return None
 
     def _discover_apps_url(self) -> bool:
@@ -141,10 +129,7 @@ class DBXWebUIEnvWrapper:
         try:
             apps = response.json()
         except Exception as e:
-            if (
-                "Spark is starting up. Please wait a while until it's ready"
-                in response.text
-            ):
+            if "Spark is starting up. Please wait a while until it's ready" in response.text:
                 # Spark is still initializing, retrying.
                 # https://github.com/apache/spark/blob/38c41c/core/src/main/scala/org/apache/spark/ui/SparkUI.scala#L64
                 return None
@@ -161,15 +146,11 @@ class DBXWebUIEnvWrapper:
             response = self._request_get(env_url)
         except Exception as e:
             # No reason for any exception, `environment` uri should be accessible if we have running apps.
-            raise DatabricksJobNameDiscoverException(
-                f"Environment request failed {env_url=}"
-            ) from e
+            raise DatabricksJobNameDiscoverException(f"Environment request failed {env_url=}") from e
         try:
             env = response.json()
         except Exception as e:
-            raise DatabricksJobNameDiscoverException(
-                f"Environment request failed {response.text=}"
-            ) from e
+            raise DatabricksJobNameDiscoverException(f"Environment request failed {response.text=}") from e
         return env
 
     def _cluster_all_tags_metadata(self) -> Optional[Dict[str, str]]:
@@ -197,9 +178,7 @@ class DBXWebUIEnvWrapper:
         full_spark_app_env = self._spark_app_env_json(apps[0]["id"])
         spark_properties = full_spark_app_env.get("sparkProperties")
         if spark_properties is None:
-            raise DatabricksJobNameDiscoverException(
-                f"sparkProperties was not found in {full_spark_app_env=}"
-            )
+            raise DatabricksJobNameDiscoverException(f"sparkProperties was not found in {full_spark_app_env=}")
 
         # First, trying to extract `CLUSTER_TAGS_KEY` property, in case not redacted.
         result: Optional[Dict[str, str]] = {}
@@ -209,20 +188,13 @@ class DBXWebUIEnvWrapper:
             try:
                 cluster_all_tags_value_json = json.loads(cluster_all_tags_value)
             except Exception as e:
-                raise DatabricksJobNameDiscoverException(
-                    f"Failed to parse {cluster_all_tags_value}"
-                ) from e
+                raise DatabricksJobNameDiscoverException(f"Failed to parse {cluster_all_tags_value}") from e
 
             result.update(
-                {
-                    cluster_all_tag["key"]: cluster_all_tag["value"]
-                    for cluster_all_tag in cluster_all_tags_value_json
-                }
+                {cluster_all_tag["key"]: cluster_all_tag["value"] for cluster_all_tag in cluster_all_tags_value_json}
             )
         # As a fallback, trying to extract `CLUSTER_USAGE_CLUSTER_NAME_PROP` property.
-        elif (
-            cluster_name_value := spark_properties.get(CLUSTER_USAGE_CLUSTER_NAME_PROP)
-        ) is not None:
+        elif (cluster_name_value := spark_properties.get(CLUSTER_USAGE_CLUSTER_NAME_PROP)) is not None:
             result[CLUSTER_NAME_KEY] = cluster_name_value
 
         else:
@@ -233,10 +205,7 @@ class DBXWebUIEnvWrapper:
 
         # Now add additional intereseting data to the metadata
         for prop in props:
-            if (
-                prop[0] in CLUSTER_USAGE_RELEVANT_TAGS_PROPS
-                and DATABRICKS_REDACTED_STR not in prop[1]
-            ):
+            if prop[0] in CLUSTER_USAGE_RELEVANT_TAGS_PROPS and DATABRICKS_REDACTED_STR not in prop[1]:
                 result[prop[0]] = prop[1]
 
         return self._apply_pattern(result)
@@ -254,12 +223,8 @@ class DBXWebUIEnvWrapper:
             metadata[JOB_NAME_KEY] = metadata[JOB_NAME_KEY].replace(" ", "-").lower()
         if CLUSTER_NAME_KEY in metadata:
             # We've tackled cases where the cluster name includes Run ID, we want to remove it.
-            metadata[CLUSTER_NAME_KEY] = re.sub(
-                RUN_ID_REGEX, "", metadata[CLUSTER_NAME_KEY]
-            )
-            metadata[CLUSTER_NAME_KEY] = (
-                metadata[CLUSTER_NAME_KEY].replace(" ", "-").lower()
-            )
+            metadata[CLUSTER_NAME_KEY] = re.sub(RUN_ID_REGEX, "", metadata[CLUSTER_NAME_KEY])
+            metadata[CLUSTER_NAME_KEY] = metadata[CLUSTER_NAME_KEY].replace(" ", "-").lower()
         return metadata
 
 
