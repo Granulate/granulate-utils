@@ -181,7 +181,7 @@ class DBXWebUIEnvWrapper:
             raise DatabricksJobNameDiscoverException(f"sparkProperties was not found in {full_spark_app_env=}")
 
         # First, trying to extract `CLUSTER_TAGS_KEY` property, in case not redacted.
-        result: Optional[Dict[str, str]] = {}
+        result: Dict[str, str] = {}
         if (
             cluster_all_tags_value := spark_properties.get(CLUSTER_USAGE_ALL_TAGS_PROP)
         ) is not None and DATABRICKS_REDACTED_STR not in cluster_all_tags_value:
@@ -200,11 +200,12 @@ class DBXWebUIEnvWrapper:
         else:
             # We expect at least one of the properties to be present.
             raise DatabricksJobNameDiscoverException(
-                f"Failed to extract {CLUSTER_USAGE_ALL_TAGS_PROP} or {CLUSTER_USAGE_CLUSTER_NAME_PROP} from {spark_properties=}"
+                f"Failed to extract {CLUSTER_USAGE_ALL_TAGS_PROP} or "
+                f"{CLUSTER_USAGE_CLUSTER_NAME_PROP} from {spark_properties=}"
             )
 
         # Now add additional intereseting data to the metadata
-        for prop in props:
+        for prop in spark_properties:
             if prop[0] in CLUSTER_USAGE_RELEVANT_TAGS_PROPS and DATABRICKS_REDACTED_STR not in prop[1]:
                 result[prop[0]] = prop[1]
 
