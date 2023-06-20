@@ -181,7 +181,10 @@ class DBXWebUIEnvWrapper:
             raise DatabricksJobNameDiscoverException(f"sparkProperties was not found in {full_spark_app_env=}")
 
         # Convert from [[key, val], [key, val]] to {key: val, key: val}
-        spark_properties = dict(spark_properties)
+        try:
+            spark_properties = dict(spark_properties)
+        except Exception as e:
+            raise DatabricksJobNameDiscoverException(f"Failed to parse as dict {full_spark_app_env=}") from e
 
         # First, trying to extract `CLUSTER_TAGS_KEY` property, in case not redacted.
         result: Dict[str, str] = {}
