@@ -105,11 +105,3 @@ class MemoryControllerFactory:
         if cgroup_core.is_v1:
             return MemoryControllerV1(cgroup_core)
         return MemoryControllerV2(cgroup_core)
-
-    @classmethod
-    def create_sub_memory_controller(
-        cls, new_cgroup_name: str, parent_cgroup: Optional[Union[Path, CgroupCore]] = None
-    ) -> MemoryController:
-        current_cgroup = MemoryController.get_cgroup_core(parent_cgroup)
-        subcgroup_core = current_cgroup.get_subcgroup(MemoryController.CONTROLLER, new_cgroup_name)
-        return cls.get_memory_controller(subcgroup_core)

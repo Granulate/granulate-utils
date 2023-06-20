@@ -10,99 +10,13 @@ import pytest
 from pytest import TempPathFactory
 
 from granulate_utils.exceptions import CgroupInterfaceNotSupported
-from granulate_utils.linux.cgroups_v2.cgroup import (
-    CGROUP_PROCS_FILE,
-    CgroupCoreV1,
-    CgroupCoreV2,
-    ControllerType,
-    get_cgroup_core,
-)
+from granulate_utils.linux.cgroups_v2.cgroup import CgroupCoreV1, CgroupCoreV2, ControllerType, get_cgroup_core
 from granulate_utils.linux.cgroups_v2.cpu_controller import CpuControllerFactory
 from granulate_utils.linux.cgroups_v2.cpuacct_controller import CpuAcctController
 from granulate_utils.linux.cgroups_v2.memory_controller import MemoryControllerFactory
 
 DUMMY_CONTROLLER: ControllerType = "cpu"
 DUMMY2_CONTROLLER: ControllerType = "memory"
-
-
-# Cgroup
-def test_cgroup_v1(tmp_path_factory: TempPathFactory):
-    tmp_dir = tmp_path_factory.mktemp("base_controller")
-    cgroup_dir = Path(tmp_dir)
-    SUB_CGROUP_NAME = "sub_cgroup"
-    cpu_procs = cgroup_dir / CGROUP_PROCS_FILE
-
-    cpu_procs.write_text("1 2 3")
-
-    cgroup_v1 = CgroupCoreV1(cgroup_dir, tmp_dir)
-
-    assert cgroup_v1.get_pids_in_cgroup() == set([1, 2, 3])
-    cgroup_v1.assign_process_to_cgroup(4)
-    assert cgroup_v1.get_pids_in_cgroup() == set([4])  # write_text overwrites.
-
-    sub_cgroup_dir = cgroup_dir / SUB_CGROUP_NAME
-    assert not sub_cgroup_dir.exists()
-    sub_cgroup = cgroup_v1.get_subcgroup(DUMMY2_CONTROLLER, SUB_CGROUP_NAME)
-    assert sub_cgroup_dir.exists()
-    assert sub_cgroup is not None
-
-    sub_cgroup_procs = sub_cgroup_dir / CGROUP_PROCS_FILE
-    sub_cgroup.assign_process_to_cgroup(5)
-    assert sub_cgroup.get_pids_in_cgroup() == set([5])
-    assert sub_cgroup_procs.read_text() == "5"
-
-    same_cgroup = sub_cgroup.get_subcgroup(DUMMY_CONTROLLER, sub_cgroup.cgroup_abs_path.name)
-    assert same_cgroup.cgroup_abs_path == sub_cgroup.cgroup_abs_path
-
-
-def test_cgroup_v2(tmp_path_factory: TempPathFactory):
-    root_cgroup = tmp_path_factory.mktemp("root")
-    parent_cgroup = root_cgroup / "base_controller"
-    current_leaf = parent_cgroup / "leaf"
-    current_leaf.mkdir(exist_ok=True, parents=True)
-
-    (root_cgroup / "cgroup.controllers").touch()
-    (root_cgroup / "cgroup.subtree_control").touch()
-    parent_supported_controllers = parent_cgroup / "cgroup.controllers"
-    parent_supported_controllers.write_text(DUMMY_CONTROLLER)
-    parent_delegated_controllers = parent_cgroup / "cgroup.subtree_control"
-    parent_delegated_controllers.touch()
-
-    SUB_CGROUP_NAME = "sub_cgroup"
-    sub_cgroup_dir = parent_cgroup / SUB_CGROUP_NAME
-
-    cgroup = CgroupCoreV2(current_leaf, root_cgroup)
-    sub_cgroup = cgroup.get_subcgroup(DUMMY_CONTROLLER, SUB_CGROUP_NAME)
-    assert sub_cgroup_dir.absolute() == sub_cgroup.cgroup_abs_path.absolute()
-    assert parent_delegated_controllers.read_text().strip() == f"+{DUMMY_CONTROLLER}"
-
-    with pytest.raises(AssertionError) as exception:
-        sub_cgroup = cgroup.get_subcgroup(DUMMY2_CONTROLLER, SUB_CGROUP_NAME)
-    assert exception.value.args[0] == f"Controller '{DUMMY2_CONTROLLER}' is not supported under {str(root_cgroup)}"
-
-
-def test_cgroup_v2_fallback_to_root(tmp_path_factory: TempPathFactory):
-    root_cgroup = tmp_path_factory.mktemp("root")
-    parent_cgroup = root_cgroup / "base_controller"
-    current_leaf = parent_cgroup / "leaf"
-    current_leaf.mkdir(exist_ok=True, parents=True)
-
-    root_supported_controllers = root_cgroup / "cgroup.controllers"
-    root_supported_controllers.write_text(DUMMY_CONTROLLER)
-    root_delegated_controllers = root_cgroup / "cgroup.subtree_control"
-    root_delegated_controllers.touch()
-    parent_supported_controllers = parent_cgroup / "cgroup.controllers"
-    parent_supported_controllers.touch()
-    parent_delegated_controllers = parent_cgroup / "cgroup.subtree_control"
-    parent_delegated_controllers.touch()
-
-    SUB_CGROUP_NAME = "sub_cgroup"
-    sub_cgroup_dir = root_cgroup / SUB_CGROUP_NAME
-
-    cgroup = CgroupCoreV2(current_leaf, root_cgroup)
-    sub_cgroup = cgroup.get_subcgroup(DUMMY_CONTROLLER, SUB_CGROUP_NAME)
-    assert sub_cgroup_dir.absolute() == sub_cgroup.cgroup_abs_path.absolute()
-    assert root_delegated_controllers.read_text().strip() == f"+{DUMMY_CONTROLLER}"
 
 
 def test_get_cgroup_current_process():

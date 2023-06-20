@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-from abc import abstractmethod
 from pathlib import Path
 from typing import List, Literal, Mapping, Optional, Union
 
@@ -119,11 +118,6 @@ class CgroupCore:
         self.cgroup_abs_path = cgroup_abs_path
         self.cgroup_mount_path = cgroup_mount_path
 
-    def _create_subcgroup(self, cgroup_name: str) -> Path:
-        new_cgroup_path = self.cgroup_abs_path / cgroup_name
-        new_cgroup_path.mkdir(exist_ok=True)
-        return new_cgroup_path
-
     def get_pids_in_cgroup(self) -> set[int]:
         return {int(proc) for proc in self.read_from_interface_file(CGROUP_PROCS_FILE).split()}
 
@@ -142,14 +136,6 @@ class CgroupCore:
     def write_to_interface_file(self, interface_name: str, data: str) -> None:
         interface_path = self.cgroup_abs_path / interface_name
         interface_path.write_text(data)
-
-    @abstractmethod
-    def get_subcgroup(self, controller: ControllerType, cgroup_name: str) -> CgroupCore:
-        """
-        Return a CGroup which has the given name.
-        If current cgroup is of a different name, create a subcgroup with the given name.
-        """
-        pass
 
     @property
     def filesystem_type(self) -> str:
@@ -177,14 +163,6 @@ class CgroupCore:
 
 
 class CgroupCoreV1(CgroupCore):
-    def get_subcgroup(self, controller: ControllerType, cgroup_name: str) -> CgroupCore:
-        assert controller in CONTROLLERS
-
-        if self.cgroup_abs_path.name == cgroup_name:
-            return self
-
-        return CgroupCoreV1(self._create_subcgroup(cgroup_name), self.cgroup_mount_path)
-
     @property
     def filesystem_type(self) -> str:
         return "cgroup"
@@ -198,45 +176,8 @@ class CgroupCoreV2(CgroupCore):
     def is_controller_supported(self, controller: ControllerType):
         return controller in self.read_from_interface_file(CGROUP_V2_SUPPORTED_CONTROLLERS).split()
 
-    def _delegate_controller(self, controller: ControllerType) -> None:
-        if self.is_controller_delegated(controller):
-            return
-
-        assert self.is_controller_supported(
-            controller
-        ), f"Controller '{controller}' is not supported under {self.cgroup_abs_path}"
-        self.write_to_interface_file(CGROUP_V2_DELEGATED_CONTROLLERS, f"+{controller}")
-
     def is_controller_delegated(self, controller: ControllerType):
         return controller in self.read_from_interface_file(CGROUP_V2_DELEGATED_CONTROLLERS).split()
-
-    def _get_parent_cgroup_for_controller(self, controller: ControllerType) -> CgroupCoreV2:
-        if self.cgroup_abs_path != self.cgroup_mount_path:
-            parent_cgroup = CgroupCoreV2(self.cgroup_abs_path.parent, self.cgroup_mount_path)
-            # If controller can't be delegated - fallback to root cGroup
-            if parent_cgroup.is_controller_supported(controller):
-                return parent_cgroup
-        return CgroupCoreV2(self.cgroup_mount_path, self.cgroup_mount_path)
-
-    def get_subcgroup(self, controller: ControllerType, cgroup_name: str) -> CgroupCore:
-        """
-        Create a subcgroup. There are 2 cases:
-        1. Current cGroup is the root cGroup - in this case, we create our cGroup under current cGroup.
-        2. Current cGroup isn't the root cGroup - in this case, we create a cGroup under the parent of the
-           current cGroup.
-        """
-        if self.cgroup_abs_path.name == cgroup_name:
-            parent_cgroup = self._get_parent_cgroup_for_controller(controller)
-            assert (
-                parent_cgroup.cgroup_abs_path != self.cgroup_abs_path.parent
-            ), "current cGroup doesn't support '{controller}' Controller"
-            parent_cgroup._delegate_controller(controller)
-            return self
-
-        parent_cgroup = self._get_parent_cgroup_for_controller(controller)
-        parent_cgroup._delegate_controller(controller)
-
-        return CgroupCoreV2(parent_cgroup._create_subcgroup(cgroup_name), self.cgroup_mount_path)
 
     @classmethod
     def convert_outer_value_to_inner(cls, val: int) -> str:
@@ -297,19 +238,41 @@ def _get_cgroup_from_path(controller: ControllerType, cgroup_path_or_full_path: 
     return cgroup_mount.build_object(cgroup_abs_path, cgroup_mount.cgroup_mount_path)
 
 
+def _get_controller_relative_path(controller: ControllerType, process: Optional[psutil.Process] = None) -> str:
+    for process_cgroup in get_process_cgroups(process):
+        if controller in process_cgroup.controllers:
+            return process_cgroup.relative_path.lstrip("/")
+
+    return ""
+
+
+def _get_unified_controller_relative_path(process: Optional[psutil.Process] = None) -> str:
+    for process_cgroup in get_process_cgroups(process):
+        if process_cgroup.hier_id == "0":
+            return process_cgroup.relative_path.lstrip("/")
+
+    return ""
+
+
 def _get_cgroup_for_process(controller: ControllerType, process: Optional[psutil.Process] = None) -> CgroupCore:
     """
     Get a CgrouopCore object for a given process. If process is None return for current process.
     """
     cgroup_mount = _get_cgroup_mount_checked(controller)
 
-    for process_cgroup in get_process_cgroups(process):
-        if (cgroup_mount.is_v1 and controller in process_cgroup.controllers) or (
-            cgroup_mount.is_v2 and process_cgroup.hier_id == "0"
-        ):
+    if cgroup_mount.is_v1:
+        controller_cgroup_relative_path = _get_controller_relative_path(controller, process)
+        if controller_cgroup_relative_path != "":
             return cgroup_mount.build_object(
-                cgroup_mount.cgroup_abs_path / process_cgroup.relative_path.lstrip("/"), cgroup_mount.cgroup_mount_path
+                cgroup_mount.cgroup_abs_path / controller_cgroup_relative_path, cgroup_mount.cgroup_mount_path
             )
+    elif cgroup_mount.is_v2:
+        unified_cgroup_relative_path = _get_unified_controller_relative_path(process)
+        if unified_cgroup_relative_path != "":
+            return cgroup_mount.build_object(
+                cgroup_mount.cgroup_abs_path / unified_cgroup_relative_path, cgroup_mount.cgroup_mount_path
+            )
+
     raise Exception(f"{controller!r} not found")
 
 

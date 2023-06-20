@@ -117,11 +117,3 @@ class CpuControllerFactory:
         if cgroup_core.is_v1:
             return CpuControllerV1(cgroup_core)
         return CpuControllerV2(cgroup_core)
-
-    @classmethod
-    def create_sub_cpu_controller(
-        cls, new_cgroup_name: str, parent_cgroup: Optional[Union[Path, CgroupCore]] = None
-    ) -> CpuController:
-        current_cgroup = CpuController.get_cgroup_core(parent_cgroup)
-        subcgroup_core = current_cgroup.get_subcgroup(CpuController.CONTROLLER, new_cgroup_name)
-        return cls.get_cpu_controller(subcgroup_core)
