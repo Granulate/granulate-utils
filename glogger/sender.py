@@ -38,6 +38,9 @@ class Sender:
         server_address: str,
         *,
         scheme: str = "https",
+        x_auth_type: str = "",
+        x_auth_access_key_id: str = "",
+        x_auth_secret_access_key: str = "",
         send_interval: float = 30.0,
         send_threshold: float = 0.8,
         send_min_interval: float = 10.0,
@@ -49,6 +52,9 @@ class Sender:
 
         :param application_name: Unique identifier requests coming from this handler.
         :param auth_token: Token for authenticating requests to the server.
+        :param x_auth_type: The type of authentication to use.
+        :param x_auth_access_key_id: The access key id to use for authentication.
+        :param x_auth_secret_access_key: The secret access key to use for authentication.
         :param server_address: Address of server where to send messages.
         :param scheme: The scheme to use as string ('http' or 'https')
         :param send_interval: Seconds between sending batches.
@@ -59,12 +65,15 @@ class Sender:
 
         self.application_name = application_name
         self.auth_token = auth_token
+        self.x_auth_type = x_auth_type
+        self.x_auth_access_key_id = x_auth_access_key_id
+        self.x_auth_secret_access_key = x_auth_secret_access_key
         self.server_address = server_address
         self.send_interval = send_interval
         self.send_threshold = send_threshold
         self.send_min_interval = send_min_interval
-        self.max_send_tries = max_send_tries
 
+        self.max_send_tries = max_send_tries
         self.stdout_logger = get_stdout_logger()
         self.server_uri = f"{scheme}://{server_address}/api/v1/logs"
         self.jsonify = JSONEncoder(separators=(",", ":"), default=repr).encode  # compact, no whitespace
@@ -162,6 +171,9 @@ class Sender:
             "Content-Type": "application/json",
             "X-Application-Name": self.application_name,
             "X-Token": self.auth_token,
+            "X-Auth-Type": self.x_auth_type,
+            "X-Auth-Access-Key-Id": self.x_auth_access_key_id,
+            "X-Auth-Secret-Access-Key": self.x_auth_secret_access_key,
         }
 
         # Default compression level (9) is slowest. Level 6 trades a bit of compression for speed.
