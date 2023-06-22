@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from gprofiler.metadata.bigdata.databricks import get_databricks_version
-from gprofiler.metadata.bigdata.dataproc import get_dataproc_version
-from gprofiler.metadata.bigdata.emr import get_emr_version
+from granulate_utils.metadata.bigdata.databricks import get_databricks_version
+from granulate_utils.metadata.bigdata.dataproc import get_dataproc_version
+from granulate_utils.metadata.bigdata.emr import get_emr_version
 
 
 @dataclass
