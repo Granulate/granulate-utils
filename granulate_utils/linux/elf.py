@@ -183,3 +183,10 @@ def get_libc_type(elf: ELFType) -> LibcType:
             return LibcType.STATIC_LIBC
 
         return LibcType.STATIC_NO_LIBC
+
+
+def elf_has_debug_info(elf: ELFType) -> bool:
+    with open_elf(elf) as elf:
+        if elf.has_dwarf_info():
+            return elf.get_dwarf_info().has_debug_info
+    return False
