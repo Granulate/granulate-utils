@@ -1,10 +1,21 @@
 from datetime import datetime
-from typing import List, Literal
+from enum import Enum
+from typing import List
 
 from pydantic import BaseModel
 
-BigDataPlatform = Literal["unknown", "emr", "dataproc", "databricks"]
-CloudProvider = Literal["unknown", "aws", "gcp"]
+
+class BigDataPlatform(str, Enum):
+    UNKOWN = "unknown"
+    EMR = "emr"
+    DATAPROC = "dataproc"
+    DATABRICKS = "databricks"
+
+
+class CloudProvider(str, Enum):
+    UNKOWN = "unknown"
+    AWS = "aws"
+    GCP = "gcp"
 
 
 class ClusterBase(BaseModel):

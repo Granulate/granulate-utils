@@ -1,6 +1,7 @@
 import json
 from typing import Dict, Optional
 
+from granulate_utils.config_feeder.core.models.cluster import BigDataPlatform, CloudProvider
 from granulate_utils.config_feeder.core.models.node import NodeInfo
 
 
@@ -10,8 +11,8 @@ def get_emr_node_info() -> Optional[NodeInfo]:
             external_id=_get_instance_id(),
             external_cluster_id=emr_info["jobFlowId"],
             is_master=_get_is_master(),
-            provider="aws",
-            bigdata_platform="emr",
+            provider=CloudProvider.AWS,
+            bigdata_platform=BigDataPlatform.EMR,
         )
     return None
 

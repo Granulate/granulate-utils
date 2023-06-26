@@ -8,6 +8,7 @@ from requests_mock.mocker import Mocker
 from requests_mock.request import _RequestObjectProxy
 
 from granulate_utils.config_feeder.client.client import DEFAULT_API_SERVER_ADDRESS
+from granulate_utils.config_feeder.core.models.cluster import BigDataPlatform, CloudProvider
 from granulate_utils.config_feeder.core.models.node import NodeInfo
 
 
@@ -31,8 +32,8 @@ class ApiMock:
                 external_cluster_id="j-1234567890",
                 external_id="i-1234567890",
                 is_master=True,
-                provider="aws",
-                bigdata_platform="emr",
+                provider=CloudProvider.AWS,
+                bigdata_platform=BigDataPlatform.EMR,
             ),
         )
 

@@ -1,6 +1,6 @@
 from typing import Dict, Optional
 
-from granulate_utils.config_feeder.core.models.cluster import CloudProvider
+from granulate_utils.config_feeder.core.models.cluster import BigDataPlatform, CloudProvider
 from granulate_utils.config_feeder.core.models.node import NodeInfo
 
 INSTANCE_KEY_PREFIX = "databricks.instance.metadata"
@@ -17,7 +17,7 @@ def get_databricks_node_info() -> Optional[NodeInfo]:
             external_cluster_id=properties["spark.databricks.clusterUsageTags.clusterId"],
             is_master=instance_id == driver_instance_id,
             provider=provider,
-            bigdata_platform="databricks",
+            bigdata_platform=BigDataPlatform.DATABRICKS,
             properties=properties,
         )
     return None
@@ -48,7 +48,7 @@ def _get_deploy_conf() -> Optional[Dict[str, str]]:
 
 def _resolve_cloud_provider(provider: str) -> CloudProvider:
     if provider == "AWS":
-        return "aws"
+        return CloudProvider.AWS
     elif provider == "GCP":
-        return "gcp"
-    return "unknown"
+        return CloudProvider.GCP
+    return CloudProvider.UNKOWN

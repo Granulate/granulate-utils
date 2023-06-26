@@ -8,7 +8,7 @@ class DatabricksNodeMock(NodeMockBase):
     def __init__(
         self,
         *,
-        provider: CloudProvider = "aws",
+        provider: CloudProvider = CloudProvider.AWS,
         cluster_id: str = "",
         instance_id: str = "",
         is_master: bool = False,
