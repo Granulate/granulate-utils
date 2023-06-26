@@ -128,7 +128,7 @@ class ConfigFeederClient:
             ),
             allow_existing=True,
         )
-        response = CreateClusterResponse(**self._api_request("POST", "/clusters", request))
+        response = CreateClusterResponse.parse_obj(self._api_request("POST", "/clusters", request))
         self._cluster_id = response.cluster.id
 
     def _get_configs_request(self, configs: CollectionResult) -> Optional[CreateNodeConfigsRequest]:
