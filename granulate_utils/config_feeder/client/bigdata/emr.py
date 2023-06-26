@@ -19,7 +19,7 @@ def get_emr_node_info() -> Optional[NodeInfo]:
 def _get_emr_job_info() -> Optional[Dict[str, str]]:
     try:
         with open("/mnt/var/lib/info/job-flow.json", "r") as f:
-            obj = json.loads(f.read())
+            obj = json.load(f)
             if isinstance(obj, dict):
                 return obj
     except FileNotFoundError:
