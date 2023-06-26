@@ -24,6 +24,14 @@ def get_databricks_node_info() -> Optional[NodeInfo]:
 
 
 def _get_deploy_conf() -> Optional[Dict[str, str]]:
+    """
+    Reads dataproc properties from deploy.conf
+
+    e.g.
+
+      spark.databricks.clusterUsageTags.clusterId = "0523-113117-1f8u0192"
+      databricks.instance.metadata.instanceId = "i-000e86ee86c521650"
+    """
     try:
         with open("/databricks/common/conf/deploy.conf", "r") as f:
             result = {}
@@ -31,7 +39,7 @@ def _get_deploy_conf() -> Optional[Dict[str, str]]:
                 line = line.strip()
                 if line.startswith(INSTANCE_KEY_PREFIX) or line.startswith(CLUSTER_KEY_PREFIX):
                     key, value = line.split("=")
-                    result[key.strip()] = value.strip()[1:-1]
+                    result[key.strip()] = value.strip('"')
             return result
     except FileNotFoundError:
         pass
