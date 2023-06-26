@@ -183,3 +183,8 @@ def get_libc_type(elf: ELFType) -> LibcType:
             return LibcType.STATIC_LIBC
 
         return LibcType.STATIC_NO_LIBC
+
+
+def elf_is_stripped(elf: ELFType) -> bool:
+    with open_elf(elf) as elf:
+        return elf.get_section_by_name(".symtab") is None
