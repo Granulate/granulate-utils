@@ -20,42 +20,42 @@ class BusinessLogicException(Exception):
         super().__init__(message)
 
 
-class InvalidIdException(BusinessException):
+class InvalidIdException(BusinessLogicException):
     def __init__(self, message: str) -> None:
         super().__init__(INVALID_ID, message, 400)
 
 
-class ServiceNotFoundException(BusinessException):
+class ServiceNotFoundException(BusinessLogicException):
     def __init__(self, message: str) -> None:
         super().__init__(SERVICE_NOT_FOUND, message, 404)
 
 
-class ClusterNotFoundException(BusinessException):
+class ClusterNotFoundException(BusinessLogicException):
     def __init__(self, message: str) -> None:
         super().__init__(CLUSTER_NOT_FOUND, message, 404)
 
 
-class ClusterExistsException(BusinessException):
+class ClusterExistsException(BusinessLogicException):
     def __init__(self, message: str) -> None:
         super().__init__(CLUSTER_EXISTS, message, 400)
 
 
-class NodeNotFoundException(BusinessException):
+class NodeNotFoundException(BusinessLogicException):
     def __init__(self, message: str) -> None:
         super().__init__(NODE_NOT_FOUND, message, 404)
 
 
-class NodeExistsException(BusinessException):
+class NodeExistsException(BusinessLogicException):
     def __init__(self, message: str) -> None:
         super().__init__(NODE_EXISTS, message, 400)
 
 
-class InvalidTokenException(BusinessException):
+class InvalidTokenException(BusinessLogicException):
     def __init__(self, message: str) -> None:
         super().__init__(INVALID_TOKEN, message, 401)
 
 
-class AccessDeniedException(BusinessException):
+class AccessDeniedException(BusinessLogicException):
     def __init__(self, message: str) -> None:
         super().__init__(ACCESS_DENIED, message, 403)
 
@@ -75,4 +75,4 @@ EXCEPTIONS = {
 def raise_for_code(code: str, message: str) -> None:
     if code in EXCEPTIONS:
         raise EXCEPTIONS[code](message)
-    raise BusinessException(code, message, 400)
+    raise BusinessLogicException(code, message, 400)
