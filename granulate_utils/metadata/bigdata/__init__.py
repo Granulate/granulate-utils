@@ -13,6 +13,9 @@ class BigDataInfo:
 
 
 def get_bigdata_info() -> Optional[BigDataInfo]:
+    """
+    Before applying any change, please consider that this function should be non-blocking, and fairly quick.
+    """
     if emr_version := get_emr_version():
         return BigDataInfo("emr", emr_version)
     elif databricks_version := get_databricks_version():
