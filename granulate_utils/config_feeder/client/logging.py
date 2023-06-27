@@ -15,6 +15,6 @@ class Extra(logging.Filter):
 def get_logger() -> logging.Logger:
     logger = logging.getLogger(LOGGER_NAME)
     logger.addFilter(Extra())
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
     logger.addHandler(logging.NullHandler())
     return logger
