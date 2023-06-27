@@ -19,7 +19,7 @@ class DataprocNodeMock(NodeMockBase):
     ) -> None:
         super().__init__()
 
-        metadata = {
+        self.metadata = {
             "id": instance_id,
             "attributes": {
                 "dataproc-cluster-uuid": cluster_uuid,
@@ -29,10 +29,8 @@ class DataprocNodeMock(NodeMockBase):
             },
         }
 
-        self.mock_command_stdout(
-            'curl "http://metadata.google.internal/computeMetadata/v1/instance/?recursive=true" -H "Metadata-Flavor: Google"',  # noqa: E501
-            json.dumps(metadata).encode("utf-8"),
-        )
+        url = "http://metadata.google.internal/computeMetadata/v1/instance/?recursive=true"
+        self.mock_http_response("GET", url, {"json": self.metadata})
 
         self.mock_command_stdout(
             f"gcloud dataproc clusters describe {cluster_name} --region={region} --format=json",  # noqa: E501

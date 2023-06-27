@@ -4,6 +4,8 @@ from abc import ABC
 from typing import Any, Callable, ContextManager, Dict, List, Tuple, TypeVar
 from unittest.mock import Mock, mock_open, patch
 
+from requests_mock.mocker import Mocker
+
 from granulate_utils.config_feeder.client.bigdata import get_node_info
 from granulate_utils.config_feeder.core.models.node import NodeInfo
 
@@ -14,6 +16,7 @@ class NodeMockBase(ABC):
     def __init__(self) -> None:
         self._files: Dict[str, str] = {}
         self._stdout: Dict[str, bytes | str] = {}
+        self._requests: List[Tuple[str, str, Dict[str, Any]]] = []
         self._contexts: List[Tuple[ContextManager[Any], Callable[[Any], None] | None]] = []
 
     @property
@@ -28,6 +31,10 @@ class NodeMockBase(ABC):
 
     def mock_command_stdout(self: T, cmd: str, stdout: bytes | str) -> T:
         self._stdout[cmd] = stdout
+        return self
+
+    def mock_http_response(self: T, method: str, url: str, response: Dict[str, Any]) -> T:
+        self._requests.append((method, url, response))
         return self
 
     def add_context(self: T, ctx: ContextManager[Any], fn: Callable[[Any], None] | None = None) -> T:
@@ -57,6 +64,10 @@ class NodeMockBase(ABC):
         mock.stdout = self._stdout[cmd]
         return mock
 
+    def _mock_http_response(self, mock: Any) -> None:
+        for method, url, response in self._requests:
+            mock.request(method, url, **response)
+
     def __enter__(self: T) -> T:
         self.add_context(
             patch(
@@ -76,6 +87,7 @@ class NodeMockBase(ABC):
                 self._mock_subprocess_run_stdout,
             ),
         )
+        self.add_context(Mocker(), self._mock_http_response)
 
         for ctx, fn in self._contexts:
             value = ctx.__enter__()

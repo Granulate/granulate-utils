@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from requests.exceptions import ConnectionError
-from requests_mock.mocker import Mocker
 
 from granulate_utils.config_feeder.client.yarn.utils import RM_DEFAULT_ADDRESS
 from granulate_utils.config_feeder.core.models.node import NodeInfo
@@ -32,8 +31,6 @@ class YarnNodeMock(NodeMockBase):
             if provider == "aws"
             else DataprocNodeMock(cluster_uuid=cluster_uuid, instance_id=instance_id, is_master=is_master)
         )
-        self._web_address = web_address
-        self._response = response
         self._configure_properties(properties)
 
         self._node_mock.mock_file("/home/hadoop/hadoop/etc/hadoop/yarn-site.xml", yarn_site_xml)
@@ -48,7 +45,11 @@ class YarnNodeMock(NodeMockBase):
             ),
         )
 
-        self._node_mock.add_context(Mocker(), self._configure_api_mock)
+        if web_address != RM_DEFAULT_ADDRESS:
+            self._node_mock.mock_http_response("GET", f"{RM_DEFAULT_ADDRESS}/conf", {"exc": ConnectionError})
+
+        response = response or {"json": {"properties": self._properties}}
+        self._node_mock.mock_http_response("GET", f"{web_address}/conf", response)
 
     @property
     def node_info(self) -> NodeInfo:
@@ -71,13 +72,6 @@ class YarnNodeMock(NodeMockBase):
         self.expected_config = {
             "properties": [{k: v for k, v in prop.items() if k != "isFinal"} for prop in self._properties]
         }
-
-    def _configure_api_mock(self, mock: Any) -> None:
-        if self._web_address != RM_DEFAULT_ADDRESS:
-            mock.get(f"{RM_DEFAULT_ADDRESS}/conf", exc=ConnectionError)
-
-        response = self._response or {"json": {"properties": self._properties}}
-        mock.get(f"{self._web_address}/conf", **response)
 
     def __enter__(self) -> YarnNodeMock:
         self._node_mock.__enter__()
