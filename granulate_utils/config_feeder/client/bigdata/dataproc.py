@@ -9,6 +9,9 @@ from granulate_utils.config_feeder.core.models.node import NodeInfo
 
 def get_dataproc_node_info() -> Optional[NodeInfo]:
     """
+    https://cloud.google.com/compute/docs/metadata/querying-metadata
+    https://cloud.google.com/dataproc/docs/concepts/configuring-clusters/metadata
+
     tested on Dataproc 2.0-debian10
     """
     try:
