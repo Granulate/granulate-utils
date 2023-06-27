@@ -12,7 +12,7 @@ NODE_NOT_FOUND = "NODE_NOT_FOUND"
 NODE_EXISTS = "NODE_EXISTS"
 
 
-class BusinessException(Exception):
+class BusinessLogicException(Exception):
     def __init__(self, code: str, message: str, status_code: int) -> None:
         self.code = code
         self.message = message
