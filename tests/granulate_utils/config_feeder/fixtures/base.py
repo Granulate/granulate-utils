@@ -1,15 +1,13 @@
 from __future__ import annotations
 
 from abc import ABC
-from typing import Any, Callable, ContextManager, Dict, List, Tuple, TypeVar
+from typing import Any, Callable, ContextManager, Dict, List, Tuple
 from unittest.mock import Mock, mock_open, patch
 
 from requests_mock.mocker import Mocker
 
 from granulate_utils.config_feeder.client.bigdata import get_node_info
 from granulate_utils.config_feeder.core.models.node import NodeInfo
-
-T = TypeVar("T", bound="NodeMockBase")
 
 
 class NodeMockBase(ABC):
@@ -25,19 +23,21 @@ class NodeMockBase(ABC):
         assert node_info is not None
         return node_info
 
-    def mock_file(self: T, fname: str, content: str) -> NodeMockBase:
+    def mock_file(self: NodeMockBase, fname: str, content: str) -> NodeMockBase:
         self._files[fname] = content
         return self
 
-    def mock_command_stdout(self: T, cmd: str, stdout: bytes | str) -> T:
+    def mock_command_stdout(self: NodeMockBase, cmd: str, stdout: bytes | str) -> NodeMockBase:
         self._stdout[cmd] = stdout
         return self
 
-    def mock_http_response(self: T, method: str, url: str, response: Dict[str, Any]) -> T:
+    def mock_http_response(self: NodeMockBase, method: str, url: str, response: Dict[str, Any]) -> NodeMockBase:
         self._requests.append((method, url, response))
         return self
 
-    def add_context(self: T, ctx: ContextManager[Any], fn: Callable[[Any], None] | None = None) -> T:
+    def add_context(
+        self: NodeMockBase, ctx: ContextManager[Any], fn: Callable[[Any], None] | None = None
+    ) -> NodeMockBase:
         self._contexts.append((ctx, fn))
         return self
 
@@ -68,7 +68,7 @@ class NodeMockBase(ABC):
         for method, url, response in self._requests:
             mock.request(method, url, **response)
 
-    def __enter__(self: T) -> T:
+    def __enter__(self: NodeMockBase) -> NodeMockBase:
         self.add_context(
             patch(
                 "builtins.open",
