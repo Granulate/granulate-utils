@@ -35,6 +35,6 @@ def _get_instance_id() -> str:
 
 def _get_is_master() -> bool:
     with open("/mnt/var/lib/info/instance.json", "r") as f:
-        obj = json.loads(f.read())
+        obj = json.load(f)
         result: bool = obj["isMaster"]
         return result
