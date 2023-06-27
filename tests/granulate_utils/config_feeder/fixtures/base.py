@@ -25,7 +25,7 @@ class NodeMockBase(ABC):
         assert node_info is not None
         return node_info
 
-    def mock_file(self: T, fname: str, content: str) -> T:
+    def mock_file(self: T, fname: str, content: str) -> NodeMockBase:
         self._files[fname] = content
         return self
 
