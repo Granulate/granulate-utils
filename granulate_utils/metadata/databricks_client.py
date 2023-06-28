@@ -16,8 +16,25 @@ from granulate_utils.exceptions import DatabricksJobNameDiscoverException
 
 HOST_KEY_NAME = "*.sink.ganglia.host"
 DATABRICKS_METRICS_PROP_PATH = "/databricks/spark/conf/metrics.properties"
-CLUSTER_ALL_TAGS_PROP = "spark.databricks.clusterUsageTags.clusterAllTags"
-CLUSTER_NAME_PROP = "spark.databricks.clusterUsageTags.clusterName"
+CLUSTER_USAGE_ALL_TAGS_PROP = "spark.databricks.clusterUsageTags.clusterAllTags"
+CLUSTER_USAGE_CLUSTER_NAME_PROP = "spark.databricks.clusterUsageTags.clusterName"
+CLUSTER_USAGE_RELEVANT_TAGS_PROPS = [
+    "spark.databricks.clusterUsageTags.cloudProvider",
+    "spark.databricks.clusterUsageTags.clusterAvailability",
+    "spark.databricks.clusterUsageTags.clusterCreator",
+    "spark.databricks.clusterUsageTags.clusterFirstOnDemand",
+    "spark.databricks.clusterUsageTags.clusterMaxWorkers",
+    "spark.databricks.clusterUsageTags.clusterMinWorkers",
+    "spark.databricks.clusterUsageTags.clusterNodeType",
+    "spark.databricks.clusterUsageTags.clusterScalingType",
+    "spark.databricks.clusterUsageTags.clusterSizeType",
+    "spark.databricks.clusterUsageTags.clusterSku",
+    "spark.databricks.clusterUsageTags.clusterSpotBidMaxPrice",
+    "spark.databricks.clusterUsageTags.clusterTargetWorkers",
+    "spark.databricks.clusterUsageTags.clusterWorkers",
+    "spark.databricks.clusterUsageTags.driverNodeType",
+]
+DATABRICKS_REDACTED_STR = "redacted"
 SPARKUI_APPS_URL = "http://{}/api/v1/applications"
 REQUEST_TIMEOUT = 5
 JOB_NAME_KEY = "RunName"
@@ -70,7 +87,8 @@ class DBXWebUIEnvWrapper:
             try:
                 if cluster_all_props := self._cluster_all_tags_metadata():
                     self.logger.info(
-                        "Successfully got relevant cluster tags metadata", cluster_all_props=cluster_all_props
+                        "Successfully got relevant cluster tags metadata",
+                        cluster_all_props=cluster_all_props,
                     )
                     return cluster_all_props
                 else:
@@ -135,18 +153,6 @@ class DBXWebUIEnvWrapper:
             raise DatabricksJobNameDiscoverException(f"Environment request failed {response.text=}") from e
         return env
 
-    @staticmethod
-    def _extract_service_name_candidates(spark_properties: Any) -> Dict[str, str]:
-        # Creating a dict of the relevant properties and their values.
-        relevant_props = [CLUSTER_ALL_TAGS_PROP, CLUSTER_NAME_PROP]
-        service_name_prop_candidates = {prop[0]: prop[1] for prop in spark_properties if prop[0] in relevant_props}
-        if len(service_name_prop_candidates) == 0:
-            # We expect at least one of the properties to be present.
-            raise DatabricksJobNameDiscoverException(
-                f"Failed to create dict of relevant properties {spark_properties=}"
-            )
-        return service_name_prop_candidates
-
     def _cluster_all_tags_metadata(self) -> Optional[Dict[str, str]]:
         """
         Returns `includes spark.databricks.clusterUsageTags.clusterAllTags` tags as `Dict`.
@@ -173,26 +179,45 @@ class DBXWebUIEnvWrapper:
         spark_properties = full_spark_app_env.get("sparkProperties")
         if spark_properties is None:
             raise DatabricksJobNameDiscoverException(f"sparkProperties was not found in {full_spark_app_env=}")
-        service_name_prop_candidates = self._extract_service_name_candidates(spark_properties)
+
+        # Convert from [[key, val], [key, val]] to {key: val, key: val}
+        try:
+            spark_properties = dict(spark_properties)
+        except Exception as e:
+            raise DatabricksJobNameDiscoverException(f"Failed to parse as dict {full_spark_app_env=}") from e
 
         # First, trying to extract `CLUSTER_TAGS_KEY` property, in case not redacted.
+        result: Dict[str, str] = {}
         if (
-            cluster_all_tags_value := service_name_prop_candidates.get(CLUSTER_ALL_TAGS_PROP)
-        ) is not None and "redacted" not in cluster_all_tags_value:
+            cluster_all_tags_value := spark_properties.get(CLUSTER_USAGE_ALL_TAGS_PROP)
+        ) is not None and DATABRICKS_REDACTED_STR not in cluster_all_tags_value:
             try:
                 cluster_all_tags_value_json = json.loads(cluster_all_tags_value)
             except Exception as e:
                 raise DatabricksJobNameDiscoverException(f"Failed to parse {cluster_all_tags_value}") from e
-            return self._apply_pattern(
+
+            result.update(
                 {cluster_all_tag["key"]: cluster_all_tag["value"] for cluster_all_tag in cluster_all_tags_value_json}
             )
-        # As a fallback, trying to extract `CLUSTER_NAME_PROP` property.
-        elif (cluster_name_value := service_name_prop_candidates.get(CLUSTER_NAME_PROP)) is not None:
-            return self._apply_pattern({CLUSTER_NAME_KEY: cluster_name_value})
+        # As a fallback, trying to extract `CLUSTER_USAGE_CLUSTER_NAME_PROP` property.
+        elif (cluster_name_value := spark_properties.get(CLUSTER_USAGE_CLUSTER_NAME_PROP)) is not None:
+            result[CLUSTER_NAME_KEY] = cluster_name_value
+
         else:
+            # We expect at least one of the properties to be present.
             raise DatabricksJobNameDiscoverException(
-                f"Failed to extract {CLUSTER_ALL_TAGS_PROP} or {CLUSTER_NAME_PROP} from {spark_properties=}"
+                f"Failed to extract {CLUSTER_USAGE_ALL_TAGS_PROP} or "
+                f"{CLUSTER_USAGE_CLUSTER_NAME_PROP} from {spark_properties=}"
             )
+
+        # Now add additional intereseting data to the metadata
+        for key in spark_properties:
+            if key in CLUSTER_USAGE_RELEVANT_TAGS_PROPS:
+                val = spark_properties[key]
+                if DATABRICKS_REDACTED_STR not in val:
+                    result[key] = val
+
+        return self._apply_pattern(result)
 
     @staticmethod
     def _apply_pattern(metadata: Dict[str, str]) -> Dict[str, str]:
