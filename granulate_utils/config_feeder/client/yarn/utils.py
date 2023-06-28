@@ -1,10 +1,9 @@
 import asyncio
+import logging
 import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
-
-from granulate_utils.config_feeder.client.logging import get_logger
+from typing import Any, Callable, Dict, List, Optional, Union
 
 REGEX_YARN_VAR = re.compile(r"\${([^}]+)}")
 
@@ -20,24 +19,22 @@ RM_ADDRESS_PROPERTY_KEY = "yarn.resourcemanager.webapp.address"
 SENSITIVE_KEYS = ("password", "secret", "keytab", "principal")
 MASK = "*****"
 
-logger = get_logger()
 
-
-async def detect_resource_manager_address() -> Optional[str]:
+async def detect_resource_manager_address(*, logger: Union[logging.Logger, logging.LoggerAdapter]) -> Optional[str]:
     """
     Look for ResourceManager address in yarn-site.xml
     """
-    if yarn_home_dir := await _find_yarn_home_dir():
+    if yarn_home_dir := await _find_yarn_home_dir(logger=logger):
         logger.debug(f"found YARN home dir: {yarn_home_dir}")
         yarn_site_xml_file = Path(yarn_home_dir).joinpath("./etc/hadoop/yarn-site.xml")
         logger.debug(f"looking for {RM_ADDRESS_PROPERTY_KEY} in {yarn_site_xml_file}")
-        config = _read_config_file(yarn_site_xml_file)
+        config = _read_config_file(yarn_site_xml_file, logger=logger)
         if rm_host := config.get(RM_ADDRESS_PROPERTY_KEY):
-            return _resolve_variables(config, rm_host)
+            return _resolve_variables(config, rm_host, logger=logger)
     return None
 
 
-async def _find_yarn_home_dir() -> Optional[str]:
+async def _find_yarn_home_dir(*, logger: Union[logging.Logger, logging.LoggerAdapter]) -> Optional[str]:
     """
     Find YARN home directory from command line arguments
     """
@@ -56,7 +53,7 @@ async def _find_yarn_home_dir() -> Optional[str]:
     return None
 
 
-def _read_config_file(xml_file: Path) -> Dict[str, str]:
+def _read_config_file(xml_file: Path, *, logger: Union[logging.Logger, logging.LoggerAdapter]) -> Dict[str, str]:
     """
     Read YARN config from file
     """
@@ -75,7 +72,9 @@ def _read_config_file(xml_file: Path) -> Dict[str, str]:
     return {}
 
 
-def _resolve_variables(config: Dict[str, Any], value: str) -> str:
+def _resolve_variables(
+    config: Dict[str, Any], value: str, *, logger: Union[logging.Logger, logging.LoggerAdapter]
+) -> str:
     """
     Resolve variables in config value
 
@@ -109,7 +108,10 @@ def get_yarn_properties(config: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def _get_properties(config: Dict[str, Any], predicate: Callable[[Dict[str, Any]], bool]) -> List[Dict[str, Any]]:
+def _get_properties(
+    config: Dict[str, Any],
+    predicate: Callable[[Dict[str, Any]], bool],
+) -> List[Dict[str, Any]]:
     """
     Return only properties that match the predicate
     """

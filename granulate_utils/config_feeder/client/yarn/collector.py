@@ -1,7 +1,8 @@
 import asyncio
 import contextvars
 import functools
-from typing import Any, Dict, Optional, cast
+import logging
+from typing import Any, Dict, Optional, Union, cast
 
 from requests import Session
 from requests.exceptions import ConnectionError
@@ -17,11 +18,10 @@ from granulate_utils.config_feeder.client.yarn.utils import (
 )
 from granulate_utils.config_feeder.core.models.node import NodeInfo
 
-logger = get_logger()
-
 
 class YarnConfigCollector:
-    def __init__(self, *, max_retries: int = 20) -> None:
+    def __init__(self, *, max_retries: int = 20, logger: Union[logging.Logger, logging.LoggerAdapter] = None) -> None:
+        self.logger = logger or get_logger()
         self._init_session()
         self._resource_manager_address = RM_DEFAULT_ADDRESS
         self._is_address_detected = False
@@ -42,7 +42,7 @@ class YarnConfigCollector:
                 config=config,
             )
 
-        logger.error("failed to collect node config", extra=node_info.__dict__)
+        self.logger.error("failed to collect node config", extra=node_info.__dict__)
         return None
 
     async def _get_master_config(self) -> Optional[Dict[str, Any]]:
@@ -52,16 +52,16 @@ class YarnConfigCollector:
         except ConnectionError:
             self._failed_connections += 1
             if self._is_address_detected:
-                logger.error(f"could not connect to {self._resource_manager_address}")
+                self.logger.error(f"could not connect to {self._resource_manager_address}")
                 return None
-            logger.warning(f"ResourceManager not found at {self._resource_manager_address}")
-            if address := await detect_resource_manager_address():
+            self.logger.warning(f"ResourceManager not found at {self._resource_manager_address}")
+            if address := await detect_resource_manager_address(logger=self.logger):
                 self._is_address_detected = True
                 self._resource_manager_address = address
-                logger.debug(f"found ResourceManager address: {address}")
+                self.logger.debug(f"found ResourceManager address: {address}")
                 config = await self._fetch(f"{address}/conf")
             else:
-                logger.error("could not resolve ResourceManager address")
+                self.logger.error("could not resolve ResourceManager address")
         return get_yarn_properties(config) if config else None
 
     async def _get_worker_config(self) -> Optional[Dict[str, Any]]:
@@ -69,13 +69,13 @@ class YarnConfigCollector:
             return get_yarn_properties(await self._fetch(f"{WORKER_ADDRESS}/conf"))
         except ConnectionError:
             self._failed_connections += 1
-            logger.warning(f"failed to connect to {WORKER_ADDRESS}")
+            self.logger.warning(f"failed to connect to {WORKER_ADDRESS}")
         return None
 
     async def _fetch(self, url: str) -> Dict[str, Any]:
         if not url.startswith("http"):
             url = f"http://{url}"
-        logger.debug(f"fetching {url}")
+        self.logger.debug(f"fetching {url}")
         coro = to_thread(self._session.request, "GET", url)
         resp = await asyncio.create_task(coro)
         resp.raise_for_status()

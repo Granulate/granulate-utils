@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 from collections import defaultdict
-from typing import Any, DefaultDict, Dict, Optional, cast
+from typing import Any, DefaultDict, Dict, Optional, Union, cast
 
 from pydantic import BaseModel
 from requests import Session
@@ -28,8 +28,6 @@ from granulate_utils.config_feeder.core.models.yarn import NodeYarnConfigCreate
 DEFAULT_API_SERVER_ADDRESS = "https://api.granulate.io/config-feeder/api/v1"
 DEFAULT_REQUEST_TIMEOUT = 3
 
-logger = get_logger()
-
 
 class ConfigFeederClient:
     def __init__(
@@ -37,11 +35,13 @@ class ConfigFeederClient:
         token: str,
         service: str,
         *,
+        logger: Union[logging.Logger, logging.LoggerAdapter] = None,
         server_address: Optional[str] = None,
         yarn: bool = True,
     ) -> None:
         if not token or not service:
             raise ClientError("Token and service must be provided")
+        self.logger = logger or get_logger()
         self._token = token
         self._service = service
         self._cluster_id: Optional[str] = None
@@ -51,18 +51,14 @@ class ConfigFeederClient:
         self._last_hash: DefaultDict[ConfigType, Dict[str, str]] = defaultdict(dict)
         self._init_api_session()
 
-    @property
-    def logger(self) -> logging.Logger:
-        return get_logger()
-
     def collect(self) -> None:
         if (node_info := get_node_info()) is None:
-            logger.warning("not a Big Data host, skipping")
+            self.logger.warning("not a Big Data host, skipping")
             return None
 
         collection_result = asyncio.run(self._collect(node_info))
         if collection_result.is_empty:
-            logger.info("no configs to submit")
+            self.logger.info("no configs to submit")
             return None
 
         self._submit_node_configs(collection_result)
@@ -76,9 +72,9 @@ class ConfigFeederClient:
     async def _collect_yarn_config(self, node_info: NodeInfo) -> Optional[YarnConfig]:
         if not self._is_yarn_enabled:
             return None
-        logger.info("YARN config collection starting")
+        self.logger.info("YARN config collection starting")
         yarn_config = await self._yarn_collector.collect(node_info)
-        logger.info("YARN config collection finished")
+        self.logger.info("YARN config collection finished")
         return yarn_config
 
     def _submit_node_configs(
@@ -88,11 +84,11 @@ class ConfigFeederClient:
         external_id = collection_result.node.external_id
         request = self._get_configs_request(collection_result)
         if request is None:
-            logger.info(f"skipping node {external_id}, configs are up to date")
+            self.logger.info(f"skipping node {external_id}, configs are up to date")
             return None
 
         node_id = self._register_node(collection_result.node)
-        logger.info(f"sending configs for node {external_id}")
+        self.logger.info(f"sending configs for node {external_id}")
         response = CreateNodeConfigsResponse(**self._api_request("POST", f"/nodes/{node_id}/configs", request))
 
         if response.yarn_config is not None:
@@ -107,7 +103,7 @@ class ConfigFeederClient:
             self._register_cluster(node.provider, node.external_cluster_id)
         assert self._cluster_id is not None
 
-        logger.debug(f"registering node {node.external_id}")
+        self.logger.debug(f"registering node {node.external_id}")
         request = CreateNodeRequest(
             node=NodeCreate(
                 external_id=node.external_id,
@@ -119,7 +115,7 @@ class ConfigFeederClient:
         return response.node.id
 
     def _register_cluster(self, provider: CloudProvider, external_id: str) -> None:
-        logger.debug(f"registering cluster {external_id}")
+        self.logger.debug(f"registering cluster {external_id}")
         request = CreateClusterRequest(
             cluster=ClusterCreate(
                 service=self._service,
@@ -145,7 +141,7 @@ class ConfigFeederClient:
         if configs.yarn_config is None:
             return None
         if self._last_hash[ConfigType.YARN].get(configs.node.external_id) == configs.yarn_config_hash:
-            logger.debug("YARN config is up to date")
+            self.logger.debug("YARN config is up to date")
             return None
         return NodeYarnConfigCreate(config_json=json.dumps(configs.yarn_config.config))
 

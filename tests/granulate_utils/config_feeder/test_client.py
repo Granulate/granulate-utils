@@ -115,6 +115,7 @@ def test_should_fail_with_api_error() -> None:
 def test_should_have_logger_with_null_handler() -> None:
     client = ConfigFeederClient("token1", "service1")
 
+    assert isinstance(client.logger, logging.Logger)
     assert len(client.logger.handlers) == 1
     assert isinstance(client.logger.handlers[0], type(logging.NullHandler()))
 
