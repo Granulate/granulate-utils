@@ -22,11 +22,11 @@ from granulate_utils.config_feeder.core.models.node import NodeInfo
 class YarnConfigCollector:
     def __init__(self, *, max_retries: int = 20, logger: Union[logging.Logger, logging.LoggerAdapter] = None) -> None:
         self.logger = logger or get_logger()
-        self._init_session()
         self._resource_manager_address = RM_DEFAULT_ADDRESS
         self._is_address_detected = False
         self._max_retries = max_retries
         self._failed_connections = 0
+        self._init_session()
 
     def _init_session(self) -> None:
         self._session = Session()
@@ -45,10 +45,13 @@ class YarnConfigCollector:
         self.logger.error("failed to collect node config", extra=node_info.__dict__)
         return None
 
-    async def _get_master_config(self) -> Optional[Dict[str, Any]]:
-        config: Optional[Dict[str, Any]] = None
+    async def rm_request(self, path: str) -> Optional[Dict[str, Any]]:
+        if self._failed_connections >= self._max_retries:
+            raise MaximumRetriesExceeded("maximum number of failed connections reached", self._max_retries)
+
+        result: Optional[Dict[str, Any]] = None
         try:
-            config = await self._fetch(f"{self._resource_manager_address}/conf")
+            result = await self._fetch(f"{self._resource_manager_address}{path}")
         except ConnectionError:
             self._failed_connections += 1
             if self._is_address_detected:
@@ -59,9 +62,13 @@ class YarnConfigCollector:
                 self._is_address_detected = True
                 self._resource_manager_address = address
                 self.logger.debug(f"found ResourceManager address: {address}")
-                config = await self._fetch(f"{address}/conf")
+                result = await self._fetch(f"{address}{path}")
             else:
                 self.logger.error("could not resolve ResourceManager address")
+        return result
+
+    async def _get_master_config(self) -> Optional[Dict[str, Any]]:
+        config: Optional[Dict[str, Any]] = await self.rm_request("/conf")
         return get_yarn_properties(config) if config else None
 
     async def _get_worker_config(self) -> Optional[Dict[str, Any]]:
