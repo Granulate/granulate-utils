@@ -4,6 +4,7 @@
 #
 
 import logging
+import os
 from dataclasses import dataclass
 from http.client import NOT_FOUND
 from typing import Dict, List, Optional, Union
@@ -196,3 +197,11 @@ def get_static_cloud_instance_metadata(logger: Union[logging.LoggerAdapter, logg
         " The most likely reason is that we're not installed on a an AWS, GCP or Azure instance."
     )
     return None
+
+
+def get_aws_execution_env() -> Optional[str]:
+    """
+    Possible values include:
+    - AWS_ECS_FARGATE
+    """
+    return os.environ.get("AWS_EXECUTION_ENV")

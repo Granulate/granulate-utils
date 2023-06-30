@@ -3,12 +3,14 @@ import contextvars
 import functools
 import logging
 from abc import ABC
-from typing import Any, Dict, Union, cast
+from typing import TypeVar, Union, cast
 
 from requests import Session
 
 from granulate_utils.config_feeder.client.exceptions import MaximumRetriesExceeded
 from granulate_utils.config_feeder.client.logging import get_logger
+
+T = TypeVar("T")
 
 
 class ConfigCollectorBase(ABC):
@@ -22,7 +24,7 @@ class ConfigCollectorBase(ABC):
         self._session = Session()
         self._session.headers.update({"Accept": "application/json"})
 
-    async def _fetch(self, url: str) -> Dict[str, Any]:
+    async def _fetch(self, url: str) -> T:
         if self._failed_requests >= self._max_retries:
             raise MaximumRetriesExceeded("maximum number of failed requests reached", self._max_retries)
         try:
@@ -32,7 +34,7 @@ class ConfigCollectorBase(ABC):
             coro = to_thread(self._session.request, "GET", url)
             resp = await asyncio.create_task(coro)
             resp.raise_for_status()
-            result = cast(Dict[str, Any], resp.json())
+            result = cast(T, resp.json())
             self._failed_requests = 0
             return result
         except Exception:
