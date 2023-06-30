@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 from requests.exceptions import ConnectionError
 
@@ -12,7 +12,7 @@ class SparkConfigCollector(ConfigCollectorBase):
         super().__init__(max_retries=max_retries, logger=logger)
         self._history_address = SPARK_HISTORY_DEFAULT_ADDRESS
 
-    async def history_request(self, path: str) -> Optional[Dict[str, Any]]:
+    async def history_request(self, path: str) -> Optional[Any]:
         try:
             return await self._fetch(f"{self._history_address}{path}")
         except ConnectionError:
