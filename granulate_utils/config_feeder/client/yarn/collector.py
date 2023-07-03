@@ -59,13 +59,23 @@ class YarnConfigCollector(ConfigCollectorBase):
         Get running ResourceManager configuration
 
         most recent config is returned
+
+        supported version: 2.9.0+
         """
-        config: Optional[Dict[str, Any]] = await self.rm_request("/conf")
-        return get_yarn_properties(config) if config else None
+        try:
+            config: Optional[Dict[str, Any]] = await self.rm_request("/conf")
+            return get_yarn_properties(config) if config else None
+        except Exception:
+            self.logger.error("failed to get ResourceManager config")
+            raise
 
     async def _get_worker_config(self) -> Optional[Dict[str, Any]]:
         """
         Get running node configuration
         """
-        config: Optional[Dict[str, Any]] = await self.node_request("/conf")
-        return get_yarn_properties(config) if config else None
+        try:
+            config: Optional[Dict[str, Any]] = await self.node_request("/conf")
+            return get_yarn_properties(config) if config else None
+        except Exception:
+            self.logger.error("failed to get node config")
+            raise
