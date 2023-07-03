@@ -55,9 +55,17 @@ class YarnConfigCollector(ConfigCollectorBase):
         return None
 
     async def _get_master_config(self) -> Optional[Dict[str, Any]]:
+        """
+        Get running ResourceManager configuration
+
+        most recent config is returned
+        """
         config: Optional[Dict[str, Any]] = await self.rm_request("/conf")
         return get_yarn_properties(config) if config else None
 
     async def _get_worker_config(self) -> Optional[Dict[str, Any]]:
+        """
+        Get running node configuration
+        """
         config: Optional[Dict[str, Any]] = await self.node_request("/conf")
         return get_yarn_properties(config) if config else None
