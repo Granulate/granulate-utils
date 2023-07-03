@@ -4,6 +4,7 @@ from typing import Any, Dict, List
 from pydantic import BaseModel
 
 from granulate_utils.config_feeder.core.models.cluster import BigDataPlatform, CloudProvider
+from granulate_utils.config_feeder.core.models.collection import CollectorType
 
 
 class NodeInfo(BaseModel):
@@ -16,6 +17,7 @@ class NodeInfo(BaseModel):
 
 
 class NodeBase(BaseModel):
+    collector: CollectorType
     external_id: str
     is_master: bool = False
 

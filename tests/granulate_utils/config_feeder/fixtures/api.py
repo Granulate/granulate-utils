@@ -48,6 +48,7 @@ class ApiMock:
                 "json": {
                     "cluster": {
                         "id": "cluster-1",
+                        "collector": "sagent",
                         "provider": "aws",
                         "external_id": "j-1234567890",
                         "ts": "2021-10-01T00:00:00Z",
@@ -63,6 +64,7 @@ class ApiMock:
                 "json": {
                     "node": {
                         "id": "node-1",
+                        "collector": "sagent",
                         "external_id": "i-1234567890",
                         "ts": "2021-10-01T00:00:00Z",
                     }

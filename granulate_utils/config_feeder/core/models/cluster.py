@@ -4,6 +4,8 @@ from typing import List
 
 from pydantic import BaseModel
 
+from granulate_utils.config_feeder.core.models.collection import CollectorType
+
 
 class BigDataPlatform(str, Enum):
     UNKOWN = "unknown"
@@ -19,6 +21,7 @@ class CloudProvider(str, Enum):
 
 
 class ClusterBase(BaseModel):
+    collector: CollectorType
     provider: CloudProvider
     external_id: str
 

@@ -3,8 +3,11 @@ from typing import Any, Dict, List
 
 from pydantic import BaseModel
 
+from granulate_utils.config_feeder.core.models.collection import CollectorType
+
 
 class NodeYarnConfigCreate(BaseModel):
+    collector: CollectorType
     config_json: str
 
 
