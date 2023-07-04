@@ -10,7 +10,6 @@ from requests.exceptions import ConnectionError, JSONDecodeError
 
 from granulate_utils.config_feeder.client.bigdata import get_node_info
 from granulate_utils.config_feeder.client.exceptions import APIError, ClientError
-from granulate_utils.config_feeder.client.logging import get_logger
 from granulate_utils.config_feeder.client.models import CollectionResult, ConfigType
 from granulate_utils.config_feeder.client.yarn.collector import YarnConfigCollector
 from granulate_utils.config_feeder.client.yarn.models import YarnConfig
@@ -36,21 +35,21 @@ class ConfigFeederClient:
         token: str,
         service: str,
         *,
-        logger: Union[logging.Logger, logging.LoggerAdapter] = None,
+        logger: Union[logging.Logger, logging.LoggerAdapter],
         server_address: Optional[str] = None,
         yarn: bool = True,
         collector=CollectorType.SAGENT,
     ) -> None:
         if not token or not service:
             raise ClientError("Token and service must be provided")
-        self.logger = logger or get_logger()
+        self.logger = logger
         self._token = token
         self._service = service
         self._cluster_id: Optional[str] = None
         self._collector = collector
         self._server_address: str = server_address.rstrip("/") if server_address else DEFAULT_API_SERVER_ADDRESS
         self._is_yarn_enabled = yarn
-        self._yarn_collector = YarnConfigCollector()
+        self._yarn_collector = YarnConfigCollector(logger=logger)
         self._last_hash: DefaultDict[ConfigType, Dict[str, str]] = defaultdict(dict)
         self._init_api_session()
 

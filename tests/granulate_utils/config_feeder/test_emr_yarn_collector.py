@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 from requests.exceptions import ConnectionError
 
@@ -8,7 +10,7 @@ from tests.granulate_utils.config_feeder.fixtures.yarn import YarnNodeMock
 
 
 @pytest.mark.asyncio
-async def test_collect_from_master_node() -> None:
+async def test_collect_from_master_node(logger: logging.Logger) -> None:
     job_flow_id = "j-1234567890"
     instance_id = "i-06828639fa954e04c"
 
@@ -28,13 +30,13 @@ async def test_collect_from_master_node() -> None:
         yarn_site_xml=yarn_site_xml,
         web_address="http://0.0.0.0:8001",
     ) as mock:
-        assert await YarnConfigCollector().collect(mock.node_info) == YarnConfig(
+        assert await YarnConfigCollector(logger=logger).collect(mock.node_info) == YarnConfig(
             config=mock.expected_config,
         )
 
 
 @pytest.mark.asyncio
-async def test_collect_from_worker_noder() -> None:
+async def test_collect_from_worker_noder(logger: logging.Logger) -> None:
     job_flow_id = "j-1234567890"
     instance_id = "i-0c97511ec7fa849a3"
 
@@ -45,7 +47,7 @@ async def test_collect_from_worker_noder() -> None:
         is_master=False,
         web_address="http://0.0.0.0:8042",
     ) as mock:
-        assert await YarnConfigCollector().collect(mock.node_info) == YarnConfig(
+        assert await YarnConfigCollector(logger=logger).collect(mock.node_info) == YarnConfig(
             config=mock.expected_config,
         )
 
@@ -58,7 +60,9 @@ async def test_collect_from_worker_noder() -> None:
     ],
 )
 @pytest.mark.asyncio
-async def test_should_fail_with_max_retries_exception(is_master: bool, web_address: str) -> None:
+async def test_should_fail_with_max_retries_exception(
+    is_master: bool, web_address: str, logger: logging.Logger
+) -> None:
     with YarnNodeMock(
         is_master=is_master,
         web_address=web_address,
@@ -66,13 +70,13 @@ async def test_should_fail_with_max_retries_exception(is_master: bool, web_addre
         response={"exc": ConnectionError},
     ) as mock:
         with pytest.raises(MaximumRetriesExceeded, match="maximum number of failed requests reached"):
-            collector = YarnConfigCollector(max_retries=3)
+            collector = YarnConfigCollector(max_retries=3, logger=logger)
             while True:
                 await collector.collect(mock.node_info)
 
 
 @pytest.mark.asyncio
-async def test_should_mask_sensitive_values() -> None:
+async def test_should_mask_sensitive_values(logger: logging.Logger) -> None:
     with YarnNodeMock(
         provider="aws",
         job_flow_id="j-1234567890",
@@ -87,7 +91,7 @@ async def test_should_mask_sensitive_values() -> None:
             }
         ],
     ) as mock:
-        result = await YarnConfigCollector().collect(mock.node_info)
+        result = await YarnConfigCollector(logger=logger).collect(mock.node_info)
 
         assert result is not None
         assert result.config == {

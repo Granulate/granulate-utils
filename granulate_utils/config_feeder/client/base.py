@@ -8,14 +8,13 @@ from typing import TypeVar, Union, cast
 from requests import Session
 
 from granulate_utils.config_feeder.client.exceptions import MaximumRetriesExceeded
-from granulate_utils.config_feeder.client.logging import get_logger
 
 T = TypeVar("T")
 
 
 class ConfigCollectorBase(ABC):
-    def __init__(self, *, max_retries: int = 20, logger: Union[logging.Logger, logging.LoggerAdapter] = None) -> None:
-        self.logger = logger or get_logger()
+    def __init__(self, *, max_retries: int = 20, logger: Union[logging.Logger, logging.LoggerAdapter]) -> None:
+        self.logger = logger
         self._max_retries = max_retries
         self._failed_requests = 0
         self._init_session()

@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 
 from granulate_utils.config_feeder.client.yarn.collector import YarnConfigCollector
@@ -6,7 +8,7 @@ from tests.granulate_utils.config_feeder.fixtures.yarn import YarnNodeMock
 
 
 @pytest.mark.asyncio
-async def test_collect_from_master_node() -> None:
+async def test_collect_from_master_node(logger: logging.Logger) -> None:
     instance_id = "7203450965080656748"
     cluster_uuid = "824afc19-cf18-4b23-99b0-51a6b20b35d"
 
@@ -16,13 +18,13 @@ async def test_collect_from_master_node() -> None:
         instance_id=instance_id,
         is_master=True,
     ) as mock:
-        assert await YarnConfigCollector().collect(mock.node_info) == YarnConfig(
+        assert await YarnConfigCollector(logger=logger).collect(mock.node_info) == YarnConfig(
             config=mock.expected_config,
         )
 
 
 @pytest.mark.asyncio
-async def test_collect_from_worker_noder() -> None:
+async def test_collect_from_worker_noder(logger: logging.Logger) -> None:
     instance_id = "3344294988448254828"
     cluster_uuid = "824afc19-cf18-4b23-99b0-51a6b20b35d"
 
@@ -33,6 +35,6 @@ async def test_collect_from_worker_noder() -> None:
         is_master=False,
         web_address="http://0.0.0.0:8042",
     ) as mock:
-        assert await YarnConfigCollector().collect(mock.node_info) == YarnConfig(
+        assert await YarnConfigCollector(logger=logger).collect(mock.node_info) == YarnConfig(
             config=mock.expected_config,
         )

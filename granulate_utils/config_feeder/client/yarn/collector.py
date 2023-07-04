@@ -15,7 +15,7 @@ from granulate_utils.config_feeder.core.models.node import NodeInfo
 
 
 class YarnConfigCollector(ConfigCollectorBase):
-    def __init__(self, *, max_retries: int = 20, logger: Union[logging.Logger, logging.LoggerAdapter] = None) -> None:
+    def __init__(self, *, max_retries: int = 20, logger: Union[logging.Logger, logging.LoggerAdapter]) -> None:
         super().__init__(max_retries=max_retries, logger=logger)
         self._resource_manager_address = RM_DEFAULT_ADDRESS
         self._is_address_detected = False

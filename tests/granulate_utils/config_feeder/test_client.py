@@ -13,11 +13,11 @@ from granulate_utils.config_feeder.core.errors import InvalidTokenException
 from tests.granulate_utils.config_feeder.fixtures.api import ApiMock
 
 
-def test_should_send_config_only_once_when_not_changed() -> None:
+def test_should_send_config_only_once_when_not_changed(logger: logging.Logger) -> None:
     with ApiMock(
         collect_yarn_config=mock_yarn_config,
     ) as mock:
-        client = ConfigFeederClient("token1", "service1")
+        client = ConfigFeederClient("token1", "service1", logger=logger)
 
         client.collect()
         client.collect()
@@ -52,7 +52,7 @@ def test_should_send_config_only_once_when_not_changed() -> None:
         }
 
 
-def test_should_send_config_only_when_changed() -> None:
+def test_should_send_config_only_when_changed(logger: logging.Logger) -> None:
     yarn_configs = [
         mock_yarn_config(thread_count=128),
         mock_yarn_config(thread_count=128),
@@ -60,7 +60,7 @@ def test_should_send_config_only_when_changed() -> None:
     ]
 
     with ApiMock(collect_yarn_config=lambda _: yarn_configs.pop()) as mock:
-        client = ConfigFeederClient("token1", "service1")
+        client = ConfigFeederClient("token1", "service1", logger=logger)
 
         client.collect()
         client.collect()
@@ -71,9 +71,9 @@ def test_should_send_config_only_when_changed() -> None:
         assert len(requests[f"{API_URL}/nodes/node-1/configs"]) == 2
 
 
-def test_should_not_send_anything() -> None:
+def test_should_not_send_anything(logger: logging.Logger) -> None:
     with ApiMock(collect_yarn_config=mock_yarn_config) as mock:
-        client = ConfigFeederClient("token1", "service1", yarn=False)
+        client = ConfigFeederClient("token1", "service1", yarn=False, logger=logger)
 
         client.collect()
         client.collect()
@@ -84,16 +84,16 @@ def test_should_not_send_anything() -> None:
         assert len(requests) == 0
 
 
-def test_should_fail_with_client_error() -> None:
+def test_should_fail_with_client_error(logger: logging.Logger) -> None:
     with ApiMock(
         collect_yarn_config=mock_yarn_config,
         register_cluster_response={"exc": ConnectionError("Connection refused")},
     ):
         with pytest.raises(ClientError, match=f"could not connect to {API_URL}"):
-            ConfigFeederClient("token1", "service1").collect()
+            ConfigFeederClient("token1", "service1", logger=logger).collect()
 
 
-def test_should_fail_with_invalid_token_exception() -> None:
+def test_should_fail_with_invalid_token_exception(logger: logging.Logger) -> None:
     with ApiMock(
         collect_yarn_config=mock_yarn_config,
         register_cluster_response={
@@ -102,24 +102,16 @@ def test_should_fail_with_invalid_token_exception() -> None:
         },
     ):
         with pytest.raises(InvalidTokenException, match="Invalid token"):
-            ConfigFeederClient("token1", "service1").collect()
+            ConfigFeederClient("token1", "service1", logger=logger).collect()
 
 
-def test_should_fail_with_api_error() -> None:
+def test_should_fail_with_api_error(logger: logging.Logger) -> None:
     with ApiMock(
         collect_yarn_config=mock_yarn_config,
         register_cluster_response={"status_code": 400, "text": "unexpected error"},
     ):
         with pytest.raises(APIError, match="400 unexpected error /clusters"):
-            ConfigFeederClient("token1", "service1").collect()
-
-
-def test_should_have_logger_with_null_handler() -> None:
-    client = ConfigFeederClient("token1", "service1")
-
-    assert isinstance(client.logger, logging.Logger)
-    assert len(client.logger.handlers) == 1
-    assert isinstance(client.logger.handlers[0], type(logging.NullHandler()))
+            ConfigFeederClient("token1", "service1", logger=logger).collect()
 
 
 def mock_yarn_config(*args: Any, thread_count: int = 64) -> YarnConfig:

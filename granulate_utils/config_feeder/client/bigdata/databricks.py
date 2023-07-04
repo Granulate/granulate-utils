@@ -15,7 +15,7 @@ def get_databricks_node_info() -> Optional[NodeInfo]:
         return NodeInfo(
             external_id=instance_id,
             external_cluster_id=properties["spark.databricks.clusterUsageTags.clusterId"],
-            is_master=instance_id == driver_instance_id,
+            is_master=(instance_id == driver_instance_id),
             provider=provider,
             bigdata_platform=BigDataPlatform.DATABRICKS,
             properties=properties,
