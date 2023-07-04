@@ -50,6 +50,7 @@ class ApiMock:
                         "id": "cluster-1",
                         "collector": "sagent",
                         "provider": "aws",
+                        "bigdata_platform": "emr",
                         "external_id": "j-1234567890",
                         "ts": "2021-10-01T00:00:00Z",
                     }

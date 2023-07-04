@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from typing import List
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
@@ -23,15 +23,18 @@ class CloudProvider(str, Enum):
 class ClusterBase(BaseModel):
     collector: CollectorType
     provider: CloudProvider
+    bigdata_platform: BigDataPlatform
     external_id: str
 
 
 class ClusterCreate(ClusterBase):
     service: str
+    properties: Optional[str] = None
 
 
 class Cluster(ClusterBase):
     id: str
+    properties: Optional[Dict[str, Any]]
     ts: datetime
 
 

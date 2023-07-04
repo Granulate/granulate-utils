@@ -16,6 +16,7 @@ from granulate_utils.config_feeder.client.yarn.models import YarnConfig
 from granulate_utils.config_feeder.core.errors import raise_for_code
 from granulate_utils.config_feeder.core.models.aggregation import CreateNodeConfigsRequest, CreateNodeConfigsResponse
 from granulate_utils.config_feeder.core.models.cluster import (
+    BigDataPlatform,
     CloudProvider,
     ClusterCreate,
     CreateClusterRequest,
@@ -102,7 +103,7 @@ class ConfigFeederClient:
         node: NodeInfo,
     ) -> str:
         if self._cluster_id is None:
-            self._register_cluster(node.provider, node.external_cluster_id)
+            self._register_cluster(node.provider, node.bigdata_platform, node.external_cluster_id)
         assert self._cluster_id is not None
 
         self.logger.debug(f"registering node {node.external_id}")
@@ -117,13 +118,14 @@ class ConfigFeederClient:
         response = CreateNodeResponse(**self._api_request("POST", f"/clusters/{self._cluster_id}/nodes", request))
         return response.node.id
 
-    def _register_cluster(self, provider: CloudProvider, external_id: str) -> None:
+    def _register_cluster(self, provider: CloudProvider, bigdata_platform: BigDataPlatform, external_id: str) -> None:
         self.logger.debug(f"registering cluster {external_id}")
         request = CreateClusterRequest(
             cluster=ClusterCreate(
                 collector=self._collector,
                 service=self._service,
                 provider=provider,
+                bigdata_platform=bigdata_platform,
                 external_id=external_id,
             ),
             allow_existing=True,

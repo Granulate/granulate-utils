@@ -31,6 +31,8 @@ def test_should_send_config_only_once_when_not_changed(logger: logging.Logger) -
                 "collector": "sagent",
                 "service": "service1",
                 "provider": "aws",
+                "bigdata_platform": "emr",
+                "properties": None,
                 "external_id": "j-1234567890",
             },
             "allow_existing": True,
