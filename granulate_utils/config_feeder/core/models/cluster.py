@@ -8,14 +8,14 @@ from granulate_utils.config_feeder.core.models.collection import CollectorType
 
 
 class BigDataPlatform(str, Enum):
-    UNKOWN = "unknown"
+    UNKNOWN = "unknown"
     DATAPROC = "dataproc"
     DATABRICKS = "databricks"
     EMR = "emr"
 
 
 class CloudProvider(str, Enum):
-    UNKOWN = "unknown"
+    UNKNOWN = "unknown"
     AWS = "aws"
     GCP = "gcp"
 

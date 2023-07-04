@@ -51,4 +51,4 @@ def _resolve_cloud_provider(provider: str) -> CloudProvider:
         return CloudProvider.AWS
     elif provider == "GCP":
         return CloudProvider.GCP
-    return CloudProvider.UNKOWN
+    return CloudProvider.UNKNOWN
