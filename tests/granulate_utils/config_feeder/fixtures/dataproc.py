@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from tests.granulate_utils.config_feeder.fixtures.base import NodeMockBase
 
@@ -16,6 +16,7 @@ class DataprocNodeMock(NodeMockBase):
         is_master: bool = False,
         region: str = "us-central1",
         cluster_info: Dict[str, Any] = {},
+        metadata_response: Optional[str] = None,
     ) -> None:
         super().__init__()
 
@@ -30,7 +31,9 @@ class DataprocNodeMock(NodeMockBase):
         }
 
         url = "http://metadata.google.internal/computeMetadata/v1/instance/?recursive=true"
-        self.mock_http_response("GET", url, {"json": self.metadata})
+        self.mock_http_response(
+            "GET", url, {"json": self.metadata} if metadata_response is None else {"text": metadata_response}
+        )
 
         self.mock_command_stdout(
             f"gcloud dataproc clusters describe {cluster_name} --region={region} --format=json",  # noqa: E501

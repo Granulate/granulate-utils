@@ -1,4 +1,5 @@
-from typing import Any, Dict, Optional
+import logging
+from typing import Any, Dict, Optional, Union
 
 import requests
 from requests.exceptions import ConnectionError, JSONDecodeError
@@ -7,7 +8,7 @@ from granulate_utils.config_feeder.core.models.cluster import BigDataPlatform, C
 from granulate_utils.config_feeder.core.models.node import NodeInfo
 
 
-def get_dataproc_node_info() -> Optional[NodeInfo]:
+def get_dataproc_node_info(logger: Optional[Union[logging.Logger, logging.LoggerAdapter]] = None) -> Optional[NodeInfo]:
     """
     https://cloud.google.com/compute/docs/metadata/querying-metadata
     https://cloud.google.com/dataproc/docs/concepts/configuring-clusters/metadata
@@ -29,8 +30,15 @@ def get_dataproc_node_info() -> Optional[NodeInfo]:
             bigdata_platform=BigDataPlatform.DATAPROC,
             properties=properties,
         )
-    except (ConnectionError, JSONDecodeError, KeyError):
-        return None
+    except JSONDecodeError:
+        if logger:
+            logger.error("got invalid dataproc metadata JSON")
+    except KeyError as e:
+        if logger:
+            logger.error("expected dataproc metadata key was not found", extra={"key": e.args[0]})
+    except ConnectionError:
+        pass
+    return None
 
 
 def _get_metadata() -> Dict[str, Any]:

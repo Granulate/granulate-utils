@@ -55,7 +55,7 @@ class ConfigFeederClient:
         self._init_api_session()
 
     def collect(self) -> None:
-        if (node_info := get_node_info()) is None:
+        if (node_info := get_node_info(self.logger)) is None:
             self.logger.warning("not a Big Data host, skipping")
             return None
 
