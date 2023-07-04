@@ -4,6 +4,7 @@ import functools
 import logging
 from abc import ABC
 from typing import TypeVar, Union, cast
+from urllib.parse import urljoin
 
 from requests import Session
 
@@ -23,12 +24,13 @@ class ConfigCollectorBase(ABC):
         self._session = Session()
         self._session.headers.update({"Accept": "application/json"})
 
-    async def _fetch(self, url: str) -> T:
+    async def _fetch(self, host: str, path: str) -> T:
         if self._failed_requests >= self._max_retries:
             raise MaximumRetriesExceeded("maximum number of failed requests reached", self._max_retries)
         try:
-            if not url.startswith("http"):
-                url = f"http://{url}"
+            if not host.startswith("http"):
+                host = f"http://{host}"
+            url = urljoin(host, path)
             self.logger.debug(f"fetching {url}")
             coro = to_thread(self._session.request, "GET", url)
             resp = await asyncio.create_task(coro)

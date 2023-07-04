@@ -37,7 +37,7 @@ class YarnConfigCollector(ConfigCollectorBase):
     async def rm_request(self, path: str) -> Optional[Dict[str, Any]]:
         result: Optional[Dict[str, Any]] = None
         try:
-            result = await self._fetch(f"{self._resource_manager_address}{path}")
+            result = await self._fetch(self._resource_manager_address, path)
         except ConnectionError:
             if self._is_address_detected:
                 self.logger.error(f"could not connect to {self._resource_manager_address}")
@@ -47,14 +47,14 @@ class YarnConfigCollector(ConfigCollectorBase):
                 self._is_address_detected = True
                 self._resource_manager_address = address
                 self.logger.debug(f"found ResourceManager address: {address}")
-                result = await self._fetch(f"{address}{path}")
+                result = await self._fetch(address, path)
             else:
                 self.logger.error("could not resolve ResourceManager address")
         return result
 
     async def node_request(self, path: str) -> Optional[Dict[str, Any]]:
         try:
-            return await self._fetch(f"{WORKER_ADDRESS}{path}")
+            return await self._fetch(WORKER_ADDRESS, path)
         except ConnectionError:
             self.logger.warning(f"failed to connect to {WORKER_ADDRESS}")
         return None

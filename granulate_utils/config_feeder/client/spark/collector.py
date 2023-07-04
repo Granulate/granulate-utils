@@ -14,7 +14,7 @@ class SparkConfigCollector(ConfigCollectorBase):
 
     async def history_request(self, path: str) -> Optional[Any]:
         try:
-            return await self._fetch(f"{self._history_address}{path}")
+            return await self._fetch(self._history_address, path)
         except ConnectionError:
             self.logger.warning(f"failed to connect to {self._history_address}")
         return None
