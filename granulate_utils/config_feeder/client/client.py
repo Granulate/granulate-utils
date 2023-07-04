@@ -60,6 +60,10 @@ class ConfigFeederClient:
             return None
 
         collection_result = asyncio.run(self._collect(node_info))
+
+        if self._cluster_id is None and (node_info.is_master or not collection_result.is_empty):
+            self._register_cluster(node_info.provider, node_info.bigdata_platform, node_info.external_cluster_id)
+
         if collection_result.is_empty:
             self.logger.info("no configs to submit")
             return None
@@ -102,10 +106,7 @@ class ConfigFeederClient:
         self,
         node: NodeInfo,
     ) -> str:
-        if self._cluster_id is None:
-            self._register_cluster(node.provider, node.bigdata_platform, node.external_cluster_id)
         assert self._cluster_id is not None
-
         self.logger.debug(f"registering node {node.external_id}")
         request = CreateNodeRequest(
             node=NodeCreate(

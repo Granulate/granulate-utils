@@ -10,6 +10,8 @@ from granulate_utils.config_feeder.client.client import ConfigFeederClient
 from granulate_utils.config_feeder.client.exceptions import APIError, ClientError
 from granulate_utils.config_feeder.client.yarn.models import YarnConfig
 from granulate_utils.config_feeder.core.errors import InvalidTokenException
+from granulate_utils.config_feeder.core.models.cluster import BigDataPlatform, CloudProvider
+from granulate_utils.config_feeder.core.models.node import NodeInfo
 from tests.granulate_utils.config_feeder.fixtures.api import ApiMock
 
 
@@ -73,8 +75,52 @@ def test_should_send_config_only_when_changed(logger: logging.Logger) -> None:
         assert len(requests[f"{API_URL}/nodes/node-1/configs"]) == 2
 
 
-def test_should_not_send_anything(logger: logging.Logger) -> None:
-    with ApiMock(collect_yarn_config=mock_yarn_config) as mock:
+def test_should_always_register_cluster_on_master_node(logger: logging.Logger) -> None:
+    with ApiMock() as mock:
+        client = ConfigFeederClient("token1", "service1", yarn=False, logger=logger)
+
+        client.collect()
+        client.collect()
+        client.collect()
+
+        requests = mock.requests
+
+        assert len(requests) == 1
+        assert requests[f"{API_URL}/clusters"][0].json() == {
+            "cluster": {
+                "collector": "sagent",
+                "service": "service1",
+                "provider": "aws",
+                "bigdata_platform": "emr",
+                "properties": None,
+                "external_id": "j-1234567890",
+            },
+            "allow_existing": True,
+        }
+
+
+def test_should_not_register_cluster_on_worker_node(logger: logging.Logger) -> None:
+    node_info = NodeInfo(
+        external_cluster_id="j-1234567890",
+        external_id="i-1234567890",
+        is_master=False,
+        provider=CloudProvider.GCP,
+        bigdata_platform=BigDataPlatform.DATABRICKS,
+    )
+    with ApiMock(node_info=node_info) as mock:
+        client = ConfigFeederClient("token1", "service1", yarn=True, logger=logger)
+
+        client.collect()
+        client.collect()
+        client.collect()
+
+        requests = mock.requests
+
+        assert len(requests) == 0
+
+
+def test_should_not_send_anything_if_not_big_data_platform(logger: logging.Logger) -> None:
+    with ApiMock(node_info=None) as mock:
         client = ConfigFeederClient("token1", "service1", yarn=False, logger=logger)
 
         client.collect()
