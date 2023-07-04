@@ -1,5 +1,6 @@
-import pytest
 import logging
+
+import pytest
 
 from granulate_utils.config_feeder.client.bigdata import get_node_info
 

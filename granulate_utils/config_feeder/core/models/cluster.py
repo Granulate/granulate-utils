@@ -9,9 +9,9 @@ from granulate_utils.config_feeder.core.models.collection import CollectorType
 
 class BigDataPlatform(str, Enum):
     UNKOWN = "unknown"
-    EMR = "emr"
     DATAPROC = "dataproc"
     DATABRICKS = "databricks"
+    EMR = "emr"
 
 
 class CloudProvider(str, Enum):

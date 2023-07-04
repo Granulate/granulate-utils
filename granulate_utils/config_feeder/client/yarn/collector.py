@@ -11,6 +11,7 @@ from granulate_utils.config_feeder.client.yarn.utils import (
     detect_resource_manager_address,
     get_yarn_properties,
 )
+from granulate_utils.config_feeder.core.models.cluster import BigDataPlatform
 from granulate_utils.config_feeder.core.models.node import NodeInfo
 
 
@@ -21,6 +22,10 @@ class YarnConfigCollector(ConfigCollectorBase):
         self._is_address_detected = False
 
     async def collect(self, node_info: NodeInfo) -> Optional[YarnConfig]:
+        if node_info.bigdata_platform == BigDataPlatform.DATABRICKS:
+            self.logger.debug(f"{node_info.bigdata_platform} is not supported, skipping")
+            return None
+
         if config := await (self._get_master_config() if node_info.is_master else self._get_worker_config()):
             return YarnConfig(
                 config=config,
