@@ -15,7 +15,7 @@ def get_dataproc_node_info(logger: Optional[Union[logging.Logger, logging.Logger
     https://cloud.google.com/compute/docs/metadata/querying-metadata
     https://cloud.google.com/dataproc/docs/concepts/configuring-clusters/metadata
 
-    tested on Dataproc 2.0-debian10
+    tested on 1.4, 2.0
     """
     try:
         metadata = _get_metadata()
