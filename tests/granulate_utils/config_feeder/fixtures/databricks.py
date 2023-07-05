@@ -19,6 +19,7 @@ class DatabricksNodeMock(NodeMockBase):
             "databricks.instance.metadata.cloudProvider": provider.upper(),
             "databricks.instance.metadata.instanceId": instance_id,
             "spark.databricks.clusterUsageTags.clusterId": cluster_id,
+            "spark.databricks.clusterUsageTags.clusterSomeSecretPassword": "password123",
         }
 
         if is_master:

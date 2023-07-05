@@ -1,7 +1,8 @@
 import pytest
 
 from granulate_utils.config_feeder.client import get_node_info
-from granulate_utils.config_feeder.core.models.cluster import CloudProvider
+from granulate_utils.config_feeder.core.models.cluster import BigDataPlatform, CloudProvider
+from granulate_utils.config_feeder.core.models.node import NodeInfo
 from tests.granulate_utils.config_feeder.fixtures.databricks import DatabricksNodeMock
 
 
@@ -14,5 +15,15 @@ async def test_should_collect_node_info() -> None:
         cluster_id=cluster_id,
         instance_id=instance_id,
         is_master=True,
-    ) as m:
-        assert get_node_info() == m.node_info
+    ):
+        assert get_node_info() == NodeInfo(
+            provider=CloudProvider.AWS,
+            bigdata_platform=BigDataPlatform.DATABRICKS,
+            external_id=instance_id,
+            external_cluster_id=cluster_id,
+            is_master=True,
+            properties={
+                "spark.databricks.clusterUsageTags.driverInstanceId": "i-000e86ee86c521650",
+                "spark.databricks.clusterUsageTags.clusterSomeSecretPassword": "*****",
+            },
+        )

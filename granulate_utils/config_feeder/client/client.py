@@ -15,13 +15,7 @@ from granulate_utils.config_feeder.client.yarn.collector import YarnConfigCollec
 from granulate_utils.config_feeder.client.yarn.models import YarnConfig
 from granulate_utils.config_feeder.core.errors import raise_for_code
 from granulate_utils.config_feeder.core.models.aggregation import CreateNodeConfigsRequest, CreateNodeConfigsResponse
-from granulate_utils.config_feeder.core.models.cluster import (
-    BigDataPlatform,
-    CloudProvider,
-    ClusterCreate,
-    CreateClusterRequest,
-    CreateClusterResponse,
-)
+from granulate_utils.config_feeder.core.models.cluster import ClusterCreate, CreateClusterRequest, CreateClusterResponse
 from granulate_utils.config_feeder.core.models.collection import CollectorType
 from granulate_utils.config_feeder.core.models.node import CreateNodeRequest, CreateNodeResponse, NodeCreate, NodeInfo
 from granulate_utils.config_feeder.core.models.yarn import NodeYarnConfigCreate
@@ -62,7 +56,7 @@ class ConfigFeederClient:
         collection_result = asyncio.run(self._collect(node_info))
 
         if self._cluster_id is None and (node_info.is_master or not collection_result.is_empty):
-            self._register_cluster(node_info.provider, node_info.bigdata_platform, node_info.external_cluster_id)
+            self._register_cluster(node_info)
 
         if collection_result.is_empty:
             self.logger.info("no configs to submit")
@@ -119,15 +113,16 @@ class ConfigFeederClient:
         response = CreateNodeResponse(**self._api_request("POST", f"/clusters/{self._cluster_id}/nodes", request))
         return response.node.id
 
-    def _register_cluster(self, provider: CloudProvider, bigdata_platform: BigDataPlatform, external_id: str) -> None:
-        self.logger.debug(f"registering cluster {external_id}")
+    def _register_cluster(self, node_info: NodeInfo) -> None:
+        self.logger.debug(f"registering cluster {node_info.external_id}")
         request = CreateClusterRequest(
             cluster=ClusterCreate(
                 collector=self._collector,
                 service=self._service,
-                provider=provider,
-                bigdata_platform=bigdata_platform,
-                external_id=external_id,
+                provider=node_info.provider,
+                bigdata_platform=node_info.bigdata_platform,
+                external_id=node_info.external_cluster_id,
+                properties=json.dumps(node_info.properties) if node_info.properties else None,
             ),
             allow_existing=True,
         )

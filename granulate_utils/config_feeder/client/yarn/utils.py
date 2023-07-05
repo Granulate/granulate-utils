@@ -5,6 +5,8 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union
 
+from granulate_utils.config_feeder.core.utils import mask_sensitive_value
+
 REGEX_YARN_VAR = re.compile(r"\${([^}]+)}")
 
 RM_DEFAULTS = {
@@ -15,9 +17,6 @@ RM_DEFAULT_ADDRESS = "http://localhost:8088"
 WORKER_ADDRESS = "http://0.0.0.0:8042"
 
 RM_ADDRESS_PROPERTY_KEY = "yarn.resourcemanager.webapp.address"
-
-SENSITIVE_KEYS = ("password", "secret", "keytab", "principal")
-MASK = "*****"
 
 
 async def detect_resource_manager_address(*, logger: Union[logging.Logger, logging.LoggerAdapter]) -> Optional[str]:
@@ -122,15 +121,8 @@ def _get_properties(
             result.append(
                 {
                     "key": key,
-                    "value": _mask_sensitive_value(key, prop["value"]),
+                    "value": mask_sensitive_value(key, prop["value"]),
                     "resource": prop["resource"],
                 }
             )
     return result
-
-
-def _mask_sensitive_value(key: str, value: Any) -> Any:
-    """
-    Mask sensitive info
-    """
-    return MASK if any(k in key for k in SENSITIVE_KEYS) else value
