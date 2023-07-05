@@ -44,8 +44,8 @@ async def _find_yarn_home_dir(*, logger: Union[logging.Logger, logging.LoggerAda
         "ps -ax", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
     )
     stdout, _ = await process.communicate()
-    lines = stdout.decode().split("-Dyarn.")
-    home_dir_key = "home.dir="
+    lines = stdout.decode().split(" -D")
+    home_dir_key = "yarn.home.dir="
     for line in lines:
         if line.startswith(home_dir_key):
             return line[len(home_dir_key) :].strip()
