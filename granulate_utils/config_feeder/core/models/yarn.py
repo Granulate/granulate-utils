@@ -7,7 +7,7 @@ from granulate_utils.config_feeder.core.models.collection import CollectorType
 
 
 class NodeYarnConfigCreate(BaseModel):
-    collector: CollectorType
+    collector_type: CollectorType
     config_json: str
 
 

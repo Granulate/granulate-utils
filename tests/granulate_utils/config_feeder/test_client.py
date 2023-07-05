@@ -30,7 +30,7 @@ def test_should_send_config_only_once_when_not_changed(logger: logging.Logger) -
         assert len(requests[f"{API_URL}/clusters"]) == 1
         assert requests[f"{API_URL}/clusters"][0].json() == {
             "cluster": {
-                "collector": "sagent",
+                "collector_type": "sagent",
                 "service": "service1",
                 "provider": "aws",
                 "bigdata_platform": "emr",
@@ -43,7 +43,7 @@ def test_should_send_config_only_once_when_not_changed(logger: logging.Logger) -
         assert len(requests[f"{API_URL}/clusters/cluster-1/nodes"]) == 1
         assert requests[f"{API_URL}/clusters/cluster-1/nodes"][0].json() == {
             "node": {
-                "collector": "sagent",
+                "collector_type": "sagent",
                 "external_id": "i-1234567890",
                 "is_master": True,
             },
@@ -52,7 +52,7 @@ def test_should_send_config_only_once_when_not_changed(logger: logging.Logger) -
 
         assert len(requests[f"{API_URL}/nodes/node-1/configs"]) == 1
         assert requests[f"{API_URL}/nodes/node-1/configs"][0].json() == {
-            "yarn_config": {"collector": "sagent", "config_json": json.dumps(mock_yarn_config().config)},
+            "yarn_config": {"collector_type": "sagent", "config_json": json.dumps(mock_yarn_config().config)},
         }
 
 
@@ -88,7 +88,7 @@ def test_should_always_register_cluster_on_master_node(logger: logging.Logger) -
         assert len(requests) == 1
         assert requests[f"{API_URL}/clusters"][0].json() == {
             "cluster": {
-                "collector": "sagent",
+                "collector_type": "sagent",
                 "service": "service1",
                 "provider": "aws",
                 "bigdata_platform": "emr",

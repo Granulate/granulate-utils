@@ -17,7 +17,7 @@ class NodeInfo(BaseModel):
 
 
 class NodeBase(BaseModel):
-    collector: CollectorType
+    collector_type: CollectorType
     external_id: str
     is_master: bool = False
 

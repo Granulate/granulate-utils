@@ -33,7 +33,7 @@ class ConfigFeederClient:
         logger: Union[logging.Logger, logging.LoggerAdapter],
         server_address: Optional[str] = None,
         yarn: bool = True,
-        collector=CollectorType.SAGENT,
+        collector_type=CollectorType.SAGENT,
     ) -> None:
         if not token or not service:
             raise ClientError("Token and service must be provided")
@@ -41,7 +41,7 @@ class ConfigFeederClient:
         self._token = token
         self._service = service
         self._cluster_id: Optional[str] = None
-        self._collector = collector
+        self._collector_type = collector_type
         self._server_address: str = server_address.rstrip("/") if server_address else DEFAULT_API_SERVER_ADDRESS
         self._is_yarn_enabled = yarn
         self._yarn_collector = YarnConfigCollector(logger=logger)
@@ -104,7 +104,7 @@ class ConfigFeederClient:
         self.logger.debug(f"registering node {node.external_id}")
         request = CreateNodeRequest(
             node=NodeCreate(
-                collector=self._collector,
+                collector_type=self._collector_type,
                 external_id=node.external_id,
                 is_master=node.is_master,
             ),
@@ -117,7 +117,7 @@ class ConfigFeederClient:
         self.logger.debug(f"registering cluster {node_info.external_id}")
         request = CreateClusterRequest(
             cluster=ClusterCreate(
-                collector=self._collector,
+                collector_type=self._collector_type,
                 service=self._service,
                 provider=node_info.provider,
                 bigdata_platform=node_info.bigdata_platform,
@@ -145,7 +145,9 @@ class ConfigFeederClient:
         if self._last_hash[ConfigType.YARN].get(configs.node.external_id) == configs.yarn_config_hash:
             self.logger.debug("YARN config is up to date")
             return None
-        return NodeYarnConfigCreate(collector=self._collector, config_json=json.dumps(configs.yarn_config.config))
+        return NodeYarnConfigCreate(
+            collector_type=self._collector_type, config_json=json.dumps(configs.yarn_config.config)
+        )
 
     def _api_request(
         self,

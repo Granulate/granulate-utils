@@ -21,7 +21,7 @@ class CloudProvider(str, Enum):
 
 
 class ClusterBase(BaseModel):
-    collector: CollectorType
+    collector_type: CollectorType
     provider: CloudProvider
     bigdata_platform: BigDataPlatform
     external_id: str
