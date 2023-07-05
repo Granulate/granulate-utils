@@ -8,6 +8,9 @@ CLUSTER_KEY_PREFIX = "spark.databricks.clusterUsageTags"
 
 
 def get_databricks_node_info() -> Optional[NodeInfo]:
+    """
+    Returns Databricks node info
+    """
     if properties := _get_deploy_conf():
         instance_id = properties["databricks.instance.metadata.instanceId"]
         driver_instance_id = properties.get("spark.databricks.clusterUsageTags.driverInstanceId")

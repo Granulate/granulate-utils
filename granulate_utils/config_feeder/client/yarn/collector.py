@@ -65,7 +65,7 @@ class YarnConfigCollector(ConfigCollectorBase):
 
         most recent config is returned
 
-        supported version: 2.9.0+
+        supported version: 2.8.3+
         """
         try:
             config: Optional[Dict[str, Any]] = await self.rm_request("/conf")

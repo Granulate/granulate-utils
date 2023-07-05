@@ -6,6 +6,11 @@ from granulate_utils.config_feeder.core.models.node import NodeInfo
 
 
 def get_emr_node_info() -> Optional[NodeInfo]:
+    """
+    Returns EMR node info
+
+    tested on EMR 5.20.1, 6.11.0
+    """
     if emr_info := _get_emr_job_info():
         return NodeInfo(
             external_id=_get_instance_id(),
