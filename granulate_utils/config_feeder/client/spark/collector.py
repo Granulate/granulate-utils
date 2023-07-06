@@ -10,7 +10,7 @@ from granulate_utils.config_feeder.client.spark.utils import SPARK_HISTORY_DEFAU
 class SparkConfigCollector(ConfigCollectorBase):
     def __init__(self, *, max_retries: int = 20, logger: Union[logging.Logger, logging.LoggerAdapter]) -> None:
         super().__init__(max_retries=max_retries, logger=logger)
-        self._history_address = SPARK_HISTORY_DEFAULT_ADDRESS
+        self._history_server_address = SPARK_HISTORY_DEFAULT_ADDRESS
 
     async def history_request(self, path: str) -> Optional[Any]:
         try:
