@@ -10,6 +10,7 @@ from granulate_utils.config_feeder.client.client import ConfigFeederClient
 from granulate_utils.config_feeder.client.exceptions import APIError, ClientError
 from granulate_utils.config_feeder.client.yarn.models import YarnConfig
 from granulate_utils.config_feeder.core.errors import InvalidTokenException
+from granulate_utils.config_feeder.core.models.autoscaling import AutoScalingConfig, AutoScalingMode
 from granulate_utils.config_feeder.core.models.cluster import BigDataPlatform, CloudProvider
 from granulate_utils.config_feeder.core.models.node import NodeInfo
 from tests.granulate_utils.config_feeder.fixtures.api import ApiMock
@@ -18,6 +19,7 @@ from tests.granulate_utils.config_feeder.fixtures.api import ApiMock
 def test_should_send_config_only_once_when_not_changed(logger: logging.Logger) -> None:
     with ApiMock(
         collect_yarn_config=mock_yarn_config,
+        collect_autoscaling_config=mock_autoscailing_config,
     ) as mock:
         client = ConfigFeederClient("token1", "service1", logger=logger)
 
@@ -53,6 +55,11 @@ def test_should_send_config_only_once_when_not_changed(logger: logging.Logger) -
         assert len(requests[f"{API_URL}/nodes/node-1/configs"]) == 1
         assert requests[f"{API_URL}/nodes/node-1/configs"][0].json() == {
             "yarn_config": {"collector_type": "sagent", "config_json": json.dumps(mock_yarn_config().config)},
+            "autoscaling_config": {
+                "collector_type": "sagent",
+                "mode": "managed",
+                "config_json": json.dumps(mock_autoscailing_config().config),
+            },
         }
 
 
@@ -172,5 +179,20 @@ def mock_yarn_config(*args: Any, thread_count: int = 64) -> YarnConfig:
                     "resource": "yarn-site.xml",
                 }
             ]
+        },
+    )
+
+
+def mock_autoscailing_config(*args: Any) -> AutoScalingConfig:
+    return AutoScalingConfig(
+        mode=AutoScalingMode.MANAGED,
+        config={
+            "ComputeLimits": {
+                "UnitType": "Instances",
+                "MinimumCapacityUnits": 2,
+                "MaximumCapacityUnits": 4,
+                "MaximumOnDemandCapacityUnits": 4,
+                "MaximumCoreCapacityUnits": 3,
+            }
         },
     )

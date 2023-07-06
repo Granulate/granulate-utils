@@ -1,5 +1,6 @@
 from typing import Dict, List, Optional
 
+from granulate_utils.config_feeder.core.models.autoscaling import AutoScalingConfig, AutoScalingMode
 from granulate_utils.config_feeder.core.models.cluster import BigDataPlatform, CloudProvider
 from granulate_utils.config_feeder.core.models.node import NodeInfo
 from granulate_utils.config_feeder.core.utils import mask_sensitive_value
@@ -30,6 +31,20 @@ def get_databricks_node_info() -> Optional[NodeInfo]:
             provider=provider,
             bigdata_platform=BigDataPlatform.DATABRICKS,
             properties=_exclude_keys(properties, [KEY_CLOUD_PROVIDER, KEY_INSTANCE_ID, KEY_CLUSTER_ID]),
+        )
+    return None
+
+
+async def get_databricks_autoscaling_config(
+    node: NodeInfo,
+) -> Optional[AutoScalingConfig]:
+    if node.properties.get("spark.databricks.clusterUsageTags.clusterScalingType") == "autoscaling":
+        return AutoScalingConfig(
+            mode=AutoScalingMode.MANAGED,
+            config={
+                "min_workers": int(node.properties.get("spark.databricks.clusterUsageTags.clusterMinWorkers", -1)),
+                "max_workers": int(node.properties.get("spark.databricks.clusterUsageTags.clusterMaxWorkers", -1)),
+            },
         )
     return None
 

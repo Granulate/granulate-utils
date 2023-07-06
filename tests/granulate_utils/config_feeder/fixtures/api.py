@@ -41,6 +41,10 @@ class ApiMock:
         instance = mock.return_value
         instance.collect.side_effect = self.kwargs.get("collect_yarn_config", lambda node_info: None)
 
+    def _configure_autoscaling_collector_mock(self, mock: Any) -> None:
+        instance = mock.return_value
+        instance.collect.side_effect = self.kwargs.get("collect_autoscaling_config", lambda node_info: None)
+
     def _configure_api_mock(self, mock: Any) -> None:
         register_cluster_response = self.kwargs.get(
             "register_cluster_response",
@@ -94,6 +98,16 @@ class ApiMock:
                         "config_json": {},
                         "ts": "2021-10-01T00:00:00Z",
                     },
+                    "autoscaling_config": {
+                        "cluster_id": "cluster-1",
+                        "autoscaling_config_id": "autoscaling-config-1",
+                        "mode": "managed",
+                        "config_hash": "1234567890",
+                        "config_json": {},
+                        "ts": "2021-10-01T00:00:00Z",
+                    }
+                    if "collect_autoscaling_config" in self.kwargs
+                    else None,
                 }
             },
         )
@@ -118,6 +132,13 @@ class ApiMock:
                     autospec=True,
                 ),
                 self._configure_yarn_collector_mock,
+            ),
+            (
+                patch(
+                    "granulate_utils.config_feeder.client.client.AutoScalingConfigCollector",
+                    autospec=True,
+                ),
+                self._configure_autoscaling_collector_mock,
             ),
             (Mocker(), self._configure_api_mock),
         ]

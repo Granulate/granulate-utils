@@ -1,9 +1,12 @@
+import asyncio
+import json
 import logging
 from typing import Any, Dict, Optional, Union
 
 import requests
 from requests.exceptions import ConnectionError, JSONDecodeError
 
+from granulate_utils.config_feeder.core.models.autoscaling import AutoScalingConfig, AutoScalingMode
 from granulate_utils.config_feeder.core.models.cluster import BigDataPlatform, CloudProvider
 from granulate_utils.config_feeder.core.models.node import NodeInfo
 
@@ -43,9 +46,45 @@ def get_dataproc_node_info(logger: Optional[Union[logging.Logger, logging.Logger
     return None
 
 
+async def get_dataproc_autoscaling_config(
+    node: NodeInfo, *, logger: Union[logging.Logger, logging.LoggerAdapter]
+) -> Optional[AutoScalingConfig]:
+    if (
+        cluster_info := await _run_gcloud_command(
+            node,
+            f"dataproc clusters describe {node.properties['cluster_name']}",
+            logger=logger,
+        )
+    ) is None:
+        logger.error("failed to get cluster info")
+        return None
+    if policy_url := cluster_info.get("config", {}).get("autoscalingConfig", {}).get("policyUri"):
+        if (
+            policy := await _run_gcloud_command(
+                node, f"dataproc autoscaling-policies describe {policy_url}", logger=logger
+            )
+        ) is not None:
+            return AutoScalingConfig(mode=AutoScalingMode.CUSTOM, config=policy)
+        else:
+            logger.error("failed to get autoscaling policy")
+    return None
+
+
 def _get_metadata() -> Dict[str, Any]:
     url = "http://metadata.google.internal/computeMetadata/v1/instance/?recursive=true"  # noqa: E501
     headers = {"Metadata-Flavor": "Google"}
     response = requests.get(url, headers=headers)
     response.raise_for_status()
     return response.json()
+
+
+async def _run_gcloud_command(
+    node: NodeInfo, command: str, *, logger: Union[logging.Logger, logging.LoggerAdapter]
+) -> Optional[Dict[str, Any]]:
+    cmd = f"gcloud {command} --region={node.properties['region']} --format=json"
+    process = await asyncio.create_subprocess_shell(cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    stdout, stderr = await process.communicate()
+    if process.returncode != 0:
+        logger.error("failed to run gcloud command", extra={"command": command, "stderr": stderr.decode()})
+        return None
+    return json.loads(stdout.decode().strip())

@@ -16,6 +16,7 @@ class DataprocNodeMock(NodeMockBase):
         is_master: bool = False,
         region: str = "us-central1",
         cluster_info: Dict[str, Any] = {},
+        autoscaling_policy: Optional[Dict[str, Any]] = None,
         metadata_response: Optional[str] = None,
     ) -> None:
         super().__init__()
@@ -39,3 +40,8 @@ class DataprocNodeMock(NodeMockBase):
             f"gcloud dataproc clusters describe {cluster_name} --region={region} --format=json",  # noqa: E501
             json.dumps(cluster_info).encode("utf-8"),
         )
+        if autoscaling_policy:
+            self.mock_command_stdout(
+                f"gcloud dataproc autoscaling-policies describe {autoscaling_policy['name']} --region={region} --format=json",  # noqa: E501
+                json.dumps(autoscaling_policy).encode("utf-8"),
+            )

@@ -56,6 +56,7 @@ class NodeMockBase(ABC):
             return self._stdout[cmd], b""
 
         mock_proc.communicate.side_effect = mock_communicate
+        mock_proc.returncode = 0
         return mock_proc
 
     def _mock_subprocess_run_stdout(self, *args: Any, **kwargs: Any) -> Mock:

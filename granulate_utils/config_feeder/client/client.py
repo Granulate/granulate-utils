@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from requests import Session
 from requests.exceptions import ConnectionError, JSONDecodeError
 
+from granulate_utils.config_feeder.client.autoscaling.collector import AutoScalingConfigCollector
 from granulate_utils.config_feeder.client.bigdata import get_node_info
 from granulate_utils.config_feeder.client.exceptions import APIError, ClientError
 from granulate_utils.config_feeder.client.models import CollectionResult, ConfigType
@@ -15,6 +16,7 @@ from granulate_utils.config_feeder.client.yarn.collector import YarnConfigCollec
 from granulate_utils.config_feeder.client.yarn.models import YarnConfig
 from granulate_utils.config_feeder.core.errors import raise_for_code
 from granulate_utils.config_feeder.core.models.aggregation import CreateNodeConfigsRequest, CreateNodeConfigsResponse
+from granulate_utils.config_feeder.core.models.autoscaling import AutoScalingConfig, ClusterAutoScalingConfigCreate
 from granulate_utils.config_feeder.core.models.cluster import ClusterCreate, CreateClusterRequest, CreateClusterResponse
 from granulate_utils.config_feeder.core.models.collection import CollectorType
 from granulate_utils.config_feeder.core.models.node import CreateNodeRequest, CreateNodeResponse, NodeCreate, NodeInfo
@@ -33,6 +35,7 @@ class ConfigFeederClient:
         logger: Union[logging.Logger, logging.LoggerAdapter],
         server_address: Optional[str] = None,
         yarn: bool = True,
+        autoscaling: bool = True,
         collector_type=CollectorType.SAGENT,
     ) -> None:
         if not token or not service:
@@ -45,6 +48,8 @@ class ConfigFeederClient:
         self._server_address: str = server_address.rstrip("/") if server_address else DEFAULT_API_SERVER_ADDRESS
         self._is_yarn_enabled = yarn
         self._yarn_collector = YarnConfigCollector(logger=logger)
+        self._is_autoscaling_enabled = autoscaling
+        self._autoscaling_collector = AutoScalingConfigCollector(logger=logger)
         self._last_hash: DefaultDict[ConfigType, Dict[str, str]] = defaultdict(dict)
         self._init_api_session()
 
@@ -67,8 +72,9 @@ class ConfigFeederClient:
     async def _collect(self, node_info: NodeInfo) -> CollectionResult:
         results = await asyncio.gather(
             self._collect_yarn_config(node_info),
+            self._collect_autoscaling_config(node_info),
         )
-        return CollectionResult(node=node_info, yarn_config=results[0])
+        return CollectionResult(node=node_info, yarn_config=results[0], autoscaling_config=results[1])
 
     async def _collect_yarn_config(self, node_info: NodeInfo) -> Optional[YarnConfig]:
         if not self._is_yarn_enabled:
@@ -77,6 +83,14 @@ class ConfigFeederClient:
         yarn_config = await self._yarn_collector.collect(node_info)
         self.logger.info("YARN config collection finished")
         return yarn_config
+
+    async def _collect_autoscaling_config(self, node_info: NodeInfo) -> Optional[AutoScalingConfig]:
+        if not self._is_autoscaling_enabled:
+            return None
+        self.logger.info("AutoScaling config collection starting")
+        autoscaling_config = await self._autoscaling_collector.collect(node_info)
+        self.logger.info("AutoScaling config collection finished")
+        return autoscaling_config
 
     def _submit_node_configs(
         self,
@@ -96,10 +110,16 @@ class ConfigFeederClient:
             assert request.yarn_config is not None
             self._last_hash[ConfigType.YARN][external_id] = collection_result.yarn_config_hash
 
+        if response.autoscaling_config is not None:
+            assert request.autoscaling_config is not None
+            self._last_hash[ConfigType.AUTOSCALING][external_id] = collection_result.autoscaling_config_hash
+
     def _register_node(
         self,
         node: NodeInfo,
     ) -> str:
+        if self._cluster_id is None:
+            self._register_cluster(node)
         assert self._cluster_id is not None
         self.logger.debug(f"registering node {node.external_id}")
         request = CreateNodeRequest(
@@ -131,12 +151,14 @@ class ConfigFeederClient:
 
     def _get_configs_request(self, configs: CollectionResult) -> Optional[CreateNodeConfigsRequest]:
         yarn_config = self._get_yarn_config_if_changed(configs)
+        autoscaling_config = self._get_autoscaling_config_if_changed(configs)
 
-        if yarn_config is None:
+        if yarn_config is None and autoscaling_config is None:
             return None
 
         return CreateNodeConfigsRequest(
             yarn_config=yarn_config,
+            autoscaling_config=autoscaling_config,
         )
 
     def _get_yarn_config_if_changed(self, configs: CollectionResult) -> Optional[NodeYarnConfigCreate]:
@@ -147,6 +169,21 @@ class ConfigFeederClient:
             return None
         return NodeYarnConfigCreate(
             collector_type=self._collector_type, config_json=json.dumps(configs.yarn_config.config)
+        )
+
+    def _get_autoscaling_config_if_changed(
+        self,
+        configs: CollectionResult,
+    ) -> Optional[ClusterAutoScalingConfigCreate]:
+        if configs.autoscaling_config is None:
+            return None
+        if self._last_hash[ConfigType.AUTOSCALING].get(configs.node.external_id) == configs.autoscaling_config_hash:
+            self.logger.debug("AutoScaling config is up to date")
+            return None
+        return ClusterAutoScalingConfigCreate(
+            collector_type=self._collector_type,
+            mode=configs.autoscaling_config.mode,
+            config_json=json.dumps(configs.autoscaling_config.config),
         )
 
     def _api_request(
