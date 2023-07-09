@@ -6,6 +6,7 @@
 # Licensed under a 3-clause BSD style license (see LICENSE.bsd3).
 #
 import logging
+import functools
 from typing import Dict, Iterable, List, Optional
 
 from granulate_utils.metrics import Collector, Sample, json_request, samples_from_json
@@ -16,10 +17,14 @@ YARN_RM_CLASSNAME = "org.apache.hadoop.yarn.server.resourcemanager.ResourceManag
 
 class ResourceManagerAPI:
     def __init__(self, rm_address: str):
+        self._info_url = f"{rm_address}/ws/v1/cluster/info"
         self._apps_url = f"{rm_address}/ws/v1/cluster/apps"
         self._metrics_url = f"{rm_address}/ws/v1/cluster/metrics"
         self._nodes_url = f"{rm_address}/ws/v1/cluster/nodes"
 
+    def info(self, **kwargs) -> Optional[Dict]:
+        return json_request(self._info_url, **kwargs).get("clusterInfo")
+    
     def apps(self, **kwargs) -> List[Dict]:
         return json_request(self._apps_url, **kwargs).get("apps", {}).get("app", [])
 
@@ -38,6 +43,7 @@ class YarnCollector(Collector):
         self.rm = ResourceManagerAPI(self.rm_address)
         self.logger = logger
 
+
     def collect(self) -> Iterable[Sample]:
         try:
             yield from self._cluster_metrics()
@@ -45,10 +51,21 @@ class YarnCollector(Collector):
         except Exception:
             self.logger.exception("Could not gather yarn metrics")
 
+    @property
+    @functools.lru_cache(maxsize=8192)
+    def cluster_id(self) -> str:
+        try:
+            return self.rm.info()["id"]
+        except Exception:
+            self.logger.exception("Could not gather yarn cluster id")
+            return "err"
+    
+
     def _cluster_metrics(self) -> Iterable[Sample]:
         try:
             if cluster_metrics := self.rm.metrics():
-                yield from samples_from_json({}, cluster_metrics, YARN_CLUSTER_METRICS)
+                labels = {"cluster_id": self.cluster_id}
+                yield from samples_from_json(labels, cluster_metrics, YARN_CLUSTER_METRICS)
         except Exception:
             self.logger.exception("Could not gather yarn cluster metrics")
 
@@ -58,7 +75,7 @@ class YarnCollector(Collector):
                 for metric, value in node.get("resourceUtilization", {}).items():
                     node[metric] = value  # this will create all relevant metrics under same dictionary
 
-                labels = {"node_hostname": node["nodeHostName"]}
+                labels = {"node_hostname": node["nodeHostName"], "cluster_id": self.cluster_id}
                 yield from samples_from_json(labels, node, YARN_NODES_METRICS)
         except Exception:
             self.logger.exception("Could not gather yarn nodes metrics")

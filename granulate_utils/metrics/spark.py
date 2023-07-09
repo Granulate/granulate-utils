@@ -6,11 +6,12 @@
 # Licensed under a 3-clause BSD style license (see LICENSE.bsd3).
 #
 import logging
-from typing import Any, Dict, Iterable, Tuple
+from typing import Any, Dict, Iterable, Optional, Tuple
 
 from bs4 import BeautifulSoup
 from requests import HTTPError
 
+from granulate_utils.metrics.yarn import YarnCollector
 from granulate_utils.metrics import (
     Collector,
     Sample,
@@ -30,6 +31,7 @@ from granulate_utils.metrics.mode import SPARK_MESOS_MODE, SPARK_STANDALONE_MODE
 
 SPARK_APPS_PATH = "api/v1/applications"
 MESOS_MASTER_APP_PATH = "/frameworks"
+YARN_CLUSTER_INFO_PATH = "ws/v1/cluster/info"
 YARN_APPS_PATH = "ws/v1/cluster/apps"
 YARN_CLUSTER_PATH = "ws/v1/cluster/metrics"
 YARN_NODES_PATH = "ws/v1/cluster/nodes"
@@ -168,12 +170,23 @@ class SparkRunningApps:
 
 
 class SparkApplicationMetricsCollector(Collector):
-    def __init__(self, cluster_mode: str, master_address: str, logger: logging.LoggerAdapter) -> None:
+    def __init__(self, cluster_mode: str, master_address: str, logger: logging.LoggerAdapter, yarn_collector: Optional[YarnCollector] = None) -> None:
         self.master_address = master_address
         self._cluster_mode = cluster_mode
         self.logger = logger
         self.running_apps_helper = SparkRunningApps(cluster_mode, master_address, logger)
         self._last_iteration_app_job_metrics: Dict[str, Dict[str, Any]] = {}
+        self._cluster_id = self._get_cluster_id(cluster_mode, master_address, yarn_collector)
+
+    @staticmethod
+    def _get_cluster_id(cluster_mode: str, master_address: str, yarn_collector: Optional[YarnCollector]) -> str:
+        if cluster_mode == SPARK_YARN_MODE:
+            assert yarn_collector is not None
+            return yarn_collector.cluster_id
+        else:
+            # Didn't research how to bring the actual cluster id, so use the master address
+            # Which should work for some use cases.
+            return master_address
 
     def collect(self) -> Iterable[Sample]:
         running_apps = self.running_apps_helper.get_running_apps()
@@ -219,7 +232,7 @@ class SparkApplicationMetricsCollector(Collector):
                     for metric in SPARK_APPLICATION_GAUGE_METRICS.keys():
                         application_gauge_aggregated_metrics[metric] += int(job[metric])
 
-                labels = {"app_name": app_name, "app_id": app_id}
+                labels = {"app_name": app_name, "app_id": app_id, "cluster_id": self._cluster_id}
                 yield from samples_from_json(
                     labels, application_diff_aggregated_metrics, SPARK_APPLICATION_DIFF_METRICS
                 )
@@ -236,7 +249,7 @@ class SparkApplicationMetricsCollector(Collector):
         Get metrics for each Spark stage.
         """
         for app_id, (app_name, tracking_url) in running_apps.items():
-            labels = {"app_name": str(app_name), "app_id": str(app_id)}
+            labels = {"app_name": str(app_name), "app_id": str(app_id), "cluster_id": self._cluster_id}
             self.logger.debug("Gathering stage metrics for app", app_id=app_id)
             try:
                 base_url = get_request_url(self.master_address, tracking_url)
@@ -269,7 +282,7 @@ class SparkApplicationMetricsCollector(Collector):
             try:
                 base_url = get_request_url(self.master_address, tracking_url)
                 executors = rest_request_to_json(base_url, SPARK_APPS_PATH, app_id, "executors")
-                labels = {"app_name": app_name, "app_id": app_id}
+                labels = {"app_name": app_name, "app_id": app_id, "cluster_id": self._cluster_id}
                 yield from samples_from_json(
                     labels,
                     {
@@ -282,4 +295,4 @@ class SparkApplicationMetricsCollector(Collector):
                 self.logger.exception("Could not gather spark executors metrics")
 
     def _running_applications_count_metric(self, running_apps: Dict[str, Tuple[str, str]]) -> Iterable[Sample]:
-        yield Sample(name=SPARK_RUNNING_APPS_COUNT_METRIC, value=len(running_apps), labels={})
+        yield Sample(name=SPARK_RUNNING_APPS_COUNT_METRIC, value=len(running_apps), labels={"cluster_id": self._cluster_id})

@@ -262,8 +262,10 @@ class BigDataSampler(Sampler):
         """
         This function fills in self._spark_samplers with the appropriate collectors.
         """
+        yarn_collector = None
         if self._cluster_mode == SPARK_YARN_MODE:
-            self._collectors.append(YarnCollector(self._master_address, self._logger))
+            yarn_collector = YarnCollector(self._master_address, self._logger)
+            self._collectors.append(yarn_collector)
 
         # In Standalone and Mesos we'd use applications metrics
         if self._cluster_mode in (SPARK_STANDALONE_MODE, SPARK_MESOS_MODE):
@@ -271,7 +273,7 @@ class BigDataSampler(Sampler):
 
         if self._applications_metrics:
             self._collectors.append(
-                SparkApplicationMetricsCollector(self._cluster_mode, self._master_address, self._logger)
+                SparkApplicationMetricsCollector(self._cluster_mode, self._master_address, self._logger, yarn_collector=yarn_collector)
             )
 
     def discover(self) -> bool:
