@@ -5,8 +5,8 @@
 # (C) Datadog, Inc. 2018-present. All rights reserved.
 # Licensed under a 3-clause BSD style license (see LICENSE.bsd3).
 #
-import logging
 import functools
+import logging
 from typing import Dict, Iterable, List, Optional
 
 from granulate_utils.metrics import Collector, Sample, json_request, samples_from_json
@@ -24,7 +24,7 @@ class ResourceManagerAPI:
 
     def info(self, **kwargs) -> Optional[Dict]:
         return json_request(self._info_url, **kwargs).get("clusterInfo")
-    
+
     def apps(self, **kwargs) -> List[Dict]:
         return json_request(self._apps_url, **kwargs).get("apps", {}).get("app", [])
 
@@ -43,7 +43,6 @@ class YarnCollector(Collector):
         self.rm = ResourceManagerAPI(self.rm_address)
         self.logger = logger
 
-
     def collect(self) -> Iterable[Sample]:
         try:
             yield from self._cluster_metrics()
@@ -51,15 +50,14 @@ class YarnCollector(Collector):
         except Exception:
             self.logger.exception("Could not gather yarn metrics")
 
-    @property
-    @functools.lru_cache(maxsize=8192)
+    @functools.cached_property
     def cluster_id(self) -> str:
         try:
-            return self.rm.info()["id"]
+            cluster_info = self.rm.info()
+            return cluster_info.get("id", "err") if cluster_info else "err"
         except Exception:
             self.logger.exception("Could not gather yarn cluster id")
             return "err"
-    
 
     def _cluster_metrics(self) -> Iterable[Sample]:
         try:

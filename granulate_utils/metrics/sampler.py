@@ -273,7 +273,9 @@ class BigDataSampler(Sampler):
 
         if self._applications_metrics:
             self._collectors.append(
-                SparkApplicationMetricsCollector(self._cluster_mode, self._master_address, self._logger, yarn_collector=yarn_collector)
+                SparkApplicationMetricsCollector(
+                    self._cluster_mode, self._master_address, self._logger, yarn_collector=yarn_collector
+                )
             )
 
     def discover(self) -> bool:
