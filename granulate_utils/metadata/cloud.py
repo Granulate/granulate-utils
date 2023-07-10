@@ -103,15 +103,15 @@ def get_aws_instance_metadata() -> Optional[AwsInstanceMetadata]:
 
 
 def get_aws_container_metadata() -> Optional[AwsContainerMetadata]:
-    ecs_container_metadata_uri_v4 = os.environ['ECS_CONTAINER_METADATA_URI_V4']
+    ecs_container_metadata_uri_v4 = os.environ["ECS_CONTAINER_METADATA_URI_V4"]
     response = send_request(ecs_container_metadata_uri_v4)
     if response is None:
         return None
     metadata = response.json()
     return AwsContainerMetadata(
         provider="aws",
-        execution_env=os.environ['AWS_EXECUTION_ENV'],
-        region=os.environ['AWS_REGION'],
+        execution_env=os.environ["AWS_EXECUTION_ENV"],
+        region=os.environ["AWS_REGION"],
         container_arn=metadata["ContainerARN"],
     )
 
