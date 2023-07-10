@@ -103,7 +103,9 @@ def get_aws_instance_metadata() -> Optional[AwsInstanceMetadata]:
 
 
 def get_aws_container_metadata() -> Optional[AwsContainerMetadata]:
-    ecs_container_metadata_uri_v4 = os.environ["ECS_CONTAINER_METADATA_URI_V4"]
+    ecs_container_metadata_uri_v4 = os.environ.get("ECS_CONTAINER_METADATA_URI_V4")
+    if ecs_container_metadata_uri_v4 is None:
+        return None
     response = send_request(ecs_container_metadata_uri_v4)
     if response is None:
         return None
