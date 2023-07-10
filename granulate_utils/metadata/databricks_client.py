@@ -18,6 +18,8 @@ HOST_KEY_NAME = "*.sink.ganglia.host"
 DATABRICKS_METRICS_PROP_PATH = "/databricks/spark/conf/metrics.properties"
 CLUSTER_USAGE_ALL_TAGS_PROP = "spark.databricks.clusterUsageTags.clusterAllTags"
 CLUSTER_USAGE_CLUSTER_NAME_PROP = "spark.databricks.clusterUsageTags.clusterName"
+CLUSTER_USAGE_WORK_ENV_ID_PROP = "spark.databricks.clusterUsageTags.workerEnvironmentId"
+
 CLUSTER_USAGE_RELEVANT_TAGS_PROPS = [
     "spark.databricks.clusterUsageTags.cloudProvider",
     "spark.databricks.clusterUsageTags.clusterAvailability",
@@ -39,6 +41,7 @@ SPARKUI_APPS_URL = "http://{}/api/v1/applications"
 REQUEST_TIMEOUT = 5
 JOB_NAME_KEY = "RunName"
 CLUSTER_NAME_KEY = "ClusterName"
+DATABRICKS_ENVIRONMENT_KEY = "DatabricksEnvironment"
 DEFAULT_WEBUI_PORT = 40001
 DATABRICKS_JOBNAME_TIMEOUT_S = 2 * 60
 RETRY_INTERVAL_S = 1
@@ -199,9 +202,13 @@ class DBXWebUIEnvWrapper:
             result.update(
                 {cluster_all_tag["key"]: cluster_all_tag["value"] for cluster_all_tag in cluster_all_tags_value_json}
             )
-        # As a fallback, trying to extract `CLUSTER_USAGE_CLUSTER_NAME_PROP` property.
-        elif (cluster_name_value := spark_properties.get(CLUSTER_USAGE_CLUSTER_NAME_PROP)) is not None:
+
+        # As a fallback, trying to extract `CLUSTER_USAGE_CLUSTER_NAME_PROP` and `` property.
+        elif (cluster_name_value := spark_properties.get(CLUSTER_USAGE_CLUSTER_NAME_PROP)) is not None: 
             result[CLUSTER_NAME_KEY] = cluster_name_value
+
+            if (workenv_id := spark_properties.get(CLUSTER_USAGE_WORK_ENV_ID_PROP)) is not None:
+                result[DATABRICKS_ENVIRONMENT_KEY] = workenv_id
 
         else:
             # We expect at least one of the properties to be present.
@@ -242,5 +249,11 @@ def get_name_from_metadata(metadata: Dict[str, str]) -> Optional[str]:
     if job_name := metadata.get(JOB_NAME_KEY):
         return f"job-{job_name}"
     elif cluster_name := metadata.get(CLUSTER_NAME_KEY):
+        if cluster_name.startswith("job-"):
+            job_id = cluster_name.split("-")[1]
+            if not job_id.isalnum():
+                raise ValueError(f"Invalid job id {job_id=} from {cluster_name=}")
+            return f"job-{job_id}"
+        
         return cluster_name
     return None
