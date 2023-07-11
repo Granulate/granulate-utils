@@ -66,3 +66,8 @@ class CgroupInterfaceNotSupported(Exception):
 class CgroupControllerNotMounted(Exception):
     def __init__(self, controller_name: str):
         super(CgroupControllerNotMounted, self).__init__(f"Controller {controller_name} is not mounted on the system")
+
+
+class NotANodeProcess(Exception):
+    def __init__(self, process: Process):
+        super().__init__(f"Process is not node: {process}")
