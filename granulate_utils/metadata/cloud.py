@@ -70,6 +70,14 @@ class AzureInstanceMetadata(CloudMetadataBase):
     image_info: Optional[Dict[str, str]]
 
 
+def get_aws_metadata() -> Optional[Union[AwsInstanceMetadata, AwsContainerMetadata]]:
+    aws_execution_env = get_aws_execution_env()
+    if aws_execution_env == "AWS_ECS_FARGATE":
+        return get_aws_container_metadata()
+    else:
+        return get_aws_instance_metadata()
+
+
 def get_aws_instance_metadata() -> Optional[AwsInstanceMetadata]:
     # Documentation:
     # on the format: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-categories.html
@@ -189,8 +197,7 @@ def send_request(url: str, headers: Dict[str, str] = None, method: str = "get") 
 def get_static_cloud_metadata(logger: Union[logging.LoggerAdapter, logging.Logger]) -> Optional[Metadata]:
     raised_exceptions: List[Exception] = []
     cloud_metadata_fetchers = [
-        get_aws_instance_metadata,
-        get_aws_container_metadata,
+        get_aws_metadata,
         get_gcp_metadata,
         get_azure_metadata,
     ]
@@ -223,3 +230,13 @@ def get_static_cloud_metadata(logger: Union[logging.LoggerAdapter, logging.Logge
         " The most likely reason is that we're not installed on a an AWS, GCP or Azure instance."
     )
     return None
+
+
+def get_aws_execution_env() -> Optional[str]:
+    """
+    Possible values include:
+    - AWS_ECS_FARGATE
+    - AWS_ECS_EC2
+    - CloudShell
+    """
+    return os.environ.get("AWS_EXECUTION_ENV")
