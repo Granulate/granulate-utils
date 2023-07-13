@@ -62,7 +62,7 @@ def _get_emr_cluster_tags() -> Optional[Dict]:
 
 def get_emr_metadata() -> Optional[Dict]:
     emr_cluster_tags = _get_emr_cluster_tags()
-    if emr_cluster_tags is None:
+    if not emr_cluster_tags:
         return None
     return {"tags": _get_emr_cluster_tags()}
 
