@@ -8,6 +8,7 @@
 import logging
 import os
 from abc import ABC, abstractmethod
+from copy import deepcopy
 from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 from xml.etree import ElementTree as ET
@@ -60,6 +61,7 @@ class BigDataSampler(Sampler):
         master_address: Optional[str],
         cluster_mode: Optional[str],
         applications_metrics: Optional[bool] = False,
+        cluster_id: Optional[str] = None,
     ):
         self._logger = logger
         self._hostname = hostname
@@ -67,6 +69,7 @@ class BigDataSampler(Sampler):
         self._collectors: List[Collector] = []
         self._master_address: Optional[str] = None
         self._cluster_mode: Optional[str] = None
+        self._cluster_id: Optional[str] = cluster_id
 
         assert (cluster_mode is None) == (
             master_address is None
@@ -262,10 +265,8 @@ class BigDataSampler(Sampler):
         """
         This function fills in self._spark_samplers with the appropriate collectors.
         """
-        yarn_collector = None
         if self._cluster_mode == SPARK_YARN_MODE:
-            yarn_collector = YarnCollector(self._master_address, self._logger)
-            self._collectors.append(yarn_collector)
+            self._collectors.append(YarnCollector(self._master_address, self._logger))
 
         # In Standalone and Mesos we'd use applications metrics
         if self._cluster_mode in (SPARK_STANDALONE_MODE, SPARK_MESOS_MODE):
@@ -273,10 +274,17 @@ class BigDataSampler(Sampler):
 
         if self._applications_metrics:
             self._collectors.append(
-                SparkApplicationMetricsCollector(
-                    self._cluster_mode, self._master_address, self._logger, yarn_collector=yarn_collector
-                )
+                SparkApplicationMetricsCollector(self._cluster_mode, self._master_address, self._logger)
             )
+
+    def _get_cluster_id(self) -> Optional[str]:
+        if self._cluster_mode == SPARK_YARN_MODE and self._master_address is not None:
+            yarn_collector = YarnCollector(self._master_address, self._logger)
+            return yarn_collector.cluster_id
+        else:
+            # Didn't research how to bring the actual cluster id, so use the master address
+            # Which should work for some use cases.
+            return self._master_address
 
     def discover(self) -> bool:
         """
@@ -308,6 +316,8 @@ class BigDataSampler(Sampler):
 
         if have_conf:
             self._init_collectors()
+            if self._cluster_id is None:
+                self._cluster_id = self._get_cluster_id()
 
         return have_conf
 
@@ -315,12 +325,21 @@ class BigDataSampler(Sampler):
         """
         Returns a MetricsSnapshot with the collected metrics.
         """
+
+        def _add_cluster_id_label(s: Sample):
+            if self._cluster_id is None:
+                return s
+            result = deepcopy(s)
+            result.labels["cluster_id"] = self._cluster_id
+            return result
+
         if self._collectors:
             collected: List[Sample] = []
             for collector in self._collectors:
                 collected.extend(collector.collect())
             # No need to submit samples that don't actually have a value:
             samples = tuple(filter(lambda s: s.value is not None, collected))
+            samples = tuple(map(_add_cluster_id_label, samples))
             return MetricsSnapshot(datetime.now(tz=timezone.utc), samples)
 
         # If we don't have any samplers, we don't have any metrics to collect:
