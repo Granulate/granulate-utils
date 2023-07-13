@@ -17,6 +17,7 @@ from granulate_utils.exceptions import BadResponseCode
 from granulate_utils.futures import call_in_parallel
 from granulate_utils.linux.ns import run_in_ns
 from granulate_utils.metadata import Metadata
+from granulate_utils.metadata.bigdata.emr import get_emr_metadata
 
 METADATA_REQUEST_TIMEOUT = 5
 
@@ -35,6 +36,7 @@ class AwsInstanceMetadata(InstanceMetadataBase):
     account_id: str
     image_id: str
     instance_id: str
+    emr: Optional[Dict[str, str]]
 
 
 @dataclass
@@ -83,6 +85,7 @@ def get_aws_metadata() -> Optional[AwsInstanceMetadata]:
     if life_cycle_response is None or metadata_response is None:
         return None
     instance = metadata_response.json()
+    emr_metadata = get_emr_metadata()
     return AwsInstanceMetadata(
         provider="aws",
         region=instance["region"],
@@ -92,6 +95,7 @@ def get_aws_metadata() -> Optional[AwsInstanceMetadata]:
         account_id=instance["accountId"],
         image_id=instance["imageId"],
         instance_id=instance["instanceId"],
+        emr=emr_metadata,
     )
 
 
