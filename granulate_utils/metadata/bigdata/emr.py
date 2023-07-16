@@ -29,12 +29,10 @@ def _get_job_flow() -> Optional[Dict]:
 def _get_emr_cluster_tags() -> Optional[Dict]:
     instance_data = _get_instance_data()
     if not instance_data:
-        # return None
-        raise Exception("Unable to load EMR instance data")
+        return None
     job_flow = _get_job_flow()
     if not job_flow:
-        # return None
-        raise Exception("Unable to load EMR job flow")
+        return None
 
     region = instance_data.get("region")
     cluster_id = job_flow.get("jobFlowId")
