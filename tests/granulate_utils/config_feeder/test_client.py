@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 from requests.exceptions import ConnectionError
 
-from granulate_utils.config_feeder.client.client import DEFAULT_API_SERVER_ADDRESS as API_URL
+from granulate_utils.config_feeder.client.http_client import DEFAULT_API_SERVER_ADDRESS as API_URL
 from granulate_utils.config_feeder.client.client import ConfigFeederClient
 from granulate_utils.config_feeder.client.exceptions import APIError, ClientError
 from granulate_utils.config_feeder.client.yarn.models import YarnConfig
