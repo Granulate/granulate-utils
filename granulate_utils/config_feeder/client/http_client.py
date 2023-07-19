@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, cast
+from typing import Any, Dict, Optional, Union, cast
 
 from pydantic import BaseModel
 from requests import Session
@@ -22,14 +22,18 @@ class HttpClient:
         self,
         method: str,
         path: str,
-        request_data: Optional[BaseModel] = None,
+        request_data: Optional[Union[BaseModel, Dict[str, Any]]] = None,
         timeout: float = DEFAULT_REQUEST_TIMEOUT,
     ) -> Dict[str, Any]:
         try:
             resp = self._session.request(
                 method,
                 f"{self._server_address}{path}",
-                json=request_data.dict() if request_data else None,
+                json=request_data.dict()
+                if isinstance(request_data, BaseModel)
+                else request_data
+                if request_data
+                else None,
                 timeout=timeout,
             )
             if resp.ok:

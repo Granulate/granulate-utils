@@ -10,6 +10,7 @@ from granulate_utils.config_feeder.client.client import ConfigFeederClient
 from granulate_utils.config_feeder.client.collector import ConfigFeederCollector
 from granulate_utils.config_feeder.client.exceptions import APIError, ClientError
 from granulate_utils.config_feeder.client.http_client import DEFAULT_API_SERVER_ADDRESS as API_URL
+from granulate_utils.config_feeder.client.models import CollectionResult
 from granulate_utils.config_feeder.client.yarn.models import YarnConfig
 from granulate_utils.config_feeder.core.errors import InvalidTokenException
 from granulate_utils.config_feeder.core.models.cluster import BigDataPlatform, CloudProvider
@@ -140,8 +141,11 @@ def test_should_call_external_collector(logger: logging.Logger) -> None:
 
         def some_collector(_):
             class SomeCollector(ConfigFeederCollector):
-                async def collect(self, _) -> None:
+                name = "some_collector"
+
+                async def collect(self, _) -> CollectionResult:
                     collect_mock()
+                    return CollectionResult(config=None)
 
             return SomeCollector(_)
 
