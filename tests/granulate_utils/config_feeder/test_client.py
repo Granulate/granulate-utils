@@ -1,13 +1,16 @@
 import json
 import logging
 from typing import Any
+from unittest.mock import Mock
 
 import pytest
 from requests.exceptions import ConnectionError
 
-from granulate_utils.config_feeder.client.client import DEFAULT_API_SERVER_ADDRESS as API_URL
 from granulate_utils.config_feeder.client.client import ConfigFeederClient
+from granulate_utils.config_feeder.client.collector import ConfigFeederCollector
 from granulate_utils.config_feeder.client.exceptions import APIError, ClientError
+from granulate_utils.config_feeder.client.http_client import DEFAULT_API_SERVER_ADDRESS as API_URL
+from granulate_utils.config_feeder.client.models import CollectionResult
 from granulate_utils.config_feeder.client.yarn.models import YarnConfig
 from granulate_utils.config_feeder.core.errors import InvalidTokenException
 from granulate_utils.config_feeder.core.models.cluster import BigDataPlatform, CloudProvider
@@ -130,6 +133,29 @@ def test_should_not_send_anything_if_not_big_data_platform(logger: logging.Logge
         requests = mock.requests
 
         assert len(requests) == 0
+
+
+def test_should_call_external_collector(logger: logging.Logger) -> None:
+    with ApiMock():
+        collect_mock = Mock()
+
+        def some_collector(_):
+            class SomeCollector(ConfigFeederCollector):
+                name = "some_collector"
+
+                async def collect(self, _) -> CollectionResult:
+                    collect_mock()
+                    return CollectionResult(config=None)
+
+            return SomeCollector(_)
+
+        client = ConfigFeederClient(
+            "token1", "service1", yarn=False, logger=logger, collector_factories=[some_collector]
+        )
+
+        client.collect()
+
+        collect_mock.assert_called_once()
 
 
 def test_should_fail_with_client_error(logger: logging.Logger) -> None:

@@ -7,7 +7,7 @@ from unittest.mock import patch
 from requests_mock.mocker import Mocker
 from requests_mock.request import _RequestObjectProxy
 
-from granulate_utils.config_feeder.client.client import DEFAULT_API_SERVER_ADDRESS
+from granulate_utils.config_feeder.client.http_client import DEFAULT_API_SERVER_ADDRESS
 from granulate_utils.config_feeder.core.models.cluster import BigDataPlatform, CloudProvider
 from granulate_utils.config_feeder.core.models.node import NodeInfo
 
@@ -114,7 +114,7 @@ class ApiMock:
             ),
             (
                 patch(
-                    "granulate_utils.config_feeder.client.client.YarnConfigCollector",
+                    "granulate_utils.config_feeder.client.yarn_config_feeder_collector.YarnConfigCollector",
                     autospec=True,
                 ),
                 self._configure_yarn_collector_mock,
