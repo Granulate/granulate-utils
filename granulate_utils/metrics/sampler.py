@@ -266,25 +266,22 @@ class BigDataSampler(Sampler):
         This function fills in self._spark_samplers with the appropriate collectors.
         """
         if self._cluster_mode == SPARK_YARN_MODE:
-            self._collectors.append(YarnCollector(self._master_address, self._logger))
+            yarn_collector = YarnCollector(self._master_address, self._logger)
+            self._collectors.append(yarn_collector)
+            self._cluster_id = self._cluster_id or yarn_collector.cluster_id
 
-        # In Standalone and Mesos we'd use applications metrics
-        if self._cluster_mode in (SPARK_STANDALONE_MODE, SPARK_MESOS_MODE):
+        elif self._cluster_mode in (SPARK_STANDALONE_MODE, SPARK_MESOS_MODE):
+            # In Standalone and Mesos we'd use applications metrics
             self._applications_metrics = True
+
+            # Didn't research how to bring the actual cluster id, so use the master address
+            # Which should work for some use cases.
+            self._cluster_id = self._cluster_id or self._master_address
 
         if self._applications_metrics:
             self._collectors.append(
                 SparkApplicationMetricsCollector(self._cluster_mode, self._master_address, self._logger)
             )
-
-    def _get_cluster_id(self) -> Optional[str]:
-        if self._cluster_mode == SPARK_YARN_MODE and self._master_address is not None:
-            yarn_collector = YarnCollector(self._master_address, self._logger)
-            return yarn_collector.cluster_id
-        else:
-            # Didn't research how to bring the actual cluster id, so use the master address
-            # Which should work for some use cases.
-            return self._master_address
 
     def discover(self) -> bool:
         """
@@ -316,8 +313,6 @@ class BigDataSampler(Sampler):
 
         if have_conf:
             self._init_collectors()
-            if self._cluster_id is None:
-                self._cluster_id = self._get_cluster_id()
 
         return have_conf
 
