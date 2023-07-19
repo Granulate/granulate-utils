@@ -5,8 +5,8 @@ from typing import Callable, List, Optional, Union
 from granulate_utils.config_feeder.client.collector import ConfigFeederCollector, ConfigFeederCollectorParams
 from granulate_utils.config_feeder.client.exceptions import ClientError
 from granulate_utils.config_feeder.client.http_client import HttpClient
-from granulate_utils.config_feeder.core.models.collection import CollectorType
 from granulate_utils.config_feeder.client.yarn_config_feeder_collector import YarnConfigFeederCollector
+from granulate_utils.config_feeder.core.models.collection import CollectorType
 
 
 class ConfigFeederClient:

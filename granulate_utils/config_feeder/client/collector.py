@@ -1,6 +1,7 @@
 from __future__ import annotations
-from abc import ABC, abstractmethod
+
 import logging
+from abc import ABC, abstractmethod
 from typing import TypedDict, Union
 
 from granulate_utils.config_feeder.client.http_client import HttpClient

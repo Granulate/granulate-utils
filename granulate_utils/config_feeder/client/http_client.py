@@ -1,9 +1,11 @@
 from typing import Any, Dict, Optional, cast
+
 from pydantic import BaseModel
 from requests import Session
 from requests.exceptions import ConnectionError, JSONDecodeError
-from granulate_utils.config_feeder.core.errors import raise_for_code
+
 from granulate_utils.config_feeder.client.exceptions import APIError, ClientError
+from granulate_utils.config_feeder.core.errors import raise_for_code
 
 DEFAULT_API_SERVER_ADDRESS = "https://api.granulate.io/config-feeder/api/v1"
 DEFAULT_REQUEST_TIMEOUT = 3
