@@ -1,9 +1,11 @@
 import json
 import logging
 from typing import Any
+from unittest.mock import Mock
 
 import pytest
 from requests.exceptions import ConnectionError
+from granulate_utils.config_feeder.client.collector import ConfigFeederCollector
 
 from granulate_utils.config_feeder.client.http_client import DEFAULT_API_SERVER_ADDRESS as API_URL
 from granulate_utils.config_feeder.client.client import ConfigFeederClient
@@ -130,6 +132,23 @@ def test_should_not_send_anything_if_not_big_data_platform(logger: logging.Logge
         requests = mock.requests
 
         assert len(requests) == 0
+
+
+def test_should_call_external_collector(logger: logging.Logger) -> None:
+    collect_mock = Mock()
+
+    def some_collector(_):
+        class SomeCollector(ConfigFeederCollector):
+            async def collect(self) -> None:
+                collect_mock()
+
+        return SomeCollector(_)
+
+    client = ConfigFeederClient("token1", "service1", yarn=False, logger=logger, collector_factories=[some_collector])
+
+    client.collect()
+
+    collect_mock.assert_called_once()
 
 
 def test_should_fail_with_client_error(logger: logging.Logger) -> None:
