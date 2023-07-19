@@ -2,11 +2,13 @@ import asyncio
 import logging
 from typing import Callable, List, Optional, Union
 
+from granulate_utils.config_feeder.client.bigdata import get_node_info
 from granulate_utils.config_feeder.client.collector import ConfigFeederCollector, ConfigFeederCollectorParams
 from granulate_utils.config_feeder.client.exceptions import ClientError
 from granulate_utils.config_feeder.client.http_client import HttpClient
 from granulate_utils.config_feeder.client.yarn_config_feeder_collector import YarnConfigFeederCollector
 from granulate_utils.config_feeder.core.models.collection import CollectorType
+from granulate_utils.config_feeder.core.models.node import NodeInfo
 
 
 class ConfigFeederClient:
@@ -35,10 +37,14 @@ class ConfigFeederClient:
         self._collectors = self._create_collectors([yarn_collector, *collector_factories])
 
     def collect(self) -> None:
-        asyncio.run(self._collect())
+        if (node_info := get_node_info(self.logger)) is None:
+            self.logger.warning("not a Big Data host, skipping")
+            return None
 
-    async def _collect(self) -> None:
-        await asyncio.gather(*list(map(lambda c: c.collect(), self._collectors)))
+        asyncio.run(self._collect(node_info))
+
+    async def _collect(self, node_info: NodeInfo) -> None:
+        await asyncio.gather(*list(map(lambda c: c.collect(node_info), self._collectors)))
 
     def _create_collectors(
         self, collector_factories: List[Callable[[ConfigFeederCollectorParams], ConfigFeederCollector]]

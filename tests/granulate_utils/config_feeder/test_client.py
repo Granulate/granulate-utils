@@ -135,20 +135,23 @@ def test_should_not_send_anything_if_not_big_data_platform(logger: logging.Logge
 
 
 def test_should_call_external_collector(logger: logging.Logger) -> None:
-    collect_mock = Mock()
+    with ApiMock():
+        collect_mock = Mock()
 
-    def some_collector(_):
-        class SomeCollector(ConfigFeederCollector):
-            async def collect(self) -> None:
-                collect_mock()
+        def some_collector(_):
+            class SomeCollector(ConfigFeederCollector):
+                async def collect(self, _) -> None:
+                    collect_mock()
 
-        return SomeCollector(_)
+            return SomeCollector(_)
 
-    client = ConfigFeederClient("token1", "service1", yarn=False, logger=logger, collector_factories=[some_collector])
+        client = ConfigFeederClient(
+            "token1", "service1", yarn=False, logger=logger, collector_factories=[some_collector]
+        )
 
-    client.collect()
+        client.collect()
 
-    collect_mock.assert_called_once()
+        collect_mock.assert_called_once()
 
 
 def test_should_fail_with_client_error(logger: logging.Logger) -> None:

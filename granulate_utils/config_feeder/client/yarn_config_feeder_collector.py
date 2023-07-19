@@ -3,7 +3,6 @@ import json
 from collections import defaultdict
 from typing import DefaultDict, Dict, Optional
 
-from granulate_utils.config_feeder.client.bigdata import get_node_info
 from granulate_utils.config_feeder.client.collector import ConfigFeederCollector, ConfigFeederCollectorParams
 from granulate_utils.config_feeder.client.models import CollectionResult, ConfigType
 from granulate_utils.config_feeder.client.yarn.collector import YarnConfigCollector
@@ -27,11 +26,7 @@ class YarnConfigFeederCollector(ConfigFeederCollector):
         self._yarn_collector = YarnConfigCollector(logger=self.logger)
         self._last_hash: DefaultDict[ConfigType, Dict[str, str]] = defaultdict(dict)
 
-    async def collect(self) -> None:
-        if (node_info := get_node_info(self.logger)) is None:
-            self.logger.warning("not a Big Data host, skipping")
-            return None
-
+    async def collect(self, node_info: NodeInfo) -> None:
         collection_result = await self._collect(node_info)
 
         if self._cluster_id is None and (node_info.is_master or not collection_result.is_empty):

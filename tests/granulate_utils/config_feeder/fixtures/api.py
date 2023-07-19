@@ -108,7 +108,7 @@ class ApiMock:
         self.contexts: List[Tuple[ContextManager[Any], Callable[[Any], None]]] = [
             (
                 patch(
-                    "granulate_utils.config_feeder.client.yarn_config_feeder_collector.get_node_info",
+                    "granulate_utils.config_feeder.client.client.get_node_info",
                 ),
                 self._configure_node_info,
             ),

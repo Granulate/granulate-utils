@@ -6,6 +6,7 @@ from typing import TypedDict, Union
 
 from granulate_utils.config_feeder.client.http_client import HttpClient
 from granulate_utils.config_feeder.core.models.collection import CollectorType
+from granulate_utils.config_feeder.core.models.node import NodeInfo
 
 
 class ConfigFeederCollectorParams(TypedDict):
@@ -23,5 +24,5 @@ class ConfigFeederCollector(ABC):
         self._collector_type = params["collector_type"]
 
     @abstractmethod
-    async def collect(self) -> None:
+    async def collect(self, node_info: NodeInfo) -> None:
         pass
