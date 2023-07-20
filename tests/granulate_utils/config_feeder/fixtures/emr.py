@@ -15,6 +15,7 @@ class EmrNodeMock(NodeMockBase):
         is_master: bool = False,
         cluster_info: Dict[str, Any] = {},
         managed_policy: Dict[str, Any] = {},
+        version: str = "emr-6.9.0",
     ) -> None:
         super().__init__()
         cluster_info = cluster_info
@@ -22,6 +23,7 @@ class EmrNodeMock(NodeMockBase):
         self.mock_file("/mnt/var/lib/cloud/data/instance-id", instance_id)
         self.mock_file("/mnt/var/lib/info/instance.json", json.dumps({"isMaster": is_master}))
         self.mock_file("/mnt/var/lib/info/job-flow.json", json.dumps({"jobFlowId": job_flow_id}))
+        self.mock_file("/mnt/var/lib/info/extraInstanceData.json", json.dumps({"releaseLabel": version}))
 
         self.mock_command_stdout(
             f"aws emr describe-cluster --cluster-id {job_flow_id}",

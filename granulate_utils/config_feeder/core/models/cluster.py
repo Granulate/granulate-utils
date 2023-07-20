@@ -24,6 +24,7 @@ class ClusterBase(BaseModel):
     collector_type: CollectorType
     provider: CloudProvider
     bigdata_platform: BigDataPlatform
+    bigdata_platform_version: Optional[str] = None
     external_id: str
 
 
