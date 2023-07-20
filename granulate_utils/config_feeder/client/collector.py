@@ -4,7 +4,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import TypedDict, Union
 
-from granulate_utils.config_feeder.client.models import CollectionResult
+from granulate_utils.config_feeder.core.models.collection import CollectionResult
 from granulate_utils.config_feeder.core.models.node import NodeInfo
 
 

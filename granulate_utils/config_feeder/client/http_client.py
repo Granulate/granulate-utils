@@ -11,12 +11,18 @@ DEFAULT_API_SERVER_ADDRESS = "https://api.granulate.io/config-feeder/api/v1"
 DEFAULT_REQUEST_TIMEOUT = 3
 
 
+class AuthCredentials(BaseModel):
+    scheme: str
+    credentials: str
+
+
 class HttpClient:
-    def __init__(self, token: str, server_address: Optional[str]) -> None:
-        self._token = token
+    def __init__(self, auth: AuthCredentials, server_address: Optional[str]) -> None:
         self._server_address: str = server_address.rstrip("/") if server_address else DEFAULT_API_SERVER_ADDRESS
         self._session = Session()
-        self._session.headers.update({"Accept": "application/json", "GProfiler-API-Key": self._token})
+        self._session.headers.update(
+            {"Accept": "application/json", "Authorization": f"{auth.scheme} {auth.credentials}"}
+        )
 
     def request(
         self,
