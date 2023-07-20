@@ -19,6 +19,7 @@ async def test_should_collect_node_info() -> None:
         assert get_node_info() == NodeInfo(
             provider=CloudProvider.AWS,
             bigdata_platform=BigDataPlatform.DATABRICKS,
+            bigdata_platform_version="11.3",
             external_id=instance_id,
             external_cluster_id=cluster_id,
             is_master=True,

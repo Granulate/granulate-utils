@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
@@ -10,6 +10,7 @@ from granulate_utils.config_feeder.core.models.collection import CollectorType
 class NodeInfo(BaseModel):
     provider: CloudProvider
     bigdata_platform: BigDataPlatform
+    bigdata_platform_version: Optional[str] = None
     external_cluster_id: str
     external_id: str
     is_master: bool

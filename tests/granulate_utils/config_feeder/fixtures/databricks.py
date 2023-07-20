@@ -12,6 +12,7 @@ class DatabricksNodeMock(NodeMockBase):
         cluster_id: str = "",
         instance_id: str = "",
         is_master: bool = False,
+        version: str = "11.3",
     ) -> None:
         super().__init__()
         driver_instance_id = instance_id if is_master else "aaa"
@@ -32,3 +33,5 @@ class DatabricksNodeMock(NodeMockBase):
                 {config}
             }}""",
         )
+
+        self.mock_file("/databricks/DBR_VERSION", version)

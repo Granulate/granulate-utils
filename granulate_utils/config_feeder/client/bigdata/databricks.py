@@ -3,6 +3,7 @@ from typing import Dict, List, Optional
 from granulate_utils.config_feeder.core.models.cluster import BigDataPlatform, CloudProvider
 from granulate_utils.config_feeder.core.models.node import NodeInfo
 from granulate_utils.config_feeder.core.utils import mask_sensitive_value
+from granulate_utils.metadata.bigdata import get_databricks_version
 
 INSTANCE_KEY_PREFIX = "databricks.instance.metadata"
 CLUSTER_KEY_PREFIX = "spark.databricks.clusterUsageTags.cluster"
@@ -29,6 +30,7 @@ def get_databricks_node_info() -> Optional[NodeInfo]:
             is_master=(instance_id == driver_instance_id),
             provider=provider,
             bigdata_platform=BigDataPlatform.DATABRICKS,
+            bigdata_platform_version=get_databricks_version(),
             properties=_exclude_keys(properties, [KEY_CLOUD_PROVIDER, KEY_INSTANCE_ID, KEY_CLUSTER_ID]),
         )
     return None

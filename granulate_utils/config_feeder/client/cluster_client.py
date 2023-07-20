@@ -42,6 +42,7 @@ class ClusterClient:
                 service=self._service,
                 provider=node_info.provider,
                 bigdata_platform=node_info.bigdata_platform,
+                bigdata_platform_version=node_info.bigdata_platform_version,
                 external_id=node_info.external_cluster_id,
                 properties=json.dumps(node_info.properties) if node_info.properties else None,
             ),
