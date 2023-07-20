@@ -8,18 +8,17 @@ from granulate_utils.config_feeder.client.bigdata import get_node_info
 from granulate_utils.config_feeder.client.cluster_client import ClusterClient
 from granulate_utils.config_feeder.client.collector import ConfigFeederCollector, ConfigFeederCollectorParams
 from granulate_utils.config_feeder.client.exceptions import ClientError
-from granulate_utils.config_feeder.client.http_client import HttpClient
-from granulate_utils.config_feeder.client.models import CollectionResult
+from granulate_utils.config_feeder.client.http_client import AuthCredentials, HttpClient
 from granulate_utils.config_feeder.client.yarn_config_feeder_collector import YarnConfigFeederCollector
 from granulate_utils.config_feeder.core.models.aggregation import NodeResourceConfigCreate
-from granulate_utils.config_feeder.core.models.collection import CollectorType
+from granulate_utils.config_feeder.core.models.collection import CollectionResult, CollectorType
 from granulate_utils.config_feeder.core.models.node import NodeInfo
 
 
 class ConfigFeederClient:
     def __init__(
         self,
-        token: str,
+        auth: AuthCredentials,
         service: str,
         *,
         logger: Union[logging.Logger, logging.LoggerAdapter],
@@ -28,8 +27,8 @@ class ConfigFeederClient:
         collector_type=CollectorType.SAGENT,
         collector_factories: List[Callable[[ConfigFeederCollectorParams], ConfigFeederCollector]] = [],
     ) -> None:
-        if not token or not service:
-            raise ClientError("Token and service must be provided")
+        if not service:
+            raise ClientError("Service must be provided")
 
         def yarn_collector(params: ConfigFeederCollectorParams) -> YarnConfigFeederCollector:
             return YarnConfigFeederCollector(params, yarn=yarn)
@@ -38,7 +37,7 @@ class ConfigFeederClient:
         self._service = service
         self._collector_type = collector_type
         self._is_yarn_enabled = yarn
-        self._http_client = HttpClient(token, server_address)
+        self._http_client = HttpClient(auth, server_address)
         self._cluster_client = ClusterClient(logger, self._http_client, collector_type, service)
         self._collectors = self._create_collectors([yarn_collector, *collector_factories])
         self._last_hash: DefaultDict[str, str] = defaultdict()

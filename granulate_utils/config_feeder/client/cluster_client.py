@@ -4,10 +4,9 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Optional, Union
 
 from granulate_utils.config_feeder.client.http_client import HttpClient
-from granulate_utils.config_feeder.client.models import CollectionResult
 from granulate_utils.config_feeder.core.models.aggregation import NodeResourceConfigCreate
 from granulate_utils.config_feeder.core.models.cluster import ClusterCreate, CreateClusterRequest, CreateClusterResponse
-from granulate_utils.config_feeder.core.models.collection import CollectorType
+from granulate_utils.config_feeder.core.models.collection import CollectionResult, CollectorType
 from granulate_utils.config_feeder.core.models.node import CreateNodeRequest, CreateNodeResponse, NodeCreate, NodeInfo
 
 

@@ -1,9 +1,9 @@
 from typing import Optional
 
 from granulate_utils.config_feeder.client.collector import ConfigFeederCollector, ConfigFeederCollectorParams
-from granulate_utils.config_feeder.client.models import CollectionResult
 from granulate_utils.config_feeder.client.yarn.collector import YarnConfigCollector
 from granulate_utils.config_feeder.client.yarn.models import YarnConfig
+from granulate_utils.config_feeder.core.models.collection import CollectionResult
 from granulate_utils.config_feeder.core.models.node import NodeInfo
 
 
