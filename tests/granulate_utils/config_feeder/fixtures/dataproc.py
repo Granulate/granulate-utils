@@ -18,6 +18,7 @@ class DataprocNodeMock(NodeMockBase):
         cluster_info: Dict[str, Any] = {},
         autoscaling_policy: Optional[Dict[str, Any]] = None,
         metadata_response: Optional[str] = None,
+        version: str = "2.0",
     ) -> None:
         super().__init__()
 
@@ -45,3 +46,5 @@ class DataprocNodeMock(NodeMockBase):
                 f"gcloud dataproc autoscaling-policies describe {autoscaling_policy['name']} --region={region} --format=json",  # noqa: E501
                 json.dumps(autoscaling_policy).encode("utf-8"),
             )
+
+        self.mock_file("/etc/environment", f"DATAPROC_IMAGE_VERSION={version}")

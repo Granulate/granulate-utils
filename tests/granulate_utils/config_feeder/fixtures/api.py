@@ -36,6 +36,7 @@ class ApiMock:
                 is_master=True,
                 provider=CloudProvider.AWS,
                 bigdata_platform=BigDataPlatform.EMR,
+                bigdata_platform_version="emr-6.9.0",
             ),
         )
 
@@ -60,6 +61,7 @@ class ApiMock:
                         "collector_type": "sagent",
                         "provider": "aws",
                         "bigdata_platform": "emr",
+                        "bigdata_platform_version": "emr-6.9.0",
                         "external_id": "j-1234567890",
                         "ts": "2021-10-01T00:00:00Z",
                     }
