@@ -1,14 +1,14 @@
-import logging
 from typing import Any, Dict
 
 import pytest
 
 from granulate_utils.config_feeder.client.autoscaling.collector import AutoScalingConfigCollector
+from granulate_utils.config_feeder.client.collector import ConfigFeederCollectorParams
 from tests.granulate_utils.config_feeder.fixtures.emr import EmrNodeMock
 
 
 @pytest.mark.asyncio
-async def test_should_collect_custom_policy(logger: logging.Logger) -> None:
+async def test_should_collect_custom_policy(collector_params: ConfigFeederCollectorParams) -> None:
     autoscaling_policy = get_sample_autoscaling_policy()
 
     instance_groups = [
@@ -31,10 +31,10 @@ async def test_should_collect_custom_policy(logger: logging.Logger) -> None:
         is_master=True,
         cluster_info={"Cluster": {"InstanceGroups": instance_groups}},
     ) as m:
-        node_config = await AutoScalingConfigCollector(logger=logger).collect(m.node_info)
+        node_config = (await AutoScalingConfigCollector(collector_params).collect(m.node_info)).config
         assert node_config is not None
-        assert node_config.mode == "custom"
-        assert node_config.config["ig-16ZL5OII561M1"] == {
+        assert node_config["mode"] == "custom"
+        assert node_config["config"]["ig-16ZL5OII561M1"] == {
             "instance_group_type": "TASK",
             "constraints": autoscaling_policy["Constraints"],
             "rules": autoscaling_policy["Rules"],
@@ -42,7 +42,7 @@ async def test_should_collect_custom_policy(logger: logging.Logger) -> None:
 
 
 @pytest.mark.asyncio
-async def test_should_collect_managed_policy(logger: logging.Logger) -> None:
+async def test_should_collect_managed_policy(collector_params: ConfigFeederCollectorParams) -> None:
     managed_policy = get_sample_managed_policy()
 
     with EmrNodeMock(
@@ -51,20 +51,20 @@ async def test_should_collect_managed_policy(logger: logging.Logger) -> None:
         is_master=True,
         managed_policy=managed_policy,
     ) as m:
-        node_config = await AutoScalingConfigCollector(logger=logger).collect(m.node_info)
+        node_config = (await AutoScalingConfigCollector(collector_params).collect(m.node_info)).config
         assert node_config is not None
-        assert node_config.mode == "managed"
-        assert node_config.config == managed_policy
+        assert node_config["mode"] == "managed"
+        assert node_config["config"] == managed_policy
 
 
 @pytest.mark.asyncio
-async def test_should_not_collect_on_worker(logger: logging.Logger) -> None:
+async def test_should_not_collect_on_worker(collector_params: ConfigFeederCollectorParams) -> None:
     with EmrNodeMock(
         job_flow_id="j-1PBPNNYXXSRYL",
         instance_id="i-06828639fa954e04c",
         is_master=False,
     ) as m:
-        assert await AutoScalingConfigCollector(logger=logger).collect(m.node_info) is None
+        assert (await AutoScalingConfigCollector(collector_params).collect(m.node_info)).is_empty
 
 
 def get_sample_managed_policy() -> Dict[str, Any]:

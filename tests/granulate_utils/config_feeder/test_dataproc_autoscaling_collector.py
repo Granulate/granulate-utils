@@ -1,14 +1,14 @@
-import logging
 from typing import Any, Dict
 
 import pytest
 
 from granulate_utils.config_feeder.client.autoscaling.collector import AutoScalingConfigCollector
+from granulate_utils.config_feeder.client.collector import ConfigFeederCollectorParams
 from tests.granulate_utils.config_feeder.fixtures.dataproc import DataprocNodeMock
 
 
 @pytest.mark.asyncio
-async def test_should_collect_custom_policy(logger: logging.Logger) -> None:
+async def test_should_collect_custom_policy(collector_params: ConfigFeederCollectorParams) -> None:
     instance_id = "7203450965080656748"
     cluster_uuid = "824afc19-cf18-4b23-99b0-51a6b20b35d"
     autoscaling_policy = get_sample_autoscaling_policy()
@@ -28,10 +28,10 @@ async def test_should_collect_custom_policy(logger: logging.Logger) -> None:
         is_master=True,
         autoscaling_policy=autoscaling_policy,
     ) as m:
-        node_config = await AutoScalingConfigCollector(logger=logger).collect(m.node_info)
+        node_config = (await AutoScalingConfigCollector(collector_params).collect(m.node_info)).config
         assert node_config is not None
-        assert node_config.mode == "custom"
-        assert node_config.config == autoscaling_policy
+        assert node_config["mode"] == "custom"
+        assert node_config["config"] == autoscaling_policy
 
 
 def get_sample_autoscaling_policy() -> Dict[str, Any]:

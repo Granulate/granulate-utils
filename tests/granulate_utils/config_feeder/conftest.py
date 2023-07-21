@@ -3,6 +3,8 @@ import logging
 import pytest
 
 from granulate_utils.config_feeder.client.bigdata import get_node_info
+from granulate_utils.config_feeder.client.collector import ConfigFeederCollectorParams
+from granulate_utils.config_feeder.client.http_client import AuthCredentials
 
 
 @pytest.fixture(autouse=True)
@@ -15,3 +17,13 @@ def logger() -> logging.Logger:
     logger = logging.getLogger("test-logger")
     logger.addHandler(logging.NullHandler())
     return logger
+
+
+@pytest.fixture(scope="session")
+def collector_params(logger: logging.Logger) -> ConfigFeederCollectorParams:
+    return {"logger": logger}
+
+
+@pytest.fixture(scope="session")
+def auth() -> AuthCredentials:
+    return AuthCredentials(scheme="Bearer", credentials="token1")

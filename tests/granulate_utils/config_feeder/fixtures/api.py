@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Any, Callable, ContextManager, List, Tuple
+from typing import Any, Callable, ContextManager, List, Optional, Tuple
 from unittest.mock import patch
 
 from requests_mock.mocker import Mocker
 from requests_mock.request import _RequestObjectProxy
 
-from granulate_utils.config_feeder.client.client import DEFAULT_API_SERVER_ADDRESS
+from granulate_utils.config_feeder.client.http_client import DEFAULT_API_SERVER_ADDRESS
+from granulate_utils.config_feeder.core.models.autoscaling import AutoScalingConfig
 from granulate_utils.config_feeder.core.models.cluster import BigDataPlatform, CloudProvider
+from granulate_utils.config_feeder.core.models.collection import CollectionResult
 from granulate_utils.config_feeder.core.models.node import NodeInfo
 
 
@@ -42,8 +44,11 @@ class ApiMock:
         instance.collect.side_effect = self.kwargs.get("collect_yarn_config", lambda node_info: None)
 
     def _configure_autoscaling_collector_mock(self, mock: Any) -> None:
+        mocker: Optional[Callable[[], Optional[AutoScalingConfig]]] = self.kwargs.get("collect_autoscaling_config")
+        config = mocker() if mocker else None
         instance = mock.return_value
-        instance.collect.side_effect = self.kwargs.get("collect_autoscaling_config", lambda node_info: None)
+        instance.name = "autoscaling_config"
+        instance.collect.side_effect = lambda node_info: CollectionResult(config=config.dict() if config else None)
 
     def _configure_api_mock(self, mock: Any) -> None:
         register_cluster_response = self.kwargs.get(
@@ -87,30 +92,27 @@ class ApiMock:
             **register_yarn_config_response,
         )
 
-        register_node_configs_response = self.kwargs.get(
-            "register_node_configs_response",
-            {
-                "json": {
-                    "yarn_config": {
-                        "node_id": "node-1",
-                        "yarn_config_id": "yarn-config-1",
-                        "config_hash": "1234567890",
-                        "config_json": {},
-                        "ts": "2021-10-01T00:00:00Z",
-                    },
-                    "autoscaling_config": {
-                        "cluster_id": "cluster-1",
-                        "autoscaling_config_id": "autoscaling-config-1",
-                        "mode": "managed",
-                        "config_hash": "1234567890",
-                        "config_json": {},
-                        "ts": "2021-10-01T00:00:00Z",
-                    }
-                    if "collect_autoscaling_config" in self.kwargs
-                    else None,
+        register_node_configs_response = self.kwargs.get("register_node_configs_response")
+        if register_node_configs_response is None:
+            response = {
+                "yarn_config": {
+                    "node_id": "node-1",
+                    "yarn_config_id": "yarn-config-1",
+                    "config_hash": "1234567890",
+                    "config_json": {},
+                    "ts": "2021-10-01T00:00:00Z",
                 }
-            },
-        )
+            }
+            if "collect_autoscaling_config" in self.kwargs:
+                response["autoscaling_config"] = {
+                    "cluster_id": "cluster-1",
+                    "autoscaling_config_id": "autoscaling-config-1",
+                    "config_json": {},
+                    "config_hash": "1234567890",
+                    "ts": "2021-10-01T00:00:00Z",
+                }
+            register_node_configs_response = {"json": response}
+
         mock.post(
             f"{DEFAULT_API_SERVER_ADDRESS}/nodes/node-1/configs",
             **register_node_configs_response,
@@ -128,7 +130,7 @@ class ApiMock:
             ),
             (
                 patch(
-                    "granulate_utils.config_feeder.client.client.YarnConfigCollector",
+                    "granulate_utils.config_feeder.client.yarn_config_feeder_collector.YarnConfigCollector",
                     autospec=True,
                 ),
                 self._configure_yarn_collector_mock,

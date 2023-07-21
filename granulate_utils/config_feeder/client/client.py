@@ -1,35 +1,25 @@
 import asyncio
-import json
 import logging
 from collections import defaultdict
-from typing import Any, DefaultDict, Dict, Optional, Union, cast
-
-from pydantic import BaseModel
-from requests import Session
-from requests.exceptions import ConnectionError, JSONDecodeError
+from functools import reduce
+from typing import Callable, DefaultDict, Dict, List, Optional, Union
 
 from granulate_utils.config_feeder.client.autoscaling.collector import AutoScalingConfigCollector
 from granulate_utils.config_feeder.client.bigdata import get_node_info
-from granulate_utils.config_feeder.client.exceptions import APIError, ClientError
-from granulate_utils.config_feeder.client.models import CollectionResult, ConfigType
-from granulate_utils.config_feeder.client.yarn.collector import YarnConfigCollector
-from granulate_utils.config_feeder.client.yarn.models import YarnConfig
-from granulate_utils.config_feeder.core.errors import raise_for_code
-from granulate_utils.config_feeder.core.models.aggregation import CreateNodeConfigsRequest, CreateNodeConfigsResponse
-from granulate_utils.config_feeder.core.models.autoscaling import AutoScalingConfig, ClusterAutoScalingConfigCreate
-from granulate_utils.config_feeder.core.models.cluster import ClusterCreate, CreateClusterRequest, CreateClusterResponse
-from granulate_utils.config_feeder.core.models.collection import CollectorType
-from granulate_utils.config_feeder.core.models.node import CreateNodeRequest, CreateNodeResponse, NodeCreate, NodeInfo
-from granulate_utils.config_feeder.core.models.yarn import NodeYarnConfigCreate
-
-DEFAULT_API_SERVER_ADDRESS = "https://api.granulate.io/config-feeder/api/v1"
-DEFAULT_REQUEST_TIMEOUT = 3
+from granulate_utils.config_feeder.client.cluster_client import ClusterClient
+from granulate_utils.config_feeder.client.collector import ConfigFeederCollector, ConfigFeederCollectorParams
+from granulate_utils.config_feeder.client.exceptions import ClientError
+from granulate_utils.config_feeder.client.http_client import AuthCredentials, HttpClient
+from granulate_utils.config_feeder.client.yarn_config_feeder_collector import YarnConfigFeederCollector
+from granulate_utils.config_feeder.core.models.aggregation import NodeResourceConfigCreate
+from granulate_utils.config_feeder.core.models.collection import CollectionResult, CollectorType
+from granulate_utils.config_feeder.core.models.node import NodeInfo
 
 
 class ConfigFeederClient:
     def __init__(
         self,
-        token: str,
+        auth: AuthCredentials,
         service: str,
         *,
         logger: Union[logging.Logger, logging.LoggerAdapter],
@@ -37,183 +27,80 @@ class ConfigFeederClient:
         yarn: bool = True,
         autoscaling: bool = True,
         collector_type=CollectorType.SAGENT,
+        collector_factories: List[Callable[[ConfigFeederCollectorParams], ConfigFeederCollector]] = [],
     ) -> None:
-        if not token or not service:
-            raise ClientError("Token and service must be provided")
+        if not service:
+            raise ClientError("Service must be provided")
+
         self.logger = logger
-        self._token = token
         self._service = service
-        self._cluster_id: Optional[str] = None
         self._collector_type = collector_type
-        self._server_address: str = server_address.rstrip("/") if server_address else DEFAULT_API_SERVER_ADDRESS
-        self._is_yarn_enabled = yarn
-        self._yarn_collector = YarnConfigCollector(logger=logger)
-        self._is_autoscaling_enabled = autoscaling
-        self._autoscaling_collector = AutoScalingConfigCollector(logger=logger)
-        self._last_hash: DefaultDict[ConfigType, Dict[str, str]] = defaultdict(dict)
-        self._init_api_session()
+        self._http_client = HttpClient(auth, server_address)
+        self._cluster_client = ClusterClient(logger, self._http_client, collector_type, service)
+
+        factories: List[Callable[[ConfigFeederCollectorParams], ConfigFeederCollector]] = []
+        if yarn:
+            factories.append(lambda params: YarnConfigFeederCollector(params))
+        if autoscaling:
+            factories.append(lambda params: AutoScalingConfigCollector(params))
+        factories.extend(collector_factories)
+        self._collectors = self._create_collectors(factories)
+
+        self._last_hash: DefaultDict[str, str] = defaultdict()
 
     def collect(self) -> None:
         if (node_info := get_node_info(self.logger)) is None:
             self.logger.warning("not a Big Data host, skipping")
             return None
 
-        collection_result = asyncio.run(self._collect(node_info))
+        asyncio.run(self._collect(node_info))
 
-        if self._cluster_id is None and (node_info.is_master or not collection_result.is_empty):
-            self._register_cluster(node_info)
+    async def _collect(self, node_info: NodeInfo) -> None:
+        collection_result = await self._run_collectors(node_info)
+        self._cluster_client.register_cluster_if_needed(node_info, collection_result)
+        self._submit_configs_if_needed(node_info, collection_result)
 
-        if collection_result.is_empty:
-            self.logger.info("no configs to submit")
+    def _submit_configs_if_needed(self, node_info: NodeInfo, collection_result: Dict[str, CollectionResult]):
+        requests = self._get_config_requests(collection_result)
+
+        if not requests:
+            self.logger.info(f"skipping node {node_info.external_id}, configs are up to date")
             return None
 
-        self._submit_node_configs(collection_result)
+        response = self._cluster_client.submit_node_configs(node_info, requests)
 
-    async def _collect(self, node_info: NodeInfo) -> CollectionResult:
-        results = await asyncio.gather(
-            self._collect_yarn_config(node_info),
-            self._collect_autoscaling_config(node_info),
-        )
-        return CollectionResult(node=node_info, yarn_config=results[0], autoscaling_config=results[1])
+        for name, _ in response.items():
+            assert collection_result.get(name, None) is not None
+            self._last_hash[name] = collection_result[name].config_hash
 
-    async def _collect_yarn_config(self, node_info: NodeInfo) -> Optional[YarnConfig]:
-        if not self._is_yarn_enabled:
-            return None
-        self.logger.info("YARN config collection starting")
-        yarn_config = await self._yarn_collector.collect(node_info)
-        self.logger.info("YARN config collection finished")
-        return yarn_config
+    async def _run_collectors(self, node_info: NodeInfo) -> Dict[str, CollectionResult]:
+        async def run_collector(c: ConfigFeederCollector):
+            collection_result = await c.collect(node_info)
 
-    async def _collect_autoscaling_config(self, node_info: NodeInfo) -> Optional[AutoScalingConfig]:
-        if not self._is_autoscaling_enabled:
-            return None
-        self.logger.info("AutoScaling config collection starting")
-        autoscaling_config = await self._autoscaling_collector.collect(node_info)
-        self.logger.info("AutoScaling config collection finished")
-        return autoscaling_config
+            if collection_result.is_empty:
+                self.logger.info(f"{c.name} has no configs to submit")
+                return {}
 
-    def _submit_node_configs(
-        self,
-        collection_result: CollectionResult,
-    ) -> None:
-        external_id = collection_result.node.external_id
-        request = self._get_configs_request(collection_result)
-        if request is None:
-            self.logger.info(f"skipping node {external_id}, configs are up to date")
-            return None
+            return {c.name: collection_result}
 
-        node_id = self._register_node(collection_result.node)
-        self.logger.info(f"sending configs for node {external_id}")
-        response = CreateNodeConfigsResponse(**self._api_request("POST", f"/nodes/{node_id}/configs", request))
+        result = await asyncio.gather(*list(map(run_collector, self._collectors)))
+        return reduce(lambda x, y: {**x, **y}, result, {})
 
-        if response.yarn_config is not None:
-            assert request.yarn_config is not None
-            self._last_hash[ConfigType.YARN][external_id] = collection_result.yarn_config_hash
+    def _create_collectors(
+        self, collector_factories: List[Callable[[ConfigFeederCollectorParams], ConfigFeederCollector]]
+    ):
+        params: ConfigFeederCollectorParams = {"logger": self.logger}
+        return list(map(lambda fac: fac(params), collector_factories))
 
-        if response.autoscaling_config is not None:
-            assert request.autoscaling_config is not None
-            self._last_hash[ConfigType.AUTOSCALING][external_id] = collection_result.autoscaling_config_hash
+    def _get_config_requests(self, configs: Dict[str, CollectionResult]) -> Dict[str, NodeResourceConfigCreate]:
+        outdated: Dict[str, NodeResourceConfigCreate] = {}
 
-    def _register_node(
-        self,
-        node: NodeInfo,
-    ) -> str:
-        if self._cluster_id is None:
-            self._register_cluster(node)
-        assert self._cluster_id is not None
-        self.logger.debug(f"registering node {node.external_id}")
-        request = CreateNodeRequest(
-            node=NodeCreate(
-                collector_type=self._collector_type,
-                external_id=node.external_id,
-                is_master=node.is_master,
-            ),
-            allow_existing=True,
-        )
-        response = CreateNodeResponse(**self._api_request("POST", f"/clusters/{self._cluster_id}/nodes", request))
-        return response.node.id
-
-    def _register_cluster(self, node_info: NodeInfo) -> None:
-        self.logger.debug(f"registering cluster {node_info.external_id}")
-        request = CreateClusterRequest(
-            cluster=ClusterCreate(
-                collector_type=self._collector_type,
-                service=self._service,
-                provider=node_info.provider,
-                bigdata_platform=node_info.bigdata_platform,
-                external_id=node_info.external_cluster_id,
-                properties=json.dumps(node_info.properties) if node_info.properties else None,
-            ),
-            allow_existing=True,
-        )
-        response = CreateClusterResponse.parse_obj(self._api_request("POST", "/clusters", request))
-        self._cluster_id = response.cluster.id
-
-    def _get_configs_request(self, configs: CollectionResult) -> Optional[CreateNodeConfigsRequest]:
-        yarn_config = self._get_yarn_config_if_changed(configs)
-        autoscaling_config = self._get_autoscaling_config_if_changed(configs)
-
-        if yarn_config is None and autoscaling_config is None:
-            return None
-
-        return CreateNodeConfigsRequest(
-            yarn_config=yarn_config,
-            autoscaling_config=autoscaling_config,
-        )
-
-    def _get_yarn_config_if_changed(self, configs: CollectionResult) -> Optional[NodeYarnConfigCreate]:
-        if configs.yarn_config is None:
-            return None
-        if self._last_hash[ConfigType.YARN].get(configs.node.external_id) == configs.yarn_config_hash:
-            self.logger.debug("YARN config is up to date")
-            return None
-        return NodeYarnConfigCreate(
-            collector_type=self._collector_type, config_json=json.dumps(configs.yarn_config.config)
-        )
-
-    def _get_autoscaling_config_if_changed(
-        self,
-        configs: CollectionResult,
-    ) -> Optional[ClusterAutoScalingConfigCreate]:
-        if configs.autoscaling_config is None:
-            return None
-        if self._last_hash[ConfigType.AUTOSCALING].get(configs.node.external_id) == configs.autoscaling_config_hash:
-            self.logger.debug("AutoScaling config is up to date")
-            return None
-        return ClusterAutoScalingConfigCreate(
-            collector_type=self._collector_type,
-            mode=configs.autoscaling_config.mode,
-            config_json=json.dumps(configs.autoscaling_config.config),
-        )
-
-    def _api_request(
-        self,
-        method: str,
-        path: str,
-        request_data: Optional[BaseModel] = None,
-        timeout: float = DEFAULT_REQUEST_TIMEOUT,
-    ) -> Dict[str, Any]:
-        try:
-            resp = self._session.request(
-                method,
-                f"{self._server_address}{path}",
-                json=request_data.dict() if request_data else None,
-                timeout=timeout,
+        for name, result in configs.items():
+            if self._last_hash.get(name, None) == result.config_hash:
+                self.logger.debug(f"{name} config is up to date")
+                continue
+            outdated[name] = NodeResourceConfigCreate(
+                collector_type=self._collector_type, config_json=result.serialized
             )
-            if resp.ok:
-                return cast(Dict[str, Any], resp.json())
-            try:
-                res = resp.json()
-                if "detail" in res:
-                    raise APIError(res["detail"], path, resp.status_code)
-                error = res["error"]
-                raise_for_code(error["code"], error["message"])
-                return cast(Dict[str, Any], res)
-            except (KeyError, JSONDecodeError):
-                raise APIError(resp.text or resp.reason, path, resp.status_code)
-        except ConnectionError:
-            raise ClientError(f"could not connect to {self._server_address}")
 
-    def _init_api_session(self) -> None:
-        self._session = Session()
-        self._session.headers.update({"Accept": "application/json", "GProfiler-API-Key": self._token})
+        return outdated
