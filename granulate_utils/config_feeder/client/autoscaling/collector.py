@@ -32,11 +32,9 @@ class AutoScalingConfigCollector(ConfigFeederCollector):
             config = await get_dataproc_autoscaling_config(node_info, logger=self.logger)
         elif node_info.bigdata_platform == BigDataPlatform.DATABRICKS:
             config = await get_databricks_autoscaling_config(node_info)
+        else:
+            self.logger.debug(
+                f"{node_info.bigdata_platform} on {node_info.provider} is not yet supported, skipping"  # noqa: E501
+            )
 
-        if config is not None:
-            return CollectionResult(config=config.dict())
-
-        self.logger.debug(
-            f"{node_info.bigdata_platform} on {node_info.provider} is not yet supported, skipping"  # noqa: E501
-        )
-        return CollectionResult(config=None)
+        return CollectionResult(config=config.dict() if config is not None else None)
