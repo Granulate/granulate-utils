@@ -19,6 +19,7 @@ class ResourceManagerAPI:
         self._apps_url = f"{rm_address}/ws/v1/cluster/apps"
         self._metrics_url = f"{rm_address}/ws/v1/cluster/metrics"
         self._nodes_url = f"{rm_address}/ws/v1/cluster/nodes"
+        self._scheduler_url = f"{rm_address}/ws/v1/cluster/scheduler"
 
     def apps(self, **kwargs) -> List[Dict]:
         return json_request(self._apps_url, **kwargs).get("apps", {}).get("app", [])
@@ -28,6 +29,9 @@ class ResourceManagerAPI:
 
     def nodes(self, **kwargs) -> List[Dict]:
         return json_request(self._nodes_url, **kwargs).get("nodes", {}).get("node", [])
+
+    def scheduler(self, **kwargs) -> Optional[Dict]:
+        return json_request(self._scheduler_url, **kwargs).get("scheduler", {}).get("schedulerInfo")
 
 
 class YarnCollector(Collector):
