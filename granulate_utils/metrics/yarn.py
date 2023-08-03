@@ -54,7 +54,8 @@ class YarnCollector(Collector):
 
     def _nodes_metrics(self) -> Iterable[Sample]:
         try:
-            for node in self.rm.nodes(states="RUNNING"):
+            for node in self.rm.nodes(
+                    states="NEW,RUNNING,UNHEALTHY,DECOMMISSIONING"):
                 for metric, value in node.get("resourceUtilization", {}).items():
                     node[metric] = value  # this will create all relevant metrics under same dictionary
 
