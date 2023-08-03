@@ -56,7 +56,7 @@ class YarnCollector(Collector):
         try:
             # This are all the statuses that defined as 'active node' in:
             # isActiveState in hadoop-yarn-project/hadoop-yarn/hadoop-yarn-api/src/main/java/org/apache/hadoop/yarn/api/records/NodeState.java
-            # Also, we don't want to collect DECOMMISSIONED because in EMR nodes are considered DECOMMISSIONING forever and are never removed
+            # Also, we don't want to collect DECOMMISSIONED because in EMR, nodes are considered DECOMMISSIONED forever and are never removed
             # from the nodes list
             for node in self.rm.nodes(
                     states="NEW,RUNNING,UNHEALTHY,DECOMMISSIONING"):
