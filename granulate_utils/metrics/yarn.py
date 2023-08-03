@@ -59,10 +59,11 @@ class YarnCollector(Collector):
             # https://github.com/apache/hadoop/blob/a91933620d8755e80ad4bdf900b506dd73d26786/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-api/src/main/java/org/apache/hadoop/yarn/api/records/NodeState.java#L65
             # Also, we don't want to collect DECOMMISSIONED because in EMR,
             # nodes are considered DECOMMISSIONED forever and are never removed from the nodes list
-            for node in self.rm.nodes(
-                    states="NEW,RUNNING,UNHEALTHY,DECOMMISSIONING"):
+            for node in self.rm.nodes(states="NEW,RUNNING,UNHEALTHY,DECOMMISSIONING"):
                 for metric, value in node.get("resourceUtilization", {}).items():
-                    node[metric] = value  # this will create all relevant metrics under same dictionary
+                    node[
+                        metric
+                    ] = value  # this will create all relevant metrics under same dictionary
 
                 labels = {"node_hostname": node["nodeHostName"]}
                 yield from samples_from_json(labels, node, YARN_NODES_METRICS)
