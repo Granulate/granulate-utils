@@ -25,8 +25,7 @@ def get_golang_buildid(process: Process) -> Optional[str]:
     elf_path = f"/proc/{process.pid}/exe"
     try:
         # section .note.go.buildid has been added since version 1.5: https://github.com/golang/go/issues/11048
-        golang_buildid = get_elf_buildid(elf_path, ".note.go.buildid", lambda note: note.n_name == "Go")
-        return golang_buildid
+        return get_elf_buildid(elf_path, ".note.go.buildid", lambda note: note.n_name == "Go")
     except FileNotFoundError:
         raise NoSuchProcess(process.pid)
 

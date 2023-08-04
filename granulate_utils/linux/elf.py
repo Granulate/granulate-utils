@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from enum import Enum, auto
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable, List, Optional, TypeVar, Union, cast
+from typing import Callable, List, Optional, TypeVar, Union, cast
 
 import psutil
 from elftools.elf.elffile import ELFError, ELFFile  # type: ignore
@@ -71,7 +71,7 @@ def get_elf_arch(elf: ELFType) -> str:
         return elf.get_machine_arch()
 
 
-def get_elf_buildid(elf: ELFType, section: str, note_check: Callable[[Any], Any] = lambda n: True) -> Optional[str]:
+def get_elf_buildid(elf: ELFType, section: str, note_check: Callable[[NoteSection], bool]) -> Optional[str]:
     """
     Gets the build ID embedded in an ELF file note section as a hex string,
     or None if not present.
