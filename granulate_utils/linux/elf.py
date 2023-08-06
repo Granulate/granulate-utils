@@ -54,6 +54,7 @@ class LibcType(Enum):
 ELFType = Union[ELFFile, Path, str]
 
 
+@raise_nosuchprocess
 @contextmanager
 def open_elf(elf: ELFType) -> ELFFile:
     if isinstance(elf, ELFFile):
@@ -99,7 +100,6 @@ def get_elf_buildid(elf: ELFType, section: str, note_check: Callable[[NoteSectio
             return None
 
 
-@raise_nosuchprocess
 def get_elf_id(elf: ELFType) -> str:
     """
     Gets an identifier for this ELF.
@@ -135,7 +135,6 @@ def read_elf_symbol(elf: ELFType, sym_name: str, size: int) -> Optional[bytes]:
         return read_elf_va(elf, addr, size)
 
 
-@raise_nosuchprocess
 def is_statically_linked(elf: ELFType) -> bool:
     with open_elf(elf) as elf:
         for segment in elf.iter_segments():
@@ -197,7 +196,6 @@ def get_libc_type(elf: ELFType) -> LibcType:
         return LibcType.STATIC_NO_LIBC
 
 
-@raise_nosuchprocess
 def elf_is_stripped(elf: ELFType) -> bool:
     with open_elf(elf) as elf:
         return elf.get_section_by_name(".symtab") is None
