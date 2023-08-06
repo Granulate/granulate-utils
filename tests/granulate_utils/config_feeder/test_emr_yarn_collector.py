@@ -69,7 +69,7 @@ async def test_should_fail_with_max_retries_exception(
         home_dir="/home/not-hadoop",
         response={"exc": ConnectionError},
     ) as mock:
-        with pytest.raises(MaximumRetriesExceeded, match="maximum number of failed requests reached"):
+        with pytest.raises(MaximumRetriesExceeded, match="maximum number of failed requests reached for /conf"):
             collector = YarnConfigCollector(max_retries=3, logger=logger)
             while True:
                 await collector.collect(mock.node_info)
