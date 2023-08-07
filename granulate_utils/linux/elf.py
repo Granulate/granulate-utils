@@ -71,6 +71,16 @@ def get_elf_arch(elf: ELFType) -> str:
         return elf.get_machine_arch()
 
 
+def elf_arch_to_uname_arch(arch: str) -> str:
+    """
+    Translates from the value returned by get_elf_arch to the value you'd receive from "uname -m"
+    """
+    return {
+        "x64": "x86_64",
+        "Aarch64": "aarch64",
+    }[arch]
+
+
 def get_elf_buildid(elf: ELFType, section: str, note_check: Callable[[NoteSection], bool]) -> Optional[str]:
     """
     Gets the build ID embedded in an ELF file note section as a string,
