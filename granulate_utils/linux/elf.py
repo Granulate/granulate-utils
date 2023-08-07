@@ -71,18 +71,19 @@ def get_elf_arch(elf: ELFType) -> str:
         return elf.get_machine_arch()
 
 
-def get_elf_buildid(elf: ELFType) -> Optional[str]:
+def get_elf_buildid(elf: ELFType, section: str, note_check: Callable[[NoteSection], bool]) -> Optional[str]:
     """
-    Gets the build ID embedded in an ELF file section as a hex string,
+    Gets the build ID embedded in an ELF file note section as a string,
     or None if not present.
+    Lambda argument is used to verify that note meets caller's requirements.
     """
     with open_elf(elf) as elf:
-        build_id_section = elf.get_section_by_name(".note.gnu.build-id")
-        if build_id_section is None or not isinstance(build_id_section, NoteSection):
+        note_section = elf.get_section_by_name(section)
+        if note_section is None or not isinstance(note_section, NoteSection):
             return None
 
-        for note in build_id_section.iter_notes():
-            if note.n_type == "NT_GNU_BUILD_ID":
+        for note in note_section.iter_notes():
+            if note_check(note):
                 return cast(str, note.n_desc)
         else:
             return None
@@ -96,7 +97,7 @@ def get_elf_id(elf: ELFType) -> str:
     we instead grab its SHA1.
     """
     with open_elf(elf) as elf:
-        buildid = get_elf_buildid(elf)
+        buildid = get_elf_buildid(elf, ".note.gnu.build-id", lambda note: note.n_type == "NT_GNU_BUILD_ID")
         if buildid is not None:
             return f"buildid:{buildid}"
 
