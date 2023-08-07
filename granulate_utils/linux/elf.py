@@ -72,7 +72,7 @@ def elf_arch_to_uname_arch(arch: str) -> str:
     """
     return {
         "x64": "x86_64",
-        "Aarch64": "aarch64",
+        "AArch64": "aarch64",
     }[arch]
 
 
