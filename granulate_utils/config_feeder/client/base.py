@@ -26,7 +26,7 @@ class ConfigCollectorBase(ABC):
 
     async def _fetch(self, host: str, path: str) -> T:
         if self._failed_requests >= self._max_retries:
-            raise MaximumRetriesExceeded("maximum number of failed requests reached", self._max_retries)
+            raise MaximumRetriesExceeded(f"maximum number of failed requests reached for {path}", self._max_retries)
         try:
             if not host.startswith("http"):
                 host = f"http://{host}"
