@@ -6,7 +6,6 @@
 import hashlib
 from contextlib import contextmanager
 from enum import Enum, auto
-from functools import wraps
 from pathlib import Path
 from typing import Callable, List, Optional, TypeVar, Union, cast
 
@@ -21,27 +20,20 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 
-def raise_nosuchprocess(func: Callable[P, R]) -> Callable[P, R]:
-    @wraps(func)
-    def inner(*args: P.args, **kwargs: P.kwargs):
-        try:
-            return func(*args, **kwargs)
-        except FileNotFoundError as e:
-            # Check if filename is /proc/{pid}/*
-            if e.filename.startswith("/proc/"):
-                if e.filename.split("/")[2].isalnum():
-                    # Take pid from /proc/{pid}/*
-                    pid = int(e.filename.split("/")[2])
-                    # Check if number from /proc/{pid} is actually a pid number
-                    with open("/proc/sys/kernel/pid_max") as pid_max_file:
-                        pid_max = int(pid_max_file.read())
-                    if pid <= pid_max:
-                        # Check if pid is running
-                        if not psutil.pid_exists(pid):
-                            raise psutil.NoSuchProcess(pid)
-            raise e
-
-    return inner
+def wrap_as_nosuchprocess(exc: FileNotFoundError) -> Union[FileNotFoundError, psutil.NoSuchProcess]:
+    # Check if filename is /proc/{pid}/*
+    if exc.filename.startswith("/proc/"):
+        if exc.filename.split("/")[2].isalnum():
+            # Take pid from /proc/{pid}/*
+            pid = int(exc.filename.split("/")[2])
+            # Check if number from /proc/{pid} is actually a pid number
+            with open("/proc/sys/kernel/pid_max") as pid_max_file:
+                pid_max = int(pid_max_file.read())
+            if pid <= pid_max:
+                # Check if pid is running
+                if not psutil.pid_exists(pid):
+                    raise psutil.NoSuchProcess(pid)
+    raise exc
 
 
 class LibcType(Enum):
@@ -54,14 +46,16 @@ class LibcType(Enum):
 ELFType = Union[ELFFile, Path, str]
 
 
-@raise_nosuchprocess
 @contextmanager
 def open_elf(elf: ELFType) -> ELFFile:
     if isinstance(elf, ELFFile):
         yield elf
     else:
-        with open(elf, "rb") as f:
-            yield ELFFile(f)
+        try:
+            with open(elf, "rb") as f:
+                yield ELFFile(f)
+        except FileNotFoundError as e:
+            raise wrap_as_nosuchprocess(e)
 
 
 def get_elf_arch(elf: ELFType) -> str:
