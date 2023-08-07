@@ -6,6 +6,7 @@ from requests.exceptions import ConnectionError, JSONDecodeError
 
 from granulate_utils.config_feeder.core.models.cluster import BigDataPlatform, CloudProvider
 from granulate_utils.config_feeder.core.models.node import NodeInfo
+from granulate_utils.metadata.bigdata import get_dataproc_version
 
 
 def get_dataproc_node_info(logger: Optional[Union[logging.Logger, logging.LoggerAdapter]] = None) -> Optional[NodeInfo]:
@@ -30,6 +31,7 @@ def get_dataproc_node_info(logger: Optional[Union[logging.Logger, logging.Logger
             is_master=attributes["dataproc-role"] == "Master",
             provider=CloudProvider.GCP,
             bigdata_platform=BigDataPlatform.DATAPROC,
+            bigdata_platform_version=get_dataproc_version(),
             properties=properties,
         )
     except JSONDecodeError:
