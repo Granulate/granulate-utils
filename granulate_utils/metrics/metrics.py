@@ -17,6 +17,7 @@ YARN_CLUSTER_METRICS = {
         "totalMB",
         "availableMB",
         "allocatedMB",
+        "reservedMB",
         "availableVirtualCores",
         "allocatedVirtualCores",
         "totalNodes",
