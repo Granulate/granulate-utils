@@ -10,6 +10,13 @@ from granulate_utils.java import JvmVersion, parse_jvm_version
     "java_version,jvm_version_or_err",
     [
         (
+            """openjdk version "1.8.0_265"
+OpenJDK Runtime Environment (AdoptOpenJDK)(build 1.8.0_265-b01)
+OpenJDK 64-Bit Server VM (AdoptOpenJDK)(build 25.265-b01, mixed mode)
+""",
+            JvmVersion(Version("8.265"), 1, "OpenJDK 64-Bit Server VM", "HotSpot", None),
+        ),
+        (
             """java version "18.0.0.1" 2022-05-19
 Java(TM) SE Runtime Environment (build 18.0.0.1+2-9)
 Java HotSpot(TM) 64-Bit Server VM (build 18.0.0.1+2-9, mixed mode, sharing)
