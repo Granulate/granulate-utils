@@ -191,18 +191,18 @@ def parse_jvm_version(version_string: str) -> JvmVersion:
         build = int(matched[0])
 
     # There is no real format here, just use the entire description string until the part which describes the build.
-    m = re.match(r"(.*?) \((?:product )?build", lines[2])
+    m = re.match(r"(.*?) (?:\(.*\))?\((?:product )?build", lines[2])
     assert m is not None, f"Missing build description? {lines[2]}"
     vm_name = m.group(1)
 
-    if vm_name.startswith("OpenJDK"):
+    if vm_name.startswith("OpenJDK") or vm_name.startswith("Java HotSpot"):
         vm_type: VmType = "HotSpot"
     elif vm_name.startswith("Zing"):
         vm_type = "Zing"
     elif vm_name == "Eclipse OpenJ9 VM":
         vm_type = "OpenJ9"
     else:
-        # TODO: additional types?
+        # There may be additional types that have not yet been categorized.
         vm_type = None
 
     if vm_type == "Zing":

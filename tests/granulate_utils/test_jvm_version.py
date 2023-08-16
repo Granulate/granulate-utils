@@ -9,6 +9,20 @@ from granulate_utils.java import JvmVersion, parse_jvm_version
 @pytest.mark.parametrize(
     "java_version,jvm_version_or_err",
     [
+        (
+            """java version "18.0.0.1" 2022-05-19
+Java(TM) SE Runtime Environment (build 18.0.0.1+2-9)
+Java HotSpot(TM) 64-Bit Server VM (build 18.0.0.1+2-9, mixed mode, sharing)
+""",
+            JvmVersion(Version("18.0.0.1"), 2, "Java HotSpot(TM) 64-Bit Server VM", "HotSpot", None),
+        ),
+        (
+            """openjdk version "1.8.0_125"
+OpenJDK Runtime Environment (Temurin)(build 1.8.0_125-b09)
+OpenJDK 64-Bit Server VM (Temurin)(build 25.125-b09, mixed mode)
+""",
+            JvmVersion(Version("8.125"), 9, "OpenJDK 64-Bit Server VM", "HotSpot", None),
+        ),
         # 8
         (
             """openjdk version "1.8.0_352"
