@@ -1,4 +1,7 @@
-from typing import Dict, List, Optional
+import logging
+import os
+import re
+from typing import Dict, List, Optional, Union
 
 from granulate_utils.config_feeder.core.models.cluster import BigDataPlatform, CloudProvider
 from granulate_utils.config_feeder.core.models.node import NodeInfo
@@ -14,8 +17,12 @@ KEY_INSTANCE_ID = f"{INSTANCE_KEY_PREFIX}.instanceId"
 KEY_CLUSTER_ID = f"{CLUSTER_KEY_PREFIX}Id"
 KEY_DRIVER_INSTANCE_ID = f"{DRIVER_KEY_PREFIX}InstanceId"
 
+REGEX_CLUSTER_ID = r"(\d{4}-\d{6}-\w{8})"
 
-def get_databricks_node_info() -> Optional[NodeInfo]:
+
+def get_databricks_node_info(
+    logger: Optional[Union[logging.Logger, logging.LoggerAdapter]] = None
+) -> Optional[NodeInfo]:
     """
     Returns Databricks node info
     """
@@ -23,16 +30,18 @@ def get_databricks_node_info() -> Optional[NodeInfo]:
         instance_id = properties[KEY_INSTANCE_ID]
         driver_instance_id = properties.get(KEY_DRIVER_INSTANCE_ID, "")
         provider = _resolve_cloud_provider(properties.get(KEY_CLOUD_PROVIDER, "unknown"))
-        external_cluster_id = properties[KEY_CLUSTER_ID]
-        return NodeInfo(
-            external_id=instance_id,
-            external_cluster_id=external_cluster_id,
-            is_master=(instance_id == driver_instance_id),
-            provider=provider,
-            bigdata_platform=BigDataPlatform.DATABRICKS,
-            bigdata_platform_version=get_databricks_version(),
-            properties=_exclude_keys(properties, [KEY_CLOUD_PROVIDER, KEY_INSTANCE_ID, KEY_CLUSTER_ID]),
-        )
+        if external_cluster_id := _resolve_cluster_id(properties):
+            return NodeInfo(
+                external_id=instance_id,
+                external_cluster_id=external_cluster_id,
+                is_master=(instance_id == driver_instance_id),
+                provider=provider,
+                bigdata_platform=BigDataPlatform.DATABRICKS,
+                bigdata_platform_version=get_databricks_version(),
+                properties=_exclude_keys(properties, [KEY_CLOUD_PROVIDER, KEY_INSTANCE_ID, KEY_CLUSTER_ID]),
+            )
+        elif logger:
+            logger.error("cannot resolve cluster id")
     return None
 
 
@@ -60,6 +69,19 @@ def _get_deploy_conf() -> Optional[Dict[str, str]]:
             return result
     except FileNotFoundError:
         pass
+    return None
+
+
+def _resolve_cluster_id(properties: Dict[str, str]) -> Optional[str]:
+    """
+    If clusterId is not available in deploy.conf, try to extract it from hostname
+
+    e.g. 0817-103940-91u12104-10-26-238-244 -> 0817-103940-91u12104
+    """
+    if KEY_CLUSTER_ID in properties:
+        return properties[KEY_CLUSTER_ID]
+    if match := re.search(REGEX_CLUSTER_ID, os.uname()[1]):
+        return match.group(1)
     return None
 
 
