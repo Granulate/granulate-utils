@@ -9,13 +9,14 @@ import uuid
 from json import JSONEncoder
 from typing import Callable, Dict, List, NamedTuple, Optional, Tuple, Union
 
-from requests import Session
+from requests import Session, HTTPError
 
 from glogger.messages_buffer import MessagesBuffer
 
 from .stdout_logger import get_stdout_logger
 
 SERVER_SEND_ERROR_MESSAGE = "Error posting logs to server"
+SERVER_INVALID_TOKEN = "Invalid token"
 
 
 class SendBatch(NamedTuple):
@@ -185,7 +186,10 @@ class Sender:
             headers=headers,
             timeout=self.request_timeout,
         )
-        response.raise_for_status()
+        if response.status_code == 401:
+            raise HTTPError(SERVER_INVALID_TOKEN, response=response)
+        else:
+            response.raise_for_status()
 
     def _make_batch(self) -> SendBatch:
         assert self.messages_buffer is not None
