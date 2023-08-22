@@ -44,12 +44,13 @@ def rest_request(url: str, **kwargs: Any) -> requests.Response:
     return response
 
 
-def json_request(url: str, **kwargs) -> Any:
+def json_request(url: str, default: Any, **kwargs) -> Any:
     """
     Query the given URL using HTTP GET and return the JSON response.
     :param kwargs: request parameters
     """
-    return rest_request(url, **kwargs).json()
+    value = rest_request(url, **kwargs).json()
+    return default if value is None else value
 
 
 def get_request_url(address, url: str) -> str:
@@ -85,7 +86,7 @@ def rest_request_to_json(url: str, object_path: str, *args: Any, **kwargs: Any) 
     Query url/object_path/args/... and return the JSON response
     """
     url = bake_url(url, object_path, *args)
-    return json_request(url, **kwargs)
+    return json_request(url, None, **kwargs)
 
 
 def rest_request_raw(url: str, object_path: str, *args: Any, **kwargs: Any) -> requests.Response:
