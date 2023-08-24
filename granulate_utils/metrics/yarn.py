@@ -72,12 +72,7 @@ class YarnCollector(Collector):
 
     def _nodes_metrics(self) -> Iterable[Sample]:
         try:
-            # This are all the statuses that defined as 'active node' in:
-            # isActiveState in
-            # https://github.com/apache/hadoop/blob/a91933620d8755e80ad4bdf900b506dd73d26786/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-api/src/main/java/org/apache/hadoop/yarn/api/records/NodeState.java#L65
-            # Also, we don't want to collect DECOMMISSIONED because in EMR,
-            # nodes are considered DECOMMISSIONED forever and are never removed from the nodes list
-            for node in self.rm.nodes(states="NEW,RUNNING,UNHEALTHY,DECOMMISSIONING"):
+            for node in self.rm.nodes(states=self._active_node_states):
                 for metric, value in node.get("resourceUtilization", {}).items():
                     node[metric] = value  # this will create all relevant metrics under same dictionary
 
@@ -85,3 +80,18 @@ class YarnCollector(Collector):
                 yield from samples_from_json(labels, node, YARN_NODES_METRICS)
         except Exception:
             self.logger.exception("Could not gather yarn nodes metrics")
+
+    @cached_property
+    def _active_node_states(self) -> str:
+        """
+        Returns all the states that are considered 'active' for a node.
+
+        Taken from isActiveState in:
+            https://github.com/apache/hadoop/blob/a91933620d8755e80ad4bdf900b506dd73d26786/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-api/src/main/java/org/apache/hadoop/yarn/api/records/NodeState.java#L65
+
+        Also, we don't want to collect DECOMMISSIONED because in EMR nodes are
+        considered DECOMMISSIONED forever and are never removed from the nodes list
+        """
+        return (
+            "NEW,RUNNING,UNHEALTHY,DECOMMISSIONING" if self.rm.is_version_at_least("2.8.0") else "NEW,RUNNING,UNHEALTHY"
+        )
