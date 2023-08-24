@@ -32,7 +32,9 @@ class MockBatchRequestsHandler(BatchRequestsHandler):
 
     def __init__(self, *args, max_total_length=100000, max_message_size=10000, overflow_drop_factor=0.25, **kwargs):
         super().__init__(
-            self.MockSender("app", *args, auth_token="token", scheme="http", send_min_interval=0.2, max_send_tries=1, **kwargs),
+            self.MockSender(
+                "app", *args, auth_token="token", scheme="http", send_min_interval=0.2, max_send_tries=1, **kwargs
+            ),
             max_total_length=max_total_length,
             max_message_size=max_message_size,
             overflow_drop_factor=overflow_drop_factor,
