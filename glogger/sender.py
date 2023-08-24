@@ -10,6 +10,7 @@ from json import JSONEncoder
 from typing import Callable, Dict, List, NamedTuple, Optional, Tuple, Union
 
 from requests import Session
+from requests.auth import HTTPBasicAuth
 
 from glogger.messages_buffer import MessagesBuffer
 
@@ -34,9 +35,10 @@ class Sender:
     def __init__(
         self,
         application_name: str,
-        auth_token: str,
         server_address: str,
         *,
+        auth_token: Optional[str],
+        basic_auth: Optional[HTTPBasicAuth],
         scheme: str = "https",
         send_interval: float = 30.0,
         send_threshold: float = 0.8,
@@ -49,16 +51,19 @@ class Sender:
 
         :param application_name: Unique identifier requests coming from this handler.
         :param auth_token: Token for authenticating requests to the server.
+        :param basic_auth: Basic auth credentials for authenticating requests to the server.
         :param server_address: Address of server where to send messages.
         :param scheme: The scheme to use as string ('http' or 'https')
         :param send_interval: Seconds between sending batches.
         :param send_threshold: Force send when buffer utilization reaches this percentage.
         :param send_min_interval: The minimal interval between each sends.
         :param max_send_tries: Number of times to retry sending a batch if sending fails.
+
+        :note: If both `auth_token` and `basic_auth` are provided, `basic_auth` will be used.
+               At least one of them must be provided.
         """
 
         self.application_name = application_name
-        self.auth_token = auth_token
         self.server_address = server_address
         self.send_interval = send_interval
         self.send_threshold = send_threshold
@@ -69,6 +74,16 @@ class Sender:
         self.server_uri = f"{scheme}://{server_address}/api/v1/logs"
         self.jsonify = JSONEncoder(separators=(",", ":"), default=repr).encode  # compact, no whitespace
         self.session = Session()
+
+        # Set up auth
+        # basic-auth is preferred over X-Token
+        if basic_auth is not None:
+            self.session.auth = basic_auth
+        elif auth_token is not None:
+            self.session.headers["X-Token"] = auth_token
+        else:
+            raise ValueError("Either auth_token or basic_auth must be provided")
+
         self.session.verify = verify
         self.messages_buffer: Optional[MessagesBuffer] = None
         self.metadata_callback: Callable[[], Dict] = lambda: {}
@@ -161,7 +176,6 @@ class Sender:
             "Content-Encoding": "gzip",
             "Content-Type": "application/json",
             "X-Application-Name": self.application_name,
-            "X-Token": self.auth_token,
         }
 
         # Default compression level (9) is slowest. Level 6 trades a bit of compression for speed.
