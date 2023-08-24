@@ -12,7 +12,7 @@ import logging
 from glogger.handler import BatchRequestsHandler
 from glogger.sender import Sender
 
-handler = BatchRequestsHandler(Sender("my_app", AUTH_TOKEN, "logs.example.com"))
+handler = BatchRequestsHandler(Sender("my_app", "logs.example.com", auth_token=AUTH_TOKEN))
 logging.basicConfig(handlers=[handler])
 ```
 
