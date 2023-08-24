@@ -38,7 +38,7 @@ class Sender:
         server_address: str,
         *,
         auth_token: Optional[str],
-        basic_auth: Optional[HTTPBasicAuth],
+        basic_auth: Optional[Tuple[str, str]],
         scheme: str = "https",
         send_interval: float = 30.0,
         send_threshold: float = 0.8,
@@ -78,7 +78,7 @@ class Sender:
         # Set up auth
         # basic-auth is preferred over X-Token
         if basic_auth is not None:
-            self.session.auth = basic_auth
+            self.session.auth = HTTPBasicAuth(*basic_auth)
         elif auth_token is not None:
             self.session.headers["X-Token"] = auth_token
         else:
