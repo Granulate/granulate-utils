@@ -16,9 +16,17 @@ from granulate_utils.config_feeder.core.models.node import NodeInfo
 
 
 class YarnConfigCollector(ConfigCollectorBase):
-    def __init__(self, *, max_retries: int = 20, logger: Union[logging.Logger, logging.LoggerAdapter]) -> None:
+    def __init__(
+        self,
+        *,
+        max_retries: int = 20,
+        logger: Union[logging.Logger, logging.LoggerAdapter],
+        resourcemanager_address: str = RM_DEFAULT_ADDRESS,
+        worker_address: str = WORKER_ADDRESS,
+    ) -> None:
         super().__init__(max_retries=max_retries, logger=logger)
-        self._resource_manager_address = RM_DEFAULT_ADDRESS
+        self._resource_manager_address = resourcemanager_address
+        self._worker_address = worker_address
         self._is_address_detected = False
 
     async def collect(self, node_info: NodeInfo) -> Optional[YarnConfig]:
@@ -54,9 +62,9 @@ class YarnConfigCollector(ConfigCollectorBase):
 
     async def node_request(self, path: str) -> Optional[Dict[str, Any]]:
         try:
-            return await self._fetch(WORKER_ADDRESS, path)
+            return await self._fetch(self._worker_address, path)
         except ConnectionError:
-            self.logger.warning(f"failed to connect to {WORKER_ADDRESS}")
+            self.logger.warning(f"failed to connect to {self._worker_address}")
         return None
 
     async def _get_master_config(self) -> Optional[Dict[str, Any]]:

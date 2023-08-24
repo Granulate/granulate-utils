@@ -9,6 +9,27 @@ from granulate_utils.java import JvmVersion, parse_jvm_version
 @pytest.mark.parametrize(
     "java_version,jvm_version_or_err",
     [
+        (
+            """openjdk version "1.8.0_265"
+OpenJDK Runtime Environment (AdoptOpenJDK)(build 1.8.0_265-b01)
+OpenJDK 64-Bit Server VM (AdoptOpenJDK)(build 25.265-b01, mixed mode)
+""",
+            JvmVersion(Version("8.265"), 1, "OpenJDK 64-Bit Server VM", "HotSpot", None),
+        ),
+        (
+            """java version "18.0.0.1" 2022-05-19
+Java(TM) SE Runtime Environment (build 18.0.0.1+2-9)
+Java HotSpot(TM) 64-Bit Server VM (build 18.0.0.1+2-9, mixed mode, sharing)
+""",
+            JvmVersion(Version("18.0.0.1"), 2, "Java HotSpot(TM) 64-Bit Server VM", "HotSpot", None),
+        ),
+        (
+            """openjdk version "1.8.0_125"
+OpenJDK Runtime Environment (Temurin)(build 1.8.0_125-b09)
+OpenJDK 64-Bit Server VM (Temurin)(build 25.125-b09, mixed mode)
+""",
+            JvmVersion(Version("8.125"), 9, "OpenJDK 64-Bit Server VM", "HotSpot", None),
+        ),
         # 8
         (
             """openjdk version "1.8.0_352"
@@ -57,7 +78,7 @@ OpenJDK 64-Bit Server VM (build 17.0.1+12-39, mixed mode, sharing)""",
             """openjdk version "11.0.12" 2021-07-20
 OpenJDK Runtime Environment (build 11.0.12+7-post-Debian-2deb10u1)
 OpenJDK 64-Bit Server VM (build 11.0.12+7-post-Debian-2deb10u1, mixed mode)""",
-            JvmVersion(Version("11.0.12"), 7, "OpenJDK 64-Bit Server VM", "HotSpot"),
+            JvmVersion(Version("11.0.12"), 7, "OpenJDK 64-Bit Server VM", "HotSpot", None),
         ),
         # 7
         (
@@ -109,6 +130,15 @@ Zing 64-Bit Tiered VM (build 1.8.0-zing_19.12.103.0-b3-product-linux-X86_64, mix
 """,
             JvmVersion(Version("8"), 3, "Zing 64-Bit Tiered VM", "Zing", Version("19.12.103")),
         ),
+        # zing 20 & java 11 (zing-jdk11.0.0-20.02.201.0-1 on CentOS)
+        (
+            """java version "11.0.7.0.101" 2020-06-03 LTS
+Zing Runtime Environment for Java Applications 20.02.201.0+1 (product build 11.0.7.0.101+10-LTS)
+Zing 64-Bit Tiered VM 20.02.201.0+1 (product build 11.0.7-zing_20.02.201.0-b1-product-linux-X86_64, mixed mode)""",
+            JvmVersion(
+                Version("11.0.7.0.101"), 10, "Zing 64-Bit Tiered VM 20.02.201.0+1", "Zing", Version("20.02.201")
+            ),
+        )
         # TODO: add error cases here
     ],
 )

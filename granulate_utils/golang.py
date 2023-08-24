@@ -9,12 +9,25 @@ from typing import Optional
 
 from psutil import NoSuchProcess, Process
 
-from granulate_utils.linux.elf import read_elf_symbol, read_elf_va
+from granulate_utils.linux.elf import get_elf_buildid, read_elf_symbol, read_elf_va
 from granulate_utils.linux.process import is_kernel_thread
 
 
 def is_golang_process(process: Process) -> bool:
-    return not is_kernel_thread(process) and get_process_golang_version(process) is not None
+    return not is_kernel_thread(process) and get_golang_buildid(process) is not None
+
+
+@functools.lru_cache(maxsize=4096)
+def get_golang_buildid(process: Process) -> Optional[str]:
+    """
+    Gets the golang build ID embedded in an ELF file section as a string, or None if not present.
+    """
+    elf_path = f"/proc/{process.pid}/exe"
+    try:
+        # section .note.go.buildid has been added since version 1.5: https://github.com/golang/go/issues/11048
+        return get_elf_buildid(elf_path, ".note.go.buildid", lambda note: note.n_name == "Go")
+    except FileNotFoundError:
+        raise NoSuchProcess(process.pid)
 
 
 @functools.lru_cache(maxsize=4096)

@@ -16,6 +16,7 @@ class NodeMockBase(ABC):
         self._stdout: Dict[str, bytes | str] = {}
         self._requests: List[Tuple[str, str, Dict[str, Any]]] = []
         self._contexts: List[Tuple[ContextManager[Any], Callable[[Any], None] | None]] = []
+        self._hostname: str = ""
 
     @property
     def node_info(self) -> NodeInfo:
@@ -33,6 +34,10 @@ class NodeMockBase(ABC):
 
     def mock_http_response(self: NodeMockBase, method: str, url: str, response: Dict[str, Any]) -> NodeMockBase:
         self._requests.append((method, url, response))
+        return self
+
+    def mock_hostname(self, hostname: str) -> NodeMockBase:
+        self._hostname = hostname
         return self
 
     def add_context(
@@ -89,6 +94,20 @@ class NodeMockBase(ABC):
             ),
         )
         self.add_context(Mocker(), self._mock_http_response)
+
+        if self._hostname:
+            self.add_context(
+                patch(
+                    "os.uname",
+                    return_value=(
+                        "Linux",
+                        self._hostname,
+                        "5.15.0-79-generic",
+                        "#86-Ubuntu SMP Mon Jul 10 16:07:21 UTC 2023",
+                        "x86_64",
+                    ),
+                )
+            )
 
         for ctx, fn in self._contexts:
             value = ctx.__enter__()
