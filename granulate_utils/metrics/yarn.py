@@ -92,6 +92,9 @@ class YarnCollector(Collector):
         Also, we don't want to collect DECOMMISSIONED because in EMR nodes are
         considered DECOMMISSIONED forever and are never removed from the nodes list
         """
-        return (
-            "NEW,RUNNING,UNHEALTHY,DECOMMISSIONING" if self.rm.is_version_at_least("2.8.0") else "NEW,RUNNING,UNHEALTHY"
-        )
+
+        # DECOMMISSIONING was added in 2.8.0
+        if self.rm.is_version_at_least("2.8.0"):
+            return "NEW,RUNNING,UNHEALTHY,DECOMMISSIONING"
+        else:
+            return "NEW,RUNNING,UNHEALTHY"
