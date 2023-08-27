@@ -19,7 +19,7 @@ from requests.structures import CaseInsensitiveDict
 
 from glogger.extra_adapter import ExtraAdapter
 from glogger.handler import BatchRequestsHandler
-from glogger.sender import SERVER_SEND_ERROR_MESSAGE, Sender
+from glogger.sender import SERVER_SEND_ERROR_MESSAGE, AuthToken, Sender
 
 
 class MockBatchRequestsHandler(BatchRequestsHandler):
@@ -33,7 +33,7 @@ class MockBatchRequestsHandler(BatchRequestsHandler):
     def __init__(self, *args, max_total_length=100000, max_message_size=10000, overflow_drop_factor=0.25, **kwargs):
         super().__init__(
             self.MockSender(
-                "app", *args, auth_token="token", scheme="http", send_min_interval=0.2, max_send_tries=1, **kwargs
+                "app", *args, auth=AuthToken("token"), scheme="http", send_min_interval=0.2, max_send_tries=1, **kwargs
             ),
             max_total_length=max_total_length,
             max_message_size=max_message_size,
@@ -53,7 +53,7 @@ class HttpBatchRequestsHandler(BatchRequestsHandler):
             self.HttpSender(
                 "app",
                 *args,
-                auth_token="token",
+                auth=AuthToken("token"),
                 scheme="http",
                 send_interval=send_interval,
                 send_min_interval=0.2,

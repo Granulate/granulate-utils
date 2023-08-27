@@ -27,6 +27,15 @@ class SendBatch(NamedTuple):
     lost_logs_count: int
 
 
+class AuthToken(str):
+    pass
+
+
+class BasicAuthCredentials(NamedTuple):
+    username: str
+    password: str
+
+
 class Sender:
     # If Tuple[float, float], then the first value is connection-timeout and the second read-timeout.
     # See https://requests.readthedocs.io/en/latest/user/advanced/#timeouts
@@ -38,7 +47,7 @@ class Sender:
         server_address: str,
         *,
         auth_token: Optional[str] = None,
-        basic_auth: Optional[Tuple[str, str]] = None,
+        auth: Union[AuthToken, BasicAuthCredentials] = None,
         scheme: str = "https",
         send_interval: float = 30.0,
         send_threshold: float = 0.8,
@@ -50,8 +59,8 @@ class Sender:
         Create a new Sender and start flushing log messages in a background thread.
 
         :param application_name: Unique identifier requests coming from this handler.
-        :param auth_token: Token for authenticating requests to the server.
-        :param basic_auth: Basic auth credentials for authenticating requests to the server.
+        :param auth: The auth to use for this handler. One of AuthToken or BasicAuthCredentials.
+        :param auth_token: Deprecated - please use the auth param instead
         :param server_address: Address of server where to send messages.
         :param scheme: The scheme to use as string ('http' or 'https')
         :param send_interval: Seconds between sending batches.
@@ -76,13 +85,16 @@ class Sender:
         self.session = Session()
 
         # Set up auth
-        # basic-auth is preferred over X-Token
-        if basic_auth is not None:
-            self.session.auth = HTTPBasicAuth(*basic_auth)
-        elif auth_token is not None:
-            self.session.headers["X-Token"] = auth_token
-        else:
-            raise ValueError("Either auth_token or basic_auth must be provided")
+        # TODO: Remove auth_token in next version
+        if auth_token is not None:
+            import warnings
+
+            warnings.warn("auth_token is deprecated, please use the auth param", DeprecationWarning)
+
+        if isinstance(auth, BasicAuthCredentials):
+            self.session.auth = HTTPBasicAuth(*auth)
+        elif isinstance(auth, AuthToken):
+            self.session.headers["X-Token"] = str(auth)
 
         self.session.verify = verify
         self.messages_buffer: Optional[MessagesBuffer] = None
