@@ -10,6 +10,7 @@ from json import JSONEncoder
 from typing import Callable, Dict, List, NamedTuple, Optional, Tuple, Union
 
 from requests import Session
+from requests.auth import HTTPBasicAuth
 
 from glogger.messages_buffer import MessagesBuffer
 
@@ -26,6 +27,15 @@ class SendBatch(NamedTuple):
     lost_logs_count: int
 
 
+class AuthToken(str):
+    pass
+
+
+class BasicAuthCredentials(NamedTuple):
+    username: str
+    password: str
+
+
 class Sender:
     # If Tuple[float, float], then the first value is connection-timeout and the second read-timeout.
     # See https://requests.readthedocs.io/en/latest/user/advanced/#timeouts
@@ -34,13 +44,10 @@ class Sender:
     def __init__(
         self,
         application_name: str,
-        auth_token: str,
         server_address: str,
         *,
+        auth: Union[AuthToken, BasicAuthCredentials] = None,
         scheme: str = "https",
-        x_auth_type: str = "",
-        x_auth_access_key_id: str = "",
-        x_auth_secret_access_key: str = "",
         send_interval: float = 30.0,
         send_threshold: float = 0.8,
         send_min_interval: float = 10.0,
@@ -51,10 +58,7 @@ class Sender:
         Create a new Sender and start flushing log messages in a background thread.
 
         :param application_name: Unique identifier requests coming from this handler.
-        :param auth_token: Token for authenticating requests to the server.
-        :param x_auth_type: The type of authentication to use.
-        :param x_auth_access_key_id: The access key id to use for authentication.
-        :param x_auth_secret_access_key: The secret access key to use for authentication.
+        :param auth: The auth to use for this handler. One of AuthToken or BasicAuthCredentials.
         :param server_address: Address of server where to send messages.
         :param scheme: The scheme to use as string ('http' or 'https')
         :param send_interval: Seconds between sending batches.
@@ -64,10 +68,6 @@ class Sender:
         """
 
         self.application_name = application_name
-        self.auth_token = auth_token
-        self.x_auth_type = x_auth_type
-        self.x_auth_access_key_id = x_auth_access_key_id
-        self.x_auth_secret_access_key = x_auth_secret_access_key
         self.server_address = server_address
         self.send_interval = send_interval
         self.send_threshold = send_threshold
@@ -78,6 +78,13 @@ class Sender:
         self.server_uri = f"{scheme}://{server_address}/api/v1/logs"
         self.jsonify = JSONEncoder(separators=(",", ":"), default=repr).encode  # compact, no whitespace
         self.session = Session()
+
+        # Set up auth
+        if isinstance(auth, BasicAuthCredentials):
+            self.session.auth = HTTPBasicAuth(*auth)
+        elif isinstance(auth, AuthToken):
+            self.session.headers["X-Token"] = str(auth)
+
         self.session.verify = verify
         self.messages_buffer: Optional[MessagesBuffer] = None
         self.metadata_callback: Callable[[], Dict] = lambda: {}
@@ -170,10 +177,6 @@ class Sender:
             "Content-Encoding": "gzip",
             "Content-Type": "application/json",
             "X-Application-Name": self.application_name,
-            "X-Token": self.auth_token,
-            "X-Auth-Type": self.x_auth_type,
-            "X-Auth-Access-Key-Id": self.x_auth_access_key_id,
-            "X-Auth-Secret-Access-Key": self.x_auth_secret_access_key,
         }
 
         # Default compression level (9) is slowest. Level 6 trades a bit of compression for speed.
