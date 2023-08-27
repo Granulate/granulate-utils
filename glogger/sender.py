@@ -46,7 +46,6 @@ class Sender:
         application_name: str,
         server_address: str,
         *,
-        auth_token: Optional[str] = None,
         auth: Union[AuthToken, BasicAuthCredentials] = None,
         scheme: str = "https",
         send_interval: float = 30.0,
@@ -60,16 +59,12 @@ class Sender:
 
         :param application_name: Unique identifier requests coming from this handler.
         :param auth: The auth to use for this handler. One of AuthToken or BasicAuthCredentials.
-        :param auth_token: Deprecated - please use the auth param instead
         :param server_address: Address of server where to send messages.
         :param scheme: The scheme to use as string ('http' or 'https')
         :param send_interval: Seconds between sending batches.
         :param send_threshold: Force send when buffer utilization reaches this percentage.
         :param send_min_interval: The minimal interval between each sends.
         :param max_send_tries: Number of times to retry sending a batch if sending fails.
-
-        :note: If both `auth_token` and `basic_auth` are provided, `basic_auth` will be used.
-               At least one of them must be provided.
         """
 
         self.application_name = application_name
@@ -85,12 +80,6 @@ class Sender:
         self.session = Session()
 
         # Set up auth
-        # TODO: Remove auth_token in next version
-        if auth_token is not None:
-            import warnings
-
-            warnings.warn("auth_token is deprecated, please use the auth param", DeprecationWarning)
-
         if isinstance(auth, BasicAuthCredentials):
             self.session.auth = HTTPBasicAuth(*auth)
         elif isinstance(auth, AuthToken):
