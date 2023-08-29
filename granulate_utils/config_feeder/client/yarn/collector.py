@@ -5,14 +5,14 @@ from requests.exceptions import ConnectionError
 
 from granulate_utils.config_feeder.client.base import ConfigCollectorBase
 from granulate_utils.config_feeder.client.yarn.models import YarnConfig
-from granulate_utils.config_feeder.client.yarn.utils import (
-    RM_DEFAULT_ADDRESS,
-    WORKER_ADDRESS,
-    detect_resource_manager_address,
-    get_yarn_properties,
-)
 from granulate_utils.config_feeder.core.models.cluster import BigDataPlatform
 from granulate_utils.config_feeder.core.models.node import NodeInfo
+from granulate_utils.metrics.yarn.utils import (
+    RM_DEFAULT_ADDRESS,
+    WORKER_ADDRESS,
+    detect_resource_manager_addresses,
+    get_yarn_properties,
+)
 
 
 class YarnConfigCollector(ConfigCollectorBase):
@@ -51,11 +51,12 @@ class YarnConfigCollector(ConfigCollectorBase):
                 self.logger.error(f"could not connect to {self._resource_manager_address}")
                 return None
             self.logger.warning(f"ResourceManager not found at {self._resource_manager_address}")
-            if address := await detect_resource_manager_address(logger=self.logger):
+            # TODO: improve
+            if address := detect_resource_manager_addresses(logger=self.logger):
                 self._is_address_detected = True
-                self._resource_manager_address = address
+                self._resource_manager_address = address[0]
                 self.logger.debug(f"found ResourceManager address: {address}")
-                result = await self._fetch(address, path)
+                result = await self._fetch(self._resource_manager_address, path)
             else:
                 self.logger.error("could not resolve ResourceManager address")
         return result
