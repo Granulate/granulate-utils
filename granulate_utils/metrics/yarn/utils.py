@@ -1,7 +1,11 @@
 import logging
+import os
 import re
+import socket
 import subprocess
 import xml.etree.ElementTree as ET
+from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union
 
@@ -27,27 +31,103 @@ class YarnConfigError(Exception):
     pass
 
 
-def detect_resource_manager_addresses(*, logger: Union[logging.Logger, logging.LoggerAdapter]) -> Optional[List[str]]:
-    """
-    Look for ResourceManager address in yarn-site.xml
+@dataclass(frozen=True)
+class YarnNodeInfo:
+    """YARN node information
 
-    If high-availability mode is enabled returns all addresses, otherwise returns single address
+    Args:
+        config: YARN config from yarn-site.xml.
+
+        resource_manager_webapp_addresses:
+          When high-availability mode is enabled list of all ResourceManager webapp addresses,
+          otherwise list with single RM address.
+
+        resource_manager_index:
+          Set only if node is a ResourceManager.
+    """
+
+    config: Dict[str, Any]
+    resource_manager_webapp_addresses: List[str]
+    resource_manager_index: Optional[int] = None
+
+    @cached_property
+    def is_resource_manager(self) -> bool:
+        return self.resource_manager_index is not None
+
+    @cached_property
+    def is_first_resource_manager(self) -> bool:
+        return self.resource_manager_index == 0
+
+
+def get_yarn_node_info(
+    *, logger: Union[logging.Logger, logging.LoggerAdapter], yarn_config: Optional[Dict[str, str]] = None
+) -> Optional[YarnNodeInfo]:
+    """
+    If running on YARN return YARN node information
+    """
+    config = detect_yarn_config(logger=logger) if yarn_config is None else yarn_config
+    if config is None:
+        return None
+    if rm_addresses := get_resource_manager_addresses(config, logger=logger):
+        return YarnNodeInfo(
+            resource_manager_index=get_rm_index(rm_addresses, logger=logger),
+            resource_manager_webapp_addresses=rm_addresses,
+            config=config,
+        )
+    return None
+
+
+def get_rm_index(
+    rm_addresses: List[str],
+    *,
+    logger: Union[logging.Logger, logging.LoggerAdapter],
+    hostname: Optional[str] = None,
+    ip: Optional[str] = None,
+) -> Optional[int]:
+    """
+    Return ResourceManager index for given hostname or ip
+
+    If hostname or ip are not provided, local hostname and ip are used.
+    """
+    _hostname = hostname or os.uname()[1]
+    _ip = ip or _get_local_ip(logger=logger)
+    for i, address in enumerate(rm_addresses):
+        rm_host = address.rsplit(":", 1)[0]
+        if rm_host in ("0.0.0.0", _hostname, _ip) or rm_host.startswith(f"{_hostname}."):
+            return i
+    return None
+
+
+def get_resource_manager_addresses(
+    yarn_config: Dict[str, str], *, logger: Union[logging.Logger, logging.LoggerAdapter]
+) -> Optional[List[str]]:
+    """
+    Return all ResourceManager addresses from YARN config
+
+    If high-availability mode is disabled always returns single address.
+    """
+    try:
+        config = {**RM_DEFAULTS, **yarn_config}
+        # multiple RMs in high-availability mode
+        if config.get(RM_HIGH_AVAILABILITY_ENABLED_PROPERTY_KEY) == "true":
+            logger.debug("high availability enabled, looking for RM addresses")
+            return get_all_rm_addresses(config, logger=logger)
+        # single RM
+        elif rm_address := config.get(RM_WEB_ADDRESS_PROPERTY_KEY):
+            return [resolve_variables(config, rm_address)]
+    except YarnConfigError as e:
+        logger.error("YARN config error", extra={"error": str(e)})
+    return None
+
+
+def detect_yarn_config(*, logger: Union[logging.Logger, logging.LoggerAdapter]) -> Optional[Dict[str, str]]:
+    """
+    Look for yarn-site.xml and return YARN config when found
     """
     if yarn_home_dir := find_yarn_home_dir(logger=logger):
         logger.debug(f"found YARN home dir: {yarn_home_dir}")
         yarn_site_xml_file = Path(yarn_home_dir).joinpath("./etc/hadoop/yarn-site.xml")
-        logger.debug(f"looking for {RM_WEB_ADDRESS_PROPERTY_KEY} in {yarn_site_xml_file}")
-        config = read_config_file(yarn_site_xml_file, logger=logger)
-        try:
-            # multiple RMs in high-availability mode
-            if config.get(RM_HIGH_AVAILABILITY_ENABLED_PROPERTY_KEY) == "true":
-                logger.debug("high availability enabled, looking for RM addresses")
-                return get_all_rm_addresses(config, logger=logger)
-            # single RM
-            elif rm_address := config.get(RM_WEB_ADDRESS_PROPERTY_KEY):
-                return [resolve_variables(config, rm_address)]
-        except YarnConfigError as e:
-            logger.error("YARN config error", extra={"error": str(e)})
+        return read_config_file(yarn_site_xml_file, logger=logger)
     return None
 
 
@@ -65,13 +145,16 @@ def find_yarn_home_dir(*, logger: Union[logging.Logger, logging.LoggerAdapter]) 
     return None
 
 
-def read_config_file(xml_file: Path, *, logger: Union[logging.Logger, logging.LoggerAdapter]) -> Dict[str, str]:
+def read_config_file(
+    xml_file: Path, *, logger: Union[logging.Logger, logging.LoggerAdapter]
+) -> Optional[Dict[str, str]]:
     """
     Read YARN config from file
     """
     try:
-        result = {**RM_DEFAULTS}
+        result = {}
         with open(xml_file, "r") as f:
+            logger.debug(f"reading {xml_file}")
             root = ET.fromstring(f.read())
             for p in root.findall("./property"):
                 name = p.find("name")
@@ -81,14 +164,14 @@ def read_config_file(xml_file: Path, *, logger: Union[logging.Logger, logging.Lo
             return result
     except FileNotFoundError:
         logger.error(f"file not found: {xml_file}")
-    return {}
+    return None
 
 
 def get_all_rm_addresses(
     yarn_config: Dict[str, Any], *, logger: Union[logging.Logger, logging.LoggerAdapter]
 ) -> List[str]:
     """
-    Return all RM addresses in high-availability mode
+    Return all ResourceManager addresses from high-availability mode configuration
     """
     rm_ids = yarn_config.get(RM_HIGH_AVAILABILITY_IDS_PROPERTY_KEY)
     if not rm_ids:
@@ -105,7 +188,7 @@ def get_all_rm_addresses(
 
 def resolve_variables(yarn_config: Dict[str, Any], value: str) -> str:
     """
-    Resolve variables in YARN config value
+    Resolve all variables in YARN config value
 
     e.g.
         properties = {
@@ -155,3 +238,17 @@ def _get_properties(
                 }
             )
     return result
+
+
+def _get_local_ip(*, logger: Union[logging.Logger, logging.LoggerAdapter]) -> str:
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.settimeout(60)
+        s.connect(("8.8.8.8", 53))
+        local_ip: str = s.getsockname()[0]
+        return local_ip
+    except socket.error:
+        logger.exception("Failed retrieving the local ip")
+        return "unknown"
+    finally:
+        s.close()

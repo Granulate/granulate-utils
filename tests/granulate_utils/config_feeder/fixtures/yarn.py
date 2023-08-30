@@ -23,6 +23,8 @@ class YarnNodeMock(NodeMockBase):
         web_address: str = RM_DEFAULT_ADDRESS,
         home_dir: str = "/home/hadoop/hadoop",
         yarn_site_xml: str = "",
+        hostname: str = "",
+        ip: str = "",
         properties: Optional[List[Dict[str, Any]]] = None,
         response: Optional[Dict[str, Any]] = None,
     ) -> None:
@@ -48,6 +50,12 @@ class YarnNodeMock(NodeMockBase):
 
         response = response or {"json": {"properties": self._properties}}
         self._node_mock.mock_http_response("GET", f"{web_address}/conf", response)
+
+        if hostname:
+            self._node_mock.mock_hostname(hostname)
+
+        if ip:
+            self._node_mock.mock_ip(ip),
 
     @property
     def node_info(self) -> NodeInfo:
