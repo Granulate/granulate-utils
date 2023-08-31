@@ -19,7 +19,7 @@ from granulate_utils.linux.process import process_exe, search_for_process
 from granulate_utils.metrics import Collector, MetricsSnapshot, Sample
 from granulate_utils.metrics.mode import SPARK_MESOS_MODE, SPARK_STANDALONE_MODE, SPARK_YARN_MODE
 from granulate_utils.metrics.spark import SparkApplicationMetricsCollector
-from granulate_utils.metrics.yarn import YarnCollector, YarnNodeInfo, get_yarn_node_info
+from granulate_utils.metrics.yarn import YARN_RM_CLASSNAME, YarnCollector, YarnNodeInfo, get_yarn_node_info
 from granulate_utils.metrics.yarn.utils import parse_config_xml
 
 FIND_CLUSTER_TIMEOUT_SECS = 10 * 60
@@ -171,7 +171,7 @@ class BigDataSampler(Sampler):
         def is_master_process(process: psutil.Process) -> bool:
             try:
                 return (
-                    "org.apache.hadoop.yarn.server.resourcemanager.ResourceManager" in process.cmdline()
+                    YARN_RM_CLASSNAME in process.cmdline()
                     or "org.apache.spark.deploy.master.Master" in process.cmdline()
                     or "mesos-master" in process_exe(process)
                 )
@@ -196,7 +196,7 @@ class BigDataSampler(Sampler):
         if spark_master_process is None:
             return None
 
-        if "org.apache.hadoop.yarn.server.resourcemanager.ResourceManager" in spark_master_process.cmdline():
+        if YARN_RM_CLASSNAME in spark_master_process.cmdline():
             if (yarn_config := self._get_yarn_config(spark_master_process)) is None:
                 return None
             self._yarn_node_info = get_yarn_node_info(logger=self._logger, yarn_config=yarn_config)
