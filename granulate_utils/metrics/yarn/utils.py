@@ -152,19 +152,26 @@ def read_config_file(
     Read YARN config from file
     """
     try:
-        result = {}
         with open(xml_file, "r") as f:
             logger.debug(f"reading {xml_file}")
-            root = ET.fromstring(f.read())
-            for p in root.findall("./property"):
-                name = p.find("name")
-                value = p.find("value")
-                if name is not None and value is not None and (key := name.text):
-                    result[key] = value.text or ""
-            return result
+            return parse_config_xml(f.read())
     except FileNotFoundError:
         logger.error(f"file not found: {xml_file}")
     return None
+
+
+def parse_config_xml(xml: str) -> Dict[str, str]:
+    """
+    Parse YARN config from XML string
+    """
+    root = ET.fromstring(xml)
+    result = {}
+    for p in root.findall("./property"):
+        name = p.find("name")
+        value = p.find("value")
+        if name is not None and value is not None and (key := name.text):
+            result[key] = value.text or ""
+    return result
 
 
 def get_all_rm_addresses(
@@ -241,6 +248,11 @@ def _get_properties(
 
 
 def _get_local_ip(*, logger: Union[logging.Logger, logging.LoggerAdapter]) -> str:
+    """
+    Returns local IP address
+
+    No packets are sent.
+    """
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
         s.settimeout(60)
