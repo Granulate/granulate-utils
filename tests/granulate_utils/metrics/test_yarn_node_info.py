@@ -66,6 +66,21 @@ from tests.granulate_utils.config_feeder.fixtures.yarn import YarnNodeMock
         pytest.param(
             {
                 "yarn_config": {
+                    "yarn.resourcemanager.ha.enabled": "true",
+                    "yarn.resourcemanager.ha.rm-ids": "foo1,foo2,foo3",
+                    "yarn.resourcemanager.webapp.address.foo1": "abcd.internal:8088",
+                    "yarn.resourcemanager.webapp.address.foo2": "abc.internal:8088",
+                    "yarn.resourcemanager.webapp.address.foo3": "ab.internal:8088",
+                },
+                "hostname": "ab",
+            },
+            2,
+            ["abcd.internal:8088", "abc.internal:8088", "ab.internal:8088"],
+            id="multiple-rms__config-webapp-address__on-third-rm",
+        ),
+        pytest.param(
+            {
+                "yarn_config": {
                     "yarn.resourcemanager.ha.rm-ids": "foo1, foo2",
                     "yarn.resourcemanager.hostname.foo2": "172-31-34-239",
                     "yarn.resourcemanager.hostname.foo1": "172-31-34-91",
