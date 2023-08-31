@@ -46,7 +46,7 @@ class YarnNodeInfo:
           Set only if node is a ResourceManager.
     """
 
-    config: Dict[str, Any]
+    config: Dict[str, str]
     resource_manager_webapp_addresses: List[str]
     resource_manager_index: Optional[int] = None
 
