@@ -244,7 +244,7 @@ class BigDataSampler(Sampler):
         if self._cluster_mode == SPARK_YARN_MODE and self._yarn_node_info is None:
             self._yarn_node_info = get_yarn_node_info(logger=self._logger)
             if self._yarn_node_info is None:
-                self._logger.debug("YARN not detectedr")
+                self._logger.debug("YARN not detected")
                 return False
             if not self._yarn_node_info.is_resource_manager:
                 self._logger.debug("This is not a YARN ResourceManager node")
