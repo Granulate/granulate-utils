@@ -247,15 +247,15 @@ class BigDataSampler(Sampler):
                 self._logger.debug("YARN not detected")
                 return False
             if not self._yarn_node_info.is_resource_manager:
-                self._logger.debug("This is not a YARN ResourceManager node")
+                self._logger.debug("This is not a ResourceManager node")
                 return False
             if not self._yarn_node_info.is_first_resource_manager:
-                self._logger.debug("This is not the first YARN ResourceManager node")
+                self._logger.debug("This is not the first ResourceManager node")
                 return False
             rm1_address = self._yarn_node_info.resource_manager_webapp_addresses[0]
             if self._master_address != rm1_address:
                 self._logger.debug(
-                    f"YARN ResourceManager address {rm1_address!r} does not match"
+                    f"ResourceManager address {rm1_address!r} does not match"
                     f" manually configured address {self._master_address!r}"
                 )
                 return False
