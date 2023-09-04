@@ -226,6 +226,13 @@ def get_yarn_properties(config: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def get_all_properties(config: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Return all properties
+    """
+    return {"properties": _get_properties(config, lambda x: True)}
+
+
 def _get_properties(
     config: Dict[str, Any],
     predicate: Callable[[Dict[str, Any]], bool],
