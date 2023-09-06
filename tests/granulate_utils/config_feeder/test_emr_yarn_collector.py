@@ -1,4 +1,5 @@
 import logging
+from typing import Any, Dict
 
 import pytest
 from requests.exceptions import ConnectionError
@@ -103,3 +104,40 @@ async def test_should_mask_sensitive_values(logger: logging.Logger) -> None:
                 }
             ]
         }
+
+
+@pytest.mark.parametrize(
+    "all_properties, expected_properties",
+    [
+        pytest.param(True, ["yarn.scheduler.minimum-allocation-mb", "mapreduce.map.memory.mb"], id="all-properties"),
+        pytest.param(False, ["yarn.scheduler.minimum-allocation-mb"], id="only-yarn-properties"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_collect_all_properties(
+    all_properties: bool, expected_properties: Dict[str, Any], logger: logging.Logger
+) -> None:
+    with YarnNodeMock(
+        provider="aws",
+        job_flow_id="j-1234567890",
+        instance_id="i-06828639fa954e04c",
+        is_master=True,
+        properties=[
+            {
+                "key": "yarn.scheduler.minimum-allocation-mb",
+                "value": "2048",
+                "isFinal": False,
+                "resource": "yarn-site.xml",
+            },
+            {
+                "key": "mapreduce.map.memory.mb",
+                "value": "4096",
+                "isFinal": False,
+                "resource": "mapred-default.xml",
+            },
+        ],
+    ) as mock:
+        result = await YarnConfigCollector(all_properties=all_properties, logger=logger).collect(mock.node_info)
+
+        assert result is not None
+        assert [p["key"] for p in result.config["properties"]] == expected_properties
