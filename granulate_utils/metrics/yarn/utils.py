@@ -12,7 +12,6 @@ from typing import Any, Callable, Dict, List, Optional, Union
 from granulate_utils.config_feeder.core.utils import mask_sensitive_value
 
 REGEX_YARN_VAR = re.compile(r"\${([^}]+)}")
-
 RM_HIGH_AVAILABILITY_ENABLED_PROPERTY_KEY = "yarn.resourcemanager.ha.enabled"
 RM_HIGH_AVAILABILITY_IDS_PROPERTY_KEY = "yarn.resourcemanager.ha.rm-ids"
 RM_HOSTNAME_PROPERTY_KEY = "yarn.resourcemanager.hostname"
@@ -25,6 +24,11 @@ RM_DEFAULTS = {
 
 RM_DEFAULT_ADDRESS = "http://0.0.0.0:8088"
 WORKER_ADDRESS = "http://0.0.0.0:8042"
+
+YARN_HOME_DIR_KEY = "yarn.home.dir="
+YARN_HOME_DIR_KEY_LEN = len(YARN_HOME_DIR_KEY)
+
+RELATIVE_YARN_SITE_XML_PATH = "./etc/hadoop/yarn-site.xml"
 
 
 class YarnConfigError(Exception):
@@ -60,7 +64,11 @@ class YarnNodeInfo:
 
 
 def get_yarn_node_info(
-    *, logger: Union[logging.Logger, logging.LoggerAdapter], yarn_config: Optional[Dict[str, str]] = None
+    *,
+    logger: Union[logging.Logger, logging.LoggerAdapter],
+    yarn_config: Optional[Dict[str, str]] = None,
+    hostname: Optional[str] = None,
+    ip: Optional[str] = None,
 ) -> Optional[YarnNodeInfo]:
     """
     If running on YARN return YARN node information
@@ -70,7 +78,7 @@ def get_yarn_node_info(
         return None
     if rm_addresses := get_resource_manager_addresses(config, logger=logger):
         return YarnNodeInfo(
-            resource_manager_index=get_rm_index(rm_addresses, logger=logger),
+            resource_manager_index=get_rm_index(rm_addresses, logger=logger, hostname=hostname, ip=ip),
             resource_manager_webapp_addresses=rm_addresses,
             config=config,
         )
@@ -111,7 +119,7 @@ def get_resource_manager_addresses(
         # multiple RMs in high-availability mode
         if config.get(RM_HIGH_AVAILABILITY_ENABLED_PROPERTY_KEY) == "true":
             logger.debug("high availability enabled, looking for RM addresses")
-            return get_all_rm_addresses(config, logger=logger)
+            return get_all_rm_addresses(config)
         # single RM
         elif rm_address := config.get(RM_WEB_ADDRESS_PROPERTY_KEY):
             return [resolve_variables(config, rm_address)]
@@ -126,7 +134,7 @@ def detect_yarn_config(*, logger: Union[logging.Logger, logging.LoggerAdapter]) 
     """
     if yarn_home_dir := find_yarn_home_dir(logger=logger):
         logger.debug(f"found YARN home dir: {yarn_home_dir}")
-        yarn_site_xml_file = Path(yarn_home_dir).joinpath("./etc/hadoop/yarn-site.xml")
+        yarn_site_xml_file = Path(yarn_home_dir).joinpath(RELATIVE_YARN_SITE_XML_PATH)
         return read_config_file(yarn_site_xml_file, logger=logger)
     return None
 
@@ -137,9 +145,8 @@ def find_yarn_home_dir(*, logger: Union[logging.Logger, logging.LoggerAdapter]) 
     """
     logger.debug("looking for running YARN processes")
     lines = subprocess.run(["ps", "-ax"], capture_output=True, text=True).stdout.split(" -D")
-    home_dir_key = "yarn.home.dir="
     for line in lines:
-        if line.startswith(home_dir_key) and (home_dir := line[len(home_dir_key) :].strip()):
+        if line.startswith(YARN_HOME_DIR_KEY) and (home_dir := line[YARN_HOME_DIR_KEY_LEN:].strip()):
             return home_dir
     logger.error("no YARN processes found")
     return None
@@ -174,9 +181,7 @@ def parse_config_xml(xml: str) -> Dict[str, str]:
     return result
 
 
-def get_all_rm_addresses(
-    yarn_config: Dict[str, Any], *, logger: Union[logging.Logger, logging.LoggerAdapter]
-) -> List[str]:
+def get_all_rm_addresses(yarn_config: Dict[str, Any]) -> List[str]:
     """
     Return all ResourceManager addresses from high-availability mode configuration
     """
@@ -206,8 +211,7 @@ def resolve_variables(yarn_config: Dict[str, Any], value: str) -> str:
     """
     while m := REGEX_YARN_VAR.search(value):
         key = m.group(1)
-        val = yarn_config.get(key)
-        if not val:
+        if (val := yarn_config.get(key)) is None:
             raise YarnConfigError(f"could not resolve variable: {key}")
         value = value.replace(f"${{{key}}}", val)
     return value
