@@ -35,6 +35,10 @@ class YarnConfigError(Exception):
     pass
 
 
+class YarnNodeNotAResourceManagerError(Exception):
+    pass
+
+
 @dataclass(frozen=True)
 class YarnNodeInfo:
     """YARN node information
@@ -58,9 +62,18 @@ class YarnNodeInfo:
     def is_resource_manager(self) -> bool:
         return self.resource_manager_index is not None
 
+    def get_own_resource_manager_webapp_address(self) -> str:
+        if self.resource_manager_index is not None:
+            return self.resource_manager_webapp_addresses[self.resource_manager_index]
+        raise YarnNodeNotAResourceManagerError("This node is not a resource manager")
+
     @cached_property
     def is_first_resource_manager(self) -> bool:
         return self.resource_manager_index == 0
+
+    @cached_property
+    def first_resource_manager_webapp_address(self) -> str:
+        return self.resource_manager_webapp_addresses[0]
 
 
 def get_yarn_node_info(

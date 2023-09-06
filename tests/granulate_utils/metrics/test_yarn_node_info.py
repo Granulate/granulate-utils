@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from granulate_utils.metrics.yarn.utils import YarnNodeInfo, get_yarn_node_info
+from granulate_utils.metrics.yarn.utils import YarnNodeInfo, YarnNodeNotAResourceManagerError, get_yarn_node_info
 from tests.granulate_utils.config_feeder.fixtures.yarn import YarnNodeMock
 
 
@@ -152,6 +152,12 @@ def test_detect_resource_manager_addresses(
         )
         assert yarn_node_info.is_resource_manager == (expected_index is not None)
         assert yarn_node_info.is_first_resource_manager == (expected_index == 0)
+        assert yarn_node_info.first_resource_manager_webapp_address == expected_addresses[0]
+        if expected_index is not None:
+            assert yarn_node_info.get_own_resource_manager_webapp_address() == expected_addresses[expected_index]
+        else:
+            with pytest.raises(YarnNodeNotAResourceManagerError):
+                yarn_node_info.get_own_resource_manager_webapp_address()
 
 
 def test_should_log_cannot_resolve_variable_error() -> None:

@@ -94,7 +94,7 @@ class BigDataSampler(Sampler):
         self._logger.debug("Trying to open yarn config file for reading", config_path=config_path)
         try:
             # resolve config path against process' filesystem root
-            process_relative_config_path = resolve_host_path(process, self._get_yarn_config_path(process))
+            process_relative_config_path = resolve_host_path(process, config_path)
             with open(process_relative_config_path, "r") as conf_file:
                 return parse_config_xml(conf_file.read())
         except FileNotFoundError:
@@ -141,11 +141,11 @@ class BigDataSampler(Sampler):
         'rm1 = hn0-nrt-hb.3e3rqto3nr5evmsjbqz0pkrj4g.tx.internal.cloudapp.net:8050'
         where the hostname is 'hn0-nrt-hb.3e3rqto3nr5evmsjbqz0pkrj4g'
         """
-        if self._yarn_node_info is None or self._yarn_node_info.resource_manager_index is None:
+        if self._yarn_node_info is None or not self._yarn_node_info.is_resource_manager:
             return False
 
         rm_addresses = self._yarn_node_info.resource_manager_webapp_addresses
-        rm1_address = rm_addresses[0]
+        rm1_address = self._yarn_node_info.first_resource_manager_webapp_address
 
         if len(rm_addresses) == 1:
             self._logger.info(
@@ -205,7 +205,7 @@ class BigDataSampler(Sampler):
             if not self._is_yarn_master_collector():
                 return None
             spark_cluster_mode = SPARK_YARN_MODE
-            webapp_url = self._yarn_node_info.resource_manager_webapp_addresses[0]
+            webapp_url = self._yarn_node_info.first_resource_manager_webapp_address
         elif "org.apache.spark.deploy.master.Master" in spark_master_process.cmdline():
             spark_cluster_mode = SPARK_STANDALONE_MODE
             webapp_url = self._guess_standalone_master_webapp_address(spark_master_process)
@@ -252,7 +252,7 @@ class BigDataSampler(Sampler):
             if not self._yarn_node_info.is_first_resource_manager:
                 self._logger.debug("This is not the first ResourceManager node")
                 return False
-            rm1_address = self._yarn_node_info.resource_manager_webapp_addresses[0]
+            rm1_address = self._yarn_node_info.first_resource_manager_webapp_address
             if self._master_address != rm1_address:
                 self._logger.debug(
                     f"ResourceManager address {rm1_address!r} does not match"
