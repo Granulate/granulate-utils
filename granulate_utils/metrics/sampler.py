@@ -199,7 +199,9 @@ class BigDataSampler(Sampler):
         if YARN_RM_CLASSNAME in spark_master_process.cmdline():
             if (yarn_config := self._get_yarn_config(spark_master_process)) is None:
                 return None
-            self._yarn_node_info = get_yarn_node_info(logger=self._logger, yarn_config=yarn_config)
+            self._yarn_node_info = get_yarn_node_info(
+                logger=self._logger, yarn_config=yarn_config, hostname=self._hostname
+            )
             if self._yarn_node_info is None:
                 return None
             if not self._is_yarn_master_collector():
