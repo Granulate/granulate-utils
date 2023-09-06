@@ -12,7 +12,14 @@ from typing import Any, Dict, Optional
 
 import requests
 
-from granulate_utils.exceptions import DatabricksJobNameDiscoverException
+from granulate_utils.exceptions import (
+    DatabricksJobNameDiscoverException,
+    DatabricksMetadataFetchException,
+    DatabricksTagsExtractionException,
+    SparkAPIException,
+    SparkAppsURLDiscoveryException,
+    SparkNotReadyException,
+)
 
 HOST_KEY_NAME = "*.sink.ganglia.host"
 DATABRICKS_METRICS_PROP_PATH = "/databricks/spark/conf/metrics.properties"
@@ -35,8 +42,10 @@ CLUSTER_USAGE_RELEVANT_TAGS_PROPS = [
     "spark.databricks.clusterUsageTags.driverNodeType",
 ]
 DATABRICKS_REDACTED_STR = "redacted"
-SPARKUI_APPS_URL = "http://{}/api/v1/applications"
-REQUEST_TIMEOUT = 5
+SPARKUI_APPS_URL_FORMAT = "http://{}/api/v1/applications"
+DEFAULT_REQUEST_TIMEOUT = 15
+DEFAULT_REQUEST_VERIFY_SSL = False
+
 JOB_NAME_KEY = "RunName"
 CLUSTER_NAME_KEY = "ClusterName"
 DEFAULT_WEBUI_PORT = 40001
@@ -46,12 +55,25 @@ RUN_ID_REGEX = "-run-\\d+"
 
 
 class DBXWebUIEnvWrapper:
-    def __init__(self, logger: logging.LoggerAdapter, enable_retries: bool = True) -> None:
+    def __init__(
+        self,
+        logger: logging.LoggerAdapter,
+        enable_retries: bool = True,
+        http_request_timeout: int = DEFAULT_REQUEST_TIMEOUT,
+        raise_on_failure: bool = False,
+        verify_request_ssl: bool = DEFAULT_REQUEST_VERIFY_SSL,
+    ) -> None:
         """
         When `enable_retries` is True, the wrapper will retry the request to the webui until it succeeds or until
         """
+        if raise_on_failure:
+            assert not enable_retries, "enable_retries and raise_on_failure can't be both True"
+
         self.logger = logger
         self.enable_retries = enable_retries
+        self.http_request_timeout = http_request_timeout
+        self.raise_on_failure = raise_on_failure
+        self.verify_request_ssl = verify_request_ssl
         self._apps_url: Optional[str] = None
         self.logger.debug("Getting DBX environment properties")
         self.all_props_dict: Optional[Dict[str, str]] = self.extract_relevant_metadata()
@@ -61,9 +83,17 @@ class DBXWebUIEnvWrapper:
             )
 
     def _request_get(self, url: str) -> requests.Response:
-        resp = requests.get(url, timeout=REQUEST_TIMEOUT)
-        resp.raise_for_status()
-        return resp
+        try:
+            resp = requests.get(
+                url, timeout=self.http_request_timeout, verify=self.verify_request_ssl, allow_redirects=True
+            )
+            resp.raise_for_status()
+            return resp
+        except requests.exceptions.RequestException as e:
+            raise SparkAPIException(
+                f"Failed to perform REST HTTP GET on {url=} response_text={e.response.text},"
+                f"code={e.response.status_code}"
+            ) from e
 
     @staticmethod
     def get_webui_address() -> Optional[str]:
@@ -85,24 +115,25 @@ class DBXWebUIEnvWrapper:
         start_time = time.monotonic()
         while time.monotonic() - start_time < DATABRICKS_JOBNAME_TIMEOUT_S:
             try:
-                if cluster_all_props := self._cluster_all_tags_metadata():
-                    self.logger.info(
-                        "Successfully got relevant cluster tags metadata",
-                        cluster_all_props=cluster_all_props,
-                    )
-                    return cluster_all_props
-                else:
-                    # No environment metadata yet, retry.
-                    time.sleep(RETRY_INTERVAL_S)
-            except DatabricksJobNameDiscoverException:
-                self.logger.exception("Failed to get DBX environment properties")
-                return None
-            except Exception:
-                self.logger.exception("Generic exception was raise during DBX environment properties discovery")
-                return None
+                return self._fetch_cluster_all_tags()
+
+            except Exception as e:
+                self.logger.exception("Exception was raised while getting DBX environment metadata")
+                if self.raise_on_failure:
+                    raise e
+
             if not self.enable_retries:
                 break
-        self.logger.info("Databricks get DBX environment metadata timeout, continuing...")
+
+            # No environment metadata yet, retry.
+            time.sleep(RETRY_INTERVAL_S)
+
+        self.logger.info("Databricks get DBX environment metadata timeout reached")
+
+        if self.raise_on_failure:
+            raise DatabricksMetadataFetchException(
+                "Failed to get DBX environment metadata in timeout " f"of {DATABRICKS_JOBNAME_TIMEOUT_S} seconds"
+            )
         return None
 
     def _discover_apps_url(self) -> bool:
@@ -115,78 +146,68 @@ class DBXWebUIEnvWrapper:
         else:
             if (web_ui_address := self.get_webui_address()) is None:
                 return False
-            self._apps_url = SPARKUI_APPS_URL.format(web_ui_address)
+            self._apps_url = SPARKUI_APPS_URL_FORMAT.format(web_ui_address)
             self.logger.debug("Databricks SparkUI address", apps_url=self._apps_url)
             return True
 
-    def _spark_apps_json(self) -> Any:
+    def _fetch_spark_apps(self) -> list:
         assert self._apps_url, "SparkUI apps url was not discovered"
-        try:
-            response = self._request_get(self._apps_url)
-        except requests.exceptions.RequestException:
-            # Request might fail in cases where the cluster is still initializing, retrying.
-            return None
+        response = self._request_get(self._apps_url)
         try:
             apps = response.json()
         except Exception as e:
             if "Spark is starting up. Please wait a while until it's ready" in response.text:
                 # Spark is still initializing, retrying.
                 # https://github.com/apache/spark/blob/38c41c/core/src/main/scala/org/apache/spark/ui/SparkUI.scala#L64
-                return None
+                raise SparkNotReadyException("Spark is still initializing") from e
             else:
-                raise DatabricksJobNameDiscoverException(
-                    f"Failed to parse apps url response, query {response.text=}"
-                ) from e
+                raise SparkAPIException(f"Failed to parse apps url response, query {response.text=}") from e
         return apps
 
-    def _spark_app_env_json(self, app_id: str) -> Any:
+    def _fetch_spark_app_environment(self, app_id: str) -> Dict[str, Any]:
         assert self._apps_url is not None, "SparkUI apps url was not discovered"
         env_url = f"{self._apps_url}/{app_id}/environment"
-        try:
-            response = self._request_get(env_url)
-        except Exception as e:
-            # No reason for any exception, `environment` uri should be accessible if we have running apps.
-            raise DatabricksJobNameDiscoverException(f"Environment request failed {env_url=}") from e
-        try:
-            env = response.json()
-        except Exception as e:
-            raise DatabricksJobNameDiscoverException(f"Environment request failed {response.text=}") from e
-        return env
+        response = self._request_get(env_url)
+        return response.json()
 
-    def _cluster_all_tags_metadata(self) -> Optional[Dict[str, str]]:
+    def _fetch_cluster_all_tags(self) -> Dict[str, str]:
         """
-        Returns `includes spark.databricks.clusterUsageTags.clusterAllTags` tags as `Dict`.
+        Returns `includes spark.databricks.clusterUsageTags.clusterAllTags` tags as `dict`.
         In any case this function returns `None`, a retry is required.
         """
         if not os.path.isfile(DATABRICKS_METRICS_PROP_PATH):
+            self.logger.warning(f"{DATABRICKS_METRICS_PROP_PATH} was not found.")
             # We want to retry in case the cluster is still initializing, and the file is not yet deployed.
-            return None
+            raise SparkAppsURLDiscoveryException(f"{DATABRICKS_METRICS_PROP_PATH} was not found.")
         # Discovering SparkUI apps url.
         if self._discover_apps_url() is False:
             # SparkUI apps url was not discovered, retrying.
-            return None
+            self.logger.warning("SparkUI apps url was not discovered")
+            raise SparkAppsURLDiscoveryException(f"{DATABRICKS_METRICS_PROP_PATH} couldn't be discovered.")
 
         # Getting spark apps in JSON format.
-        if (apps := self._spark_apps_json()) is None:
-            return None
+        apps = self._fetch_spark_apps()
+
         if len(apps) == 0:
             # apps might be empty because of initialization, retrying.
-            self.logger.debug("No apps yet, retrying.")
-            return None
+            raise DatabricksMetadataFetchException("Spark apps list is empty")
+
+        if len(apps) > 1:
+            raise DatabricksMetadataFetchException("Spark apps list contains more than one app")
 
         # Extracting for the first app the "sparkProperties" table of the application environment.
-        full_spark_app_env = self._spark_app_env_json(apps[0]["id"])
+        full_spark_app_env = self._fetch_spark_app_environment(apps[0]["id"])
         spark_properties = full_spark_app_env.get("sparkProperties")
         if spark_properties is None:
-            raise DatabricksJobNameDiscoverException(f"sparkProperties was not found in {full_spark_app_env=}")
+            raise DatabricksMetadataFetchException(f"sparkProperties was not found in {full_spark_app_env=}")
 
         # Convert from [[key, val], [key, val]] to {key: val, key: val}
         try:
             spark_properties = dict(spark_properties)
         except Exception as e:
-            raise DatabricksJobNameDiscoverException(f"Failed to parse as dict {full_spark_app_env=}") from e
+            raise DatabricksMetadataFetchException(f"Failed to parse as dict {full_spark_app_env=}") from e
 
-        # First, trying to extract `CLUSTER_TAGS_KEY` property, in case not redacted.
+        # First, trying to extract `CLUSTER_USAGE_ALL_TAGS_PROP` property, in case not redacted.
         result: Dict[str, str] = {}
         if (
             cluster_all_tags_value := spark_properties.get(CLUSTER_USAGE_ALL_TAGS_PROP)
@@ -194,30 +215,38 @@ class DBXWebUIEnvWrapper:
             try:
                 cluster_all_tags_value_json = json.loads(cluster_all_tags_value)
             except Exception as e:
-                raise DatabricksJobNameDiscoverException(f"Failed to parse {cluster_all_tags_value}") from e
+                raise DatabricksTagsExtractionException(f"Failed to parse {cluster_all_tags_value}") from e
 
             result.update(
                 {cluster_all_tag["key"]: cluster_all_tag["value"] for cluster_all_tag in cluster_all_tags_value_json}
             )
         # As a fallback, trying to extract `CLUSTER_USAGE_CLUSTER_NAME_PROP` property.
         elif (cluster_name_value := spark_properties.get(CLUSTER_USAGE_CLUSTER_NAME_PROP)) is not None:
+            self.logger.info(
+                "Falling back to get cluster name from available/not redacted property",
+            )
             result[CLUSTER_NAME_KEY] = cluster_name_value
 
         else:
             # We expect at least one of the properties to be present.
-            raise DatabricksJobNameDiscoverException(
+            raise DatabricksTagsExtractionException(
                 f"Failed to extract {CLUSTER_USAGE_ALL_TAGS_PROP} or "
                 f"{CLUSTER_USAGE_CLUSTER_NAME_PROP} from {spark_properties=}"
             )
 
-        # Now add additional intereseting data to the metadata
+        # Now add additional interesting data to the metadata
         for key in spark_properties:
             if key in CLUSTER_USAGE_RELEVANT_TAGS_PROPS:
                 val = spark_properties[key]
                 if DATABRICKS_REDACTED_STR not in val:
                     result[key] = val
 
-        return self._apply_pattern(result)
+        final_metadata = self._apply_pattern(result)
+        self.logger.info(
+            "Successfully got relevant cluster tags metadata",
+            cluster_all_props=final_metadata,
+        )
+        return final_metadata
 
     @staticmethod
     def _apply_pattern(metadata: Dict[str, str]) -> Dict[str, str]:
