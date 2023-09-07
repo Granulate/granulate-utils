@@ -45,7 +45,7 @@ class ResourceManagerAPI:
         return scheduler.get("schedulerInfo")
 
     @cached_property
-    def version(self) -> Version:
+    def version(self) -> str:
         return json_request(self._info_url, {})["clusterInfo"]["resourceManagerVersion"]
 
     @cached_property
