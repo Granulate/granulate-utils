@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from textwrap import dedent
 from typing import Any, Dict, Optional
 
 from tests.granulate_utils.config_feeder.fixtures.base import NodeMockBase
@@ -39,6 +40,17 @@ class DataprocNodeMock(NodeMockBase):
         self.mock_command_stdout(
             f"gcloud dataproc clusters describe {cluster_name} --region={region} --format=json",  # noqa: E501
             json.dumps(cluster_info).encode("utf-8"),
+        )
+
+        self.mock_command_stdout(
+            "hadoop version",
+            dedent("""Hadoop 3.2.1
+            Subversion https://bigdataoss-internal.googlesource.com/third_party/apache/hadoop -r b3e52921b6aaf2c68af220021eab42975114f7cb # noqa: E501
+            Compiled by bigtop on 2021-07-12T21:30Z
+            Compiled with protoc 2.5.0
+            From source with checksum 3ea0fd8f2b9af855fb9f66c2e3130e3
+            This command was run using /usr/lib/hadoop/hadoop-common-2.9.2.jar
+            """).encode("utf-8"),
         )
 
         self.mock_file("/etc/environment", f"DATAPROC_IMAGE_VERSION={version}")

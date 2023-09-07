@@ -15,6 +15,7 @@ class NodeInfo(BaseModel):
     external_id: str
     is_master: bool
     properties: Dict[str, Any] = {}
+    hadoop_version: Optional[str] = None
 
 
 class NodeBase(BaseModel):

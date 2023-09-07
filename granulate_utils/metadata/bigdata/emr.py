@@ -19,3 +19,19 @@ def get_emr_version() -> Optional[str]:
         if isinstance(release, str):
             return release
     return None
+
+
+def get_hadoop_version() -> Optional[str]:
+    """
+    Get the running hadoop version.
+
+    Sample value from extraInstanceData.json: "Hadoop_3_2_1"
+    """
+    if (data := _get_instance_data()) is not None:
+        hadoop_version = data.get("hadoopVersion")
+        if isinstance(hadoop_version, str):
+            try:
+                return hadoop_version.split("_", 1)[1].replace("_", ".")
+            except IndexError:
+                pass
+    return None

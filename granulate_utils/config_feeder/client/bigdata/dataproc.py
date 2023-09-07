@@ -7,6 +7,7 @@ from requests.exceptions import ConnectionError, JSONDecodeError
 from granulate_utils.config_feeder.core.models.cluster import BigDataPlatform, CloudProvider
 from granulate_utils.config_feeder.core.models.node import NodeInfo
 from granulate_utils.metadata.bigdata import get_dataproc_version
+from granulate_utils.metadata.bigdata.dataproc import get_hadoop_version
 
 
 def get_dataproc_node_info(logger: Optional[Union[logging.Logger, logging.LoggerAdapter]] = None) -> Optional[NodeInfo]:
@@ -32,12 +33,14 @@ def get_dataproc_node_info(logger: Optional[Union[logging.Logger, logging.Logger
             provider=CloudProvider.GCP,
             bigdata_platform=BigDataPlatform.DATAPROC,
             bigdata_platform_version=get_dataproc_version(),
+            hadoop_version=get_hadoop_version(),
             properties=properties,
         )
     except JSONDecodeError:
         if logger:
             logger.error("got invalid dataproc metadata JSON")
     except KeyError as e:
+        print(e.with_traceback(None))
         if logger:
             logger.error("expected dataproc metadata key was not found", extra={"key": e.args[0]})
     except ConnectionError:
