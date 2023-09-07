@@ -5,6 +5,7 @@
 # (C) Datadog, Inc. 2018-present. All rights reserved.
 # Licensed under a 3-clause BSD style license (see LICENSE.bsd3).
 #
+import re
 from functools import cached_property
 from typing import Dict, List, Optional
 
@@ -13,6 +14,11 @@ from packaging.version import Version
 from granulate_utils.metrics import json_request
 
 YARN_RM_CLASSNAME = "org.apache.hadoop.yarn.server.resourcemanager.ResourceManager"
+REGEX_SEM_VER = re.compile(r"(\d+\.\d+\.\d+)")
+
+
+class InvalidResourceManagerVersionError(Exception):
+    pass
 
 
 class ResourceManagerAPI:
@@ -39,8 +45,14 @@ class ResourceManagerAPI:
         return scheduler.get("schedulerInfo")
 
     @cached_property
-    def version(self) -> Version:
-        return Version(json_request(self._info_url, {})["clusterInfo"]["resourceManagerVersion"])
+    def version(self) -> str:
+        return json_request(self._info_url, {})["clusterInfo"]["resourceManagerVersion"]
+
+    @cached_property
+    def sem_version(self) -> Version:
+        if sem_version := REGEX_SEM_VER.search(self.version):
+            return Version(sem_version.group(1))
+        raise InvalidResourceManagerVersionError(f"Invalid ResourceManager version: {self.version}")
 
     def is_version_at_least(self, version: str) -> bool:
-        return self.version >= Version(version)
+        return self.sem_version >= Version(version)
