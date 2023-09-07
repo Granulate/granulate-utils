@@ -1,7 +1,6 @@
 from unittest.mock import patch
 
 import pytest
-from packaging.version import Version
 
 from granulate_utils.metrics.yarn.resource_manager import InvalidResourceManagerVersionError, ResourceManagerAPI
 
@@ -89,7 +88,7 @@ def test_scheduler_endpoint(response, expected) -> None:
     "rm_version, test_version, expected",
     [
         pytest.param("3.3.4", "3.3.4", True, id="same-version"),
-        pytest.param("3.3.4", "3.3.4", True, id="lower-version"),
+        pytest.param("3.3.4", "3.3.5", False, id="lower-version"),
         pytest.param("3.3.3-amzn-4", "3.3.3", True, id="vendor-suffix"),
         pytest.param("2.7.3.2.6.1.0-129", "2.7.3", True, id="patch-version"),
     ],
