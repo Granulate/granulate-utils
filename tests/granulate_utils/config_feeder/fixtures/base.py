@@ -17,6 +17,7 @@ class NodeMockBase(ABC):
         self._requests: List[Tuple[str, str, Dict[str, Any]]] = []
         self._contexts: List[Tuple[ContextManager[Any], Callable[[Any], None] | None]] = []
         self._hostname: str = ""
+        self._ip: str = ""
 
     @property
     def node_info(self) -> NodeInfo:
@@ -38,6 +39,10 @@ class NodeMockBase(ABC):
 
     def mock_hostname(self, hostname: str) -> NodeMockBase:
         self._hostname = hostname
+        return self
+
+    def mock_ip(self, ip: str) -> NodeMockBase:
+        self._ip = ip
         return self
 
     def add_context(
@@ -73,6 +78,11 @@ class NodeMockBase(ABC):
         for method, url, response in self._requests:
             mock.request(method, url, **response)
 
+    def _mock_local_ip(self, *args: Any, **kwargs: Any) -> Mock:
+        mock = Mock()
+        mock.getsockname.return_value = (self._ip, 0)
+        return mock
+
     def __enter__(self: NodeMockBase) -> NodeMockBase:
         self.add_context(
             patch(
@@ -105,6 +115,14 @@ class NodeMockBase(ABC):
                         "#86-Ubuntu SMP Mon Jul 10 16:07:21 UTC 2023",
                         "x86_64",
                     ),
+                )
+            )
+
+        if self._ip:
+            self.add_context(
+                patch(
+                    "socket.socket",
+                    self._mock_local_ip,
                 )
             )
 

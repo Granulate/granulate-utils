@@ -4,8 +4,8 @@ from typing import Any, Dict, List, Optional
 
 from requests.exceptions import ConnectionError
 
-from granulate_utils.config_feeder.client.yarn.utils import RM_DEFAULT_ADDRESS
 from granulate_utils.config_feeder.core.models.node import NodeInfo
+from granulate_utils.metrics.yarn.utils import RM_DEFAULT_ADDRESS
 from tests.granulate_utils.config_feeder.fixtures.base import NodeMockBase
 from tests.granulate_utils.config_feeder.fixtures.dataproc import DataprocNodeMock
 from tests.granulate_utils.config_feeder.fixtures.emr import EmrNodeMock
@@ -23,6 +23,8 @@ class YarnNodeMock(NodeMockBase):
         web_address: str = RM_DEFAULT_ADDRESS,
         home_dir: str = "/home/hadoop/hadoop",
         yarn_site_xml: str = "",
+        hostname: str = "",
+        ip: str = "",
         properties: Optional[List[Dict[str, Any]]] = None,
         response: Optional[Dict[str, Any]] = None,
     ) -> None:
@@ -40,9 +42,7 @@ class YarnNodeMock(NodeMockBase):
             f"""12345 ?  Sl  0:04 java
                 -Dyarn.home.dir={home_dir}
                 -Dyarn.log.file=rm.log
-                org.apache.hadoop.yarn.server.resourcemanager.ResourceManager""".encode(
-                "utf-8"
-            ),
+                org.apache.hadoop.yarn.server.resourcemanager.ResourceManager""",
         )
 
         if web_address != RM_DEFAULT_ADDRESS:
@@ -50,6 +50,12 @@ class YarnNodeMock(NodeMockBase):
 
         response = response or {"json": {"properties": self._properties}}
         self._node_mock.mock_http_response("GET", f"{web_address}/conf", response)
+
+        if hostname:
+            self._node_mock.mock_hostname(hostname)
+
+        if ip:
+            self._node_mock.mock_ip(ip),
 
     @property
     def node_info(self) -> NodeInfo:

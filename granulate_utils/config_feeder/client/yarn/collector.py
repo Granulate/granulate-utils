@@ -5,14 +5,15 @@ from requests.exceptions import ConnectionError
 
 from granulate_utils.config_feeder.client.base import ConfigCollectorBase
 from granulate_utils.config_feeder.client.yarn.models import YarnConfig
-from granulate_utils.config_feeder.client.yarn.utils import (
-    RM_DEFAULT_ADDRESS,
-    WORKER_ADDRESS,
-    detect_resource_manager_address,
-    get_yarn_properties,
-)
 from granulate_utils.config_feeder.core.models.cluster import BigDataPlatform
 from granulate_utils.config_feeder.core.models.node import NodeInfo
+from granulate_utils.metrics.yarn.utils import (
+    RM_DEFAULT_ADDRESS,
+    WORKER_ADDRESS,
+    get_all_properties,
+    get_yarn_node_info,
+    get_yarn_properties,
+)
 
 
 class YarnConfigCollector(ConfigCollectorBase):
@@ -23,11 +24,13 @@ class YarnConfigCollector(ConfigCollectorBase):
         logger: Union[logging.Logger, logging.LoggerAdapter],
         resourcemanager_address: str = RM_DEFAULT_ADDRESS,
         worker_address: str = WORKER_ADDRESS,
+        all_properties: bool = False,
     ) -> None:
         super().__init__(max_retries=max_retries, logger=logger)
         self._resource_manager_address = resourcemanager_address
         self._worker_address = worker_address
         self._is_address_detected = False
+        self._all_properties = all_properties
 
     async def collect(self, node_info: NodeInfo) -> Optional[YarnConfig]:
         if node_info.bigdata_platform == BigDataPlatform.DATABRICKS:
@@ -51,13 +54,8 @@ class YarnConfigCollector(ConfigCollectorBase):
                 self.logger.error(f"could not connect to {self._resource_manager_address}")
                 return None
             self.logger.warning(f"ResourceManager not found at {self._resource_manager_address}")
-            if address := await detect_resource_manager_address(logger=self.logger):
-                self._is_address_detected = True
-                self._resource_manager_address = address
-                self.logger.debug(f"found ResourceManager address: {address}")
-                result = await self._fetch(address, path)
-            else:
-                self.logger.error("could not resolve ResourceManager address")
+            if self._detect_resource_manager_address():
+                result = await self._fetch(self._resource_manager_address, path)
         return result
 
     async def node_request(self, path: str) -> Optional[Dict[str, Any]]:
@@ -77,7 +75,7 @@ class YarnConfigCollector(ConfigCollectorBase):
         """
         try:
             config: Optional[Dict[str, Any]] = await self.rm_request("/conf")
-            return get_yarn_properties(config) if config else None
+            return self._get_properties(config) if config else None
         except Exception:
             self.logger.error("failed to get ResourceManager config")
             raise
@@ -88,7 +86,22 @@ class YarnConfigCollector(ConfigCollectorBase):
         """
         try:
             config: Optional[Dict[str, Any]] = await self.node_request("/conf")
-            return get_yarn_properties(config) if config else None
+            return self._get_properties(config) if config else None
         except Exception:
             self.logger.error("failed to get node config")
             raise
+
+    def _get_properties(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        if self._all_properties:
+            return get_all_properties(config)
+        return get_yarn_properties(config)
+
+    def _detect_resource_manager_address(self) -> bool:
+        if (yarn_node_info := get_yarn_node_info(logger=self.logger)) and yarn_node_info.is_resource_manager:
+            self._is_address_detected = True
+            self._resource_manager_address = yarn_node_info.get_own_resource_manager_webapp_address()
+            self.logger.debug(f"found ResourceManager address: {self._resource_manager_address}")
+            return True
+        else:
+            self.logger.error("could not resolve ResourceManager address")
+        return False
