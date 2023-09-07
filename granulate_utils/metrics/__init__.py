@@ -39,7 +39,7 @@ def rest_request(url: str, **kwargs: Any) -> requests.Response:
     """
     Query the given URL and return the response
     """
-    response = requests.get(url, params={k: v for k, v in kwargs.items() if v is not None}, timeout=3)
+    response = requests.get(url, params={k: v for k, v in kwargs.items() if v is not None}, timeout=15, verify=False)
     response.raise_for_status()
     return response
 
