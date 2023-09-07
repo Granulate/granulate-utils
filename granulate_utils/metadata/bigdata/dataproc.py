@@ -20,7 +20,7 @@ def get_hadoop_version() -> Optional[str]:
 
     Sample cmd output:
     >> Hadoop 2.9.2
-    >> Subversion https://bigdataoss-internal.googlesource.com/third_party/apache/hadoop -r b3e52921b6aaf2c68af220021eab42975114f7cb
+    >> Subversion https://bigdataoss-internal.googlesource.com/third_party/apache/hadoop -r b3e52921b6aaf2c68af220021eab42975114f7cb # noqa 501
     >> Compiled by bigtop on 2021-07-12T21:30Z
     >> Compiled with protoc 2.5.0
     >> From source with checksum 3ea0fd8f2b9af855fb9f66c2e3130e3
