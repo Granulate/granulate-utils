@@ -46,10 +46,13 @@ class ResourceManagerAPI:
 
     @cached_property
     def version(self) -> Version:
-        rm_version = json_request(self._info_url, {})["clusterInfo"]["resourceManagerVersion"]
-        if sem_version := REGEX_SEM_VER.search(rm_version):
+        return json_request(self._info_url, {})["clusterInfo"]["resourceManagerVersion"]
+
+    @cached_property
+    def sem_version(self) -> Version:
+        if sem_version := REGEX_SEM_VER.search(self.version):
             return Version(sem_version.group(1))
-        raise InvalidResourceManagerVersionError(f"Invalid ResourceManager version: {rm_version}")
+        raise InvalidResourceManagerVersionError(f"Invalid ResourceManager version: {self.version}")
 
     def is_version_at_least(self, version: str) -> bool:
-        return self.version >= Version(version)
+        return self.sem_version >= Version(version)

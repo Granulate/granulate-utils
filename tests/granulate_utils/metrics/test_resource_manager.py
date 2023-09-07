@@ -86,19 +86,22 @@ def test_scheduler_endpoint(response, expected) -> None:
 
 
 @pytest.mark.parametrize(
-    "rm_version, expected",
+    "rm_version, test_version, expected",
     [
-        pytest.param("3.3.4", "3.3.4", id="same-version"),
-        pytest.param("3.3.3-amzn-4", "3.3.3", id="vendor-suffix"),
-        pytest.param("2.7.3.2.6.1.0-129", "2.7.3", id="patch-version"),
+        pytest.param("3.3.4", "3.3.4", True, id="same-version"),
+        pytest.param("3.3.4", "3.3.4", True, id="lower-version"),
+        pytest.param("3.3.3-amzn-4", "3.3.3", True, id="vendor-suffix"),
+        pytest.param("2.7.3.2.6.1.0-129", "2.7.3", True, id="patch-version"),
     ],
 )
-def test_version_check(rm_version, expected) -> None:
+def test_version_check(rm_version, test_version, expected) -> None:
     with patch(
         "granulate_utils.metrics.yarn.resource_manager.json_request",
         return_value={"clusterInfo": {"resourceManagerVersion": rm_version}},
     ) as mock_json_request:
-        assert ResourceManagerAPI(RM_ADDRESS).version == Version(expected)
+        rmapi = ResourceManagerAPI(RM_ADDRESS)
+        assert rmapi.version == rm_version
+        assert rmapi.is_version_at_least(test_version) == expected
         mock_json_request.assert_called_once_with(f"{RM_ADDRESS}/ws/v1/cluster/info", {})
 
 
@@ -108,4 +111,4 @@ def test_invalid_version() -> None:
         return_value={"clusterInfo": {"resourceManagerVersion": "my-version"}},
     ):
         with pytest.raises(InvalidResourceManagerVersionError, match="Invalid ResourceManager version: my-version"):
-            ResourceManagerAPI(RM_ADDRESS).version
+            ResourceManagerAPI(RM_ADDRESS).is_version_at_least("3.3.4")
