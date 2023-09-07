@@ -5,8 +5,9 @@
 # (C) Datadog, Inc. 2018-present. All rights reserved.
 # Licensed under a 3-clause BSD style license (see LICENSE.bsd3).
 #
+import copy
 import logging
-from typing import Any, Dict, Iterable, Tuple
+from typing import Any, Dict, Iterable, Optional, Tuple
 
 from bs4 import BeautifulSoup
 from requests import HTTPError
@@ -39,10 +40,13 @@ SPARK_MASTER_APP_PATH = "/app/"
 
 
 class SparkRunningApps:
-    def __init__(self, cluster_mode: str, master_address: str, logger: logging.LoggerAdapter) -> None:
+    def __init__(
+        self, cluster_mode: str, master_address: str, logger: logging.LoggerAdapter, request_kwargs: Dict[str, Any]
+    ) -> None:
         self._master_address = master_address
         self._cluster_mode = cluster_mode
         self._logger = logger
+        self._request_kwargs = request_kwargs
 
     def get_running_apps(self) -> Dict[str, Tuple[str, str]]:
         """
@@ -66,7 +70,7 @@ class SparkRunningApps:
         spark_apps = {}
         for app_id, (app_name, tracking_url) in running_apps.items():
             try:
-                response = rest_request_to_json(tracking_url, SPARK_APPS_PATH)
+                response = rest_request_to_json(tracking_url, SPARK_APPS_PATH, **self._request_kwargs)
 
                 for app in response:
                     app_id = app.get("id")
@@ -86,7 +90,9 @@ class SparkRunningApps:
         return self._yarn_get_spark_apps(states="RUNNING", applicationTypes="SPARK")
 
     def _yarn_get_spark_apps(self, *args: Any, **kwargs: Any) -> Dict[str, Tuple[str, str]]:
-        metrics_json = rest_request_to_json(self._master_address, YARN_APPS_PATH, *args, **kwargs)
+        merged_kwargs = copy.deepcopy(self._request_kwargs)
+        merged_kwargs.update(kwargs)
+        metrics_json = rest_request_to_json(self._master_address, YARN_APPS_PATH, *args, **merged_kwargs)
 
         running_apps = {}
 
@@ -104,7 +110,7 @@ class SparkRunningApps:
 
     def _get_mesos_apps(self) -> Dict[str, Tuple[str, str]]:
         running_apps = {}
-        metrics_json = rest_request_to_json(self._master_address, MESOS_MASTER_APP_PATH)
+        metrics_json = rest_request_to_json(self._master_address, MESOS_MASTER_APP_PATH, **self._request_kwargs)
         for app_json in metrics_json.get("frameworks", []):
             app_id = app_json.get("id")
             tracking_url = app_json.get("webui_url")
@@ -119,7 +125,7 @@ class SparkRunningApps:
         """
         # Parsing the master address json object:
         # https://github.com/apache/spark/blob/67a254c7ed8c5c3321e8bed06294bc2c9a2603de/core/src/main/scala/org/apache/spark/deploy/JsonProtocol.scala#L202
-        metrics_json = rest_request_to_json(self._master_address, SPARK_MASTER_STATE_PATH)
+        metrics_json = rest_request_to_json(self._master_address, SPARK_MASTER_STATE_PATH, **self._request_kwargs)
         running_apps = {}
 
         activeapps = metrics_json.get("activeapps", [])
@@ -157,7 +163,7 @@ class SparkRunningApps:
         fetch JSON data from HTTP interface.
         Hence, we decided to carry logic from Datadog's Spark integration.
         """
-        app_page = rest_request_raw(self._master_address, SPARK_MASTER_APP_PATH, appId=app_id)
+        app_page = rest_request_raw(self._master_address, SPARK_MASTER_APP_PATH, appId=app_id, **self._request_kwargs)
 
         dom = BeautifulSoup(app_page.text, "html.parser")
 
@@ -168,11 +174,23 @@ class SparkRunningApps:
 
 
 class SparkApplicationMetricsCollector(Collector):
-    def __init__(self, cluster_mode: str, master_address: str, logger: logging.LoggerAdapter) -> None:
+    def __init__(
+        self,
+        cluster_mode: str,
+        master_address: str,
+        logger: logging.LoggerAdapter,
+        spark_api_request_timeout: Optional[int] = None,
+        spark_api_verify_ssl: bool = True,
+    ) -> None:
         self.master_address = master_address
         self._cluster_mode = cluster_mode
         self.logger = logger
-        self.running_apps_helper = SparkRunningApps(cluster_mode, master_address, logger)
+
+        self._requests_kwargs: Dict[str, Any] = {"verify": spark_api_verify_ssl}
+        if spark_api_request_timeout is not None:
+            self._requests_kwargs["timeout"] = spark_api_request_timeout
+
+        self.running_apps_helper = SparkRunningApps(cluster_mode, master_address, logger, self._requests_kwargs)
         self._last_iteration_app_job_metrics: Dict[str, Dict[str, Any]] = {}
 
     def collect(self) -> Iterable[Sample]:
@@ -193,7 +211,7 @@ class SparkApplicationMetricsCollector(Collector):
         for app_id, (app_name, tracking_url) in running_apps.items():
             try:
                 base_url = get_request_url(self.master_address, tracking_url)
-                response = rest_request_to_json(base_url, SPARK_APPS_PATH, app_id, "jobs")
+                response = rest_request_to_json(base_url, SPARK_APPS_PATH, app_id, "jobs", **self._requests_kwargs)
                 application_diff_aggregated_metrics = dict.fromkeys(SPARK_APPLICATION_DIFF_METRICS.keys(), 0)
                 application_gauge_aggregated_metrics = dict.fromkeys(SPARK_APPLICATION_GAUGE_METRICS.keys(), 0)
                 iteration_metrics[app_id] = {}
@@ -240,7 +258,7 @@ class SparkApplicationMetricsCollector(Collector):
             self.logger.debug("Gathering stage metrics for app", app_id=app_id)
             try:
                 base_url = get_request_url(self.master_address, tracking_url)
-                response = rest_request_to_json(base_url, SPARK_APPS_PATH, app_id, "stages")
+                response = rest_request_to_json(base_url, SPARK_APPS_PATH, app_id, "stages", **self._requests_kwargs)
                 self.logger.debug("Got response for stage metrics for app %s", app_id)
             except Exception as e:
                 self.logger.exception(
@@ -268,7 +286,9 @@ class SparkApplicationMetricsCollector(Collector):
         for app_id, (app_name, tracking_url) in running_apps.items():
             try:
                 base_url = get_request_url(self.master_address, tracking_url)
-                executors = rest_request_to_json(base_url, SPARK_APPS_PATH, app_id, "executors")
+                executors = rest_request_to_json(
+                    base_url, SPARK_APPS_PATH, app_id, "executors", **self._requests_kwargs
+                )
                 labels = {"app_name": app_name, "app_id": app_id}
                 yield from samples_from_json(
                     labels,
