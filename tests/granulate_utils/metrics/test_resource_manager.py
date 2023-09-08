@@ -85,6 +85,23 @@ def test_scheduler_endpoint(response, expected) -> None:
 
 
 @pytest.mark.parametrize(
+    "response, expected",
+    [
+        pytest.param({"beans": None}, [], id="null-response"),
+        pytest.param({"beans": []}, [], id="empty-response"),
+        pytest.param({"beans": [{"AppsCompleted": 5}]}, [{"AppsCompleted": 5}], id="single-bean"),
+    ],
+)
+def test_beans_endpoint(response, expected) -> None:
+    with patch(
+        "granulate_utils.metrics.yarn.resource_manager.json_request",
+        return_value=response,
+    ) as mock_json_request:
+        assert ResourceManagerAPI(RM_ADDRESS).beans() == expected
+        mock_json_request.assert_called_once_with(f"{RM_ADDRESS}/jmx", {})
+
+
+@pytest.mark.parametrize(
     "rm_version, test_version, expected",
     [
         pytest.param("3.3.4", "3.3.4", True, id="same-version"),
