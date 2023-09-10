@@ -3,7 +3,10 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 import logging
+import sys
 from typing import Any, Dict, Mapping, MutableMapping, Tuple
+
+from .extra_exception import ExtraException
 
 
 class ExtraAdapter(logging.LoggerAdapter):
@@ -43,6 +46,17 @@ class ExtraAdapter(logging.LoggerAdapter):
             logging_kwargs["extra"] = extra
 
         extra = self.get_extra(**logging_kwargs)
+
+        if logging_kwargs.get("exc_info") is True:
+            # If exc_info is True, and the exception is subclassing ExtraException, then add the extra attributes
+            # from the exception to the extra attributes of the record:
+            exc_info = sys.exc_info()
+            # If exc_info is True, then there must be an exception:
+            assert exc_info is not None
+            if isinstance(exc_info[1], ExtraException):
+                # Merge extra attributes from exception into extra, the exception's extra attributes take precedence:
+                extra = {**extra, **exc_info[1].extra}
+
         # Retain all extras as attributes on the record, and add "extra" attribute that contains all the extras:
         logging_kwargs.update({"extra": {**extra, "extra": extra}})
         return msg, logging_kwargs
