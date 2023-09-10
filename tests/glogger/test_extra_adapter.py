@@ -2,6 +2,12 @@ import logging
 from typing import Any, Mapping
 
 from glogger.extra_adapter import ExtraAdapter
+from glogger.extra_exception import ExtraException
+
+
+class CustomException(ExtraException):
+    def __init__(self, **extra: Any) -> None:
+        super().__init__("My Exception", **extra)
 
 
 class CustomGetExtraAdapter(ExtraAdapter):
@@ -38,3 +44,17 @@ def test_custom_get_extra(caplog):
     assert record.neo == "keanu reeves"
     assert hasattr(record, "extra")
     assert record.extra == dict(test=6, neo="keanu reeves")
+
+
+def test_extra_exception(caplog):
+    caplog.set_level(logging.INFO)
+    try:
+        raise CustomException(test=6)
+    except Exception as e:
+        assert e.extra == {"test": 6}
+        ExtraAdapter(logging.getLogger()).exception("test message")
+    record = caplog.records[0]
+    assert record.message == "test message"
+    assert record.test == 6
+    assert hasattr(record, "extra")
+    assert record.extra == dict(test=6)
