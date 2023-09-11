@@ -6,8 +6,6 @@ import logging
 import sys
 from typing import Any, Dict, Mapping, MutableMapping, Tuple
 
-from .extra_exception import ExtraException
-
 
 class ExtraAdapter(logging.LoggerAdapter):
     """
@@ -53,9 +51,9 @@ class ExtraAdapter(logging.LoggerAdapter):
             exc_info = sys.exc_info()
             # If exc_info is True, then there must be an exception:
             assert exc_info is not None
-            if isinstance(exc_info[1], ExtraException):
-                # Merge extra attributes from exception into extra, the exception's extra attributes take precedence:
-                extra = {**extra, **exc_info[1].extra}
+            if (exc_extra := getattr(exc_info[1], "extra", None)) is not None and isinstance(exc_extra, dict):
+                # Merge 'extra' attributes from exception into extra, the exception's extra attributes take precedence:
+                extra = {**extra, **exc_extra}
 
         # Retain all extras as attributes on the record, and add "extra" attribute that contains all the extras:
         logging_kwargs.update({"extra": {**extra, "extra": extra}})
