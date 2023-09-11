@@ -127,7 +127,7 @@ class DBXWebUIEnvWrapper:
 
         if self.raise_on_failure:
             raise DatabricksMetadataFetchException(
-                "Failed to get DBX environment metadata in timeout " f"of {DATABRICKS_JOBNAME_TIMEOUT_S} seconds"
+                f"Timed out getting DBX environment metadata after {DATABRICKS_JOBNAME_TIMEOUT_S}s"
             )
         self.logger.info("Databricks get DBX environment metadata timeout reached")
         return None
