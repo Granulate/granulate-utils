@@ -28,6 +28,7 @@ class ResourceManagerAPI:
         self._nodes_url = f"{rm_address}/ws/v1/cluster/nodes"
         self._scheduler_url = f"{rm_address}/ws/v1/cluster/scheduler"
         self._info_url = f"{rm_address}/ws/v1/cluster/info"
+        self._jmx_url = f"{rm_address}/jmx"
 
     def apps(self, **kwargs) -> List[Dict]:
         apps = json_request(self._apps_url, {}, **kwargs).get("apps") or {}
@@ -43,6 +44,9 @@ class ResourceManagerAPI:
     def scheduler(self, **kwargs) -> Optional[Dict]:
         scheduler = json_request(self._scheduler_url, {}, **kwargs).get("scheduler") or {}
         return scheduler.get("schedulerInfo")
+
+    def beans(self) -> List[Dict]:
+        return json_request(self._jmx_url, {}).get("beans") or []
 
     @cached_property
     def version(self) -> str:
