@@ -63,9 +63,6 @@ class DBXWebUIEnvWrapper:
         raise_on_failure: bool = False,
         verify_request_ssl: bool = DEFAULT_REQUEST_VERIFY_SSL,
     ) -> None:
-        """
-        When `enable_retries` is True, the wrapper will retry the request to the webui until it succeeds or until
-        """
         if raise_on_failure:
             assert not enable_retries, "enable_retries and raise_on_failure can't be both True"
 
@@ -128,12 +125,11 @@ class DBXWebUIEnvWrapper:
             # No environment metadata yet, retry.
             time.sleep(RETRY_INTERVAL_S)
 
-        self.logger.info("Databricks get DBX environment metadata timeout reached")
-
         if self.raise_on_failure:
             raise DatabricksMetadataFetchException(
                 "Failed to get DBX environment metadata in timeout " f"of {DATABRICKS_JOBNAME_TIMEOUT_S} seconds"
             )
+        self.logger.info("Databricks get DBX environment metadata timeout reached")
         return None
 
     def _discover_apps_url(self) -> bool:
