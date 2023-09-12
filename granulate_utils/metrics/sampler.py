@@ -60,6 +60,8 @@ class BigDataSampler(Sampler):
         master_address: Optional[str],
         cluster_mode: Optional[str],
         applications_metrics: Optional[bool] = False,
+        spark_api_request_timeout: Optional[int] = None,
+        spark_api_verify_ssl: bool = True,
     ):
         self._logger = logger
         self._hostname = hostname
@@ -68,6 +70,8 @@ class BigDataSampler(Sampler):
         self._master_address: Optional[str] = None
         self._cluster_mode: Optional[str] = None
         self._yarn_node_info: Optional[YarnNodeInfo] = None
+        self._spark_api_request_timeout = spark_api_request_timeout
+        self._spark_api_request_verify_ssl = spark_api_verify_ssl
 
         assert (cluster_mode is None) == (
             master_address is None
@@ -236,7 +240,13 @@ class BigDataSampler(Sampler):
 
         if self._applications_metrics:
             self._collectors.append(
-                SparkApplicationMetricsCollector(self._cluster_mode, self._master_address, self._logger)
+                SparkApplicationMetricsCollector(
+                    self._cluster_mode,
+                    self._master_address,
+                    self._logger,
+                    self._spark_api_request_timeout,
+                    self._spark_api_request_verify_ssl,
+                )
             )
 
     def _validate_manual_configuration(self) -> bool:

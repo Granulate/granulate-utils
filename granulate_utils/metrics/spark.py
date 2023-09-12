@@ -6,7 +6,7 @@
 # Licensed under a 3-clause BSD style license (see LICENSE.bsd3).
 #
 import logging
-from typing import Any, Dict, Iterable, Tuple
+from typing import Any, Dict, Iterable, Optional, Tuple
 
 from bs4 import BeautifulSoup
 from requests import HTTPError
@@ -39,10 +39,13 @@ SPARK_MASTER_APP_PATH = "/app/"
 
 
 class SparkRunningApps:
-    def __init__(self, cluster_mode: str, master_address: str, logger: logging.LoggerAdapter) -> None:
+    def __init__(
+        self, cluster_mode: str, master_address: str, logger: logging.LoggerAdapter, request_kwargs: Dict[str, Any]
+    ) -> None:
         self._master_address = master_address
         self._cluster_mode = cluster_mode
         self._logger = logger
+        self._request_kwargs = request_kwargs
 
     def get_running_apps(self) -> Dict[str, Tuple[str, str]]:
         """
@@ -168,11 +171,23 @@ class SparkRunningApps:
 
 
 class SparkApplicationMetricsCollector(Collector):
-    def __init__(self, cluster_mode: str, master_address: str, logger: logging.LoggerAdapter) -> None:
+    def __init__(
+        self,
+        cluster_mode: str,
+        master_address: str,
+        logger: logging.LoggerAdapter,
+        spark_api_request_timeout: Optional[int] = None,
+        spark_api_verify_ssl: bool = True,
+    ) -> None:
         self.master_address = master_address
         self._cluster_mode = cluster_mode
         self.logger = logger
-        self.running_apps_helper = SparkRunningApps(cluster_mode, master_address, logger)
+
+        self._requests_kwargs: Dict[str, Any] = {"verify": spark_api_verify_ssl}
+        if spark_api_request_timeout is not None:
+            self._requests_kwargs["timeout"] = spark_api_request_timeout
+
+        self.running_apps_helper = SparkRunningApps(cluster_mode, master_address, logger, self._requests_kwargs)
         self._last_iteration_app_job_metrics: Dict[str, Dict[str, Any]] = {}
 
     def collect(self) -> Iterable[Sample]:
@@ -268,7 +283,12 @@ class SparkApplicationMetricsCollector(Collector):
         for app_id, (app_name, tracking_url) in running_apps.items():
             try:
                 base_url = get_request_url(self.master_address, tracking_url)
-                executors = rest_request_to_json(base_url, SPARK_APPS_PATH, app_id, "executors")
+                executors = rest_request_to_json(
+                    base_url,
+                    SPARK_APPS_PATH,
+                    app_id,
+                    "executors",
+                )
                 labels = {"app_name": app_name, "app_id": app_id}
                 yield from samples_from_json(
                     labels,
