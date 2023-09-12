@@ -45,12 +45,8 @@ class ExtraAdapter(logging.LoggerAdapter):
 
         extra = self.get_extra(**logging_kwargs)
 
-        if logging_kwargs.get("exc_info") is True:
-            # If exc_info is True, and the exception is subclassing ExtraException, then add the extra attributes
-            # from the exception to the extra attributes of the record:
-            exc_info = sys.exc_info()
-            # If exc_info is True, then there must be an exception:
-            assert exc_info is not None
+        if logging_kwargs.get("exc_info") is True and (exc_info := sys.exc_info()) is not None:
+            # If exc_info is True, and the exception has a dict in the 'extra' attribute, merge it into extra:
             if (exc_extra := getattr(exc_info[1], "extra", None)) is not None and isinstance(exc_extra, dict):
                 # Merge 'extra' attributes from exception into extra, the exception's extra attributes take precedence:
                 extra = {**extra, **exc_extra}
