@@ -1,4 +1,9 @@
+#
+# Copyright (c) Granulate. All rights reserved.
+# Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
+#
 import logging
+import sys
 from typing import Any, Dict, Mapping, MutableMapping, Tuple
 
 
@@ -39,6 +44,13 @@ class ExtraAdapter(logging.LoggerAdapter):
             logging_kwargs["extra"] = extra
 
         extra = self.get_extra(**logging_kwargs)
+
+        if logging_kwargs.get("exc_info") is True and (exc_info := sys.exc_info()) is not None:
+            # If exc_info is True, and the exception has a dict in the 'extra' attribute, merge it into extra:
+            if (exc_extra := getattr(exc_info[1], "extra", None)) is not None and isinstance(exc_extra, dict):
+                # Merge 'extra' attributes from exception into extra, the exception's extra attributes take precedence:
+                extra = {**extra, **exc_extra}
+
         # Retain all extras as attributes on the record, and add "extra" attribute that contains all the extras:
         logging_kwargs.update({"extra": {**extra, "extra": extra}})
         return msg, logging_kwargs
