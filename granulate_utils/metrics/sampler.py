@@ -9,8 +9,7 @@ import logging
 import os
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
-from typing import List, Optional, Tuple
-from xml.etree import ElementTree as ET
+from typing import Dict, List, Optional, Tuple
 
 import psutil
 
@@ -20,7 +19,8 @@ from granulate_utils.linux.process import process_exe, search_for_process
 from granulate_utils.metrics import Collector, MetricsSnapshot, Sample
 from granulate_utils.metrics.mode import SPARK_MESOS_MODE, SPARK_STANDALONE_MODE, SPARK_YARN_MODE
 from granulate_utils.metrics.spark import SparkApplicationMetricsCollector
-from granulate_utils.metrics.yarn import YarnCollector
+from granulate_utils.metrics.yarn import YARN_RM_CLASSNAME, YarnCollector, YarnNodeInfo, get_yarn_node_info
+from granulate_utils.metrics.yarn.utils import parse_config_xml
 
 FIND_CLUSTER_TIMEOUT_SECS = 10 * 60
 
@@ -60,6 +60,8 @@ class BigDataSampler(Sampler):
         master_address: Optional[str],
         cluster_mode: Optional[str],
         applications_metrics: Optional[bool] = False,
+        spark_api_request_timeout: Optional[int] = None,
+        spark_api_verify_ssl: bool = True,
     ):
         self._logger = logger
         self._hostname = hostname
@@ -67,6 +69,9 @@ class BigDataSampler(Sampler):
         self._collectors: List[Collector] = []
         self._master_address: Optional[str] = None
         self._cluster_mode: Optional[str] = None
+        self._yarn_node_info: Optional[YarnNodeInfo] = None
+        self._spark_api_request_timeout = spark_api_request_timeout
+        self._spark_api_request_verify_ssl = spark_api_verify_ssl
 
         assert (cluster_mode is None) == (
             master_address is None
@@ -87,31 +92,17 @@ class BigDataSampler(Sampler):
             self._logger.info("Could not find HADOOP_CONF_DIR variable, using default path", hadoop_conf_dir=path)
         return os.path.join(path, "yarn-site.xml")
 
-    def _get_yarn_config(self, process: psutil.Process) -> Optional[ET.Element]:
+    def _get_yarn_config(self, process: psutil.Process) -> Optional[Dict[str, str]]:
         config_path = self._get_yarn_config_path(process)
 
         self._logger.debug("Trying to open yarn config file for reading", config_path=config_path)
         try:
             # resolve config path against process' filesystem root
-            process_relative_config_path = resolve_host_path(process, self._get_yarn_config_path(process))
-            with open(process_relative_config_path, "rb") as conf_file:
-                config_xml_string = conf_file.read()
-            return ET.fromstring(config_xml_string)
+            process_relative_config_path = resolve_host_path(process, config_path)
+            with open(process_relative_config_path, "r") as conf_file:
+                return parse_config_xml(conf_file.read())
         except FileNotFoundError:
             return None
-
-    def _get_yarn_config_property(
-        self, process: psutil.Process, requested_property: str, default: Optional[str] = None
-    ) -> Optional[str]:
-        config = self._get_yarn_config(process)
-        if config is not None:
-            for config_property in config.iter("property"):
-                name_property = config_property.find("name")
-                if name_property is not None and name_property.text == requested_property:
-                    value_property = config_property.find("value")
-                    if value_property is not None:
-                        return value_property.text
-        return default
 
     def _guess_standalone_master_webapp_address(self, process: psutil.Process) -> str:
         """
@@ -131,24 +122,6 @@ class BigDataSampler(Sampler):
                 self._logger.exception("Could not find value for argument", arg_name=arg_name)
         return None
 
-    def _guess_yarn_resource_manager_webapp_address(self, resource_manager_process: psutil.Process) -> str:
-        config = self._get_yarn_config(resource_manager_process)
-
-        if config is not None:
-            for config_property in config.iter("property"):
-                name_property = config_property.find("name")
-                if (
-                    name_property is not None
-                    and name_property.text is not None
-                    and name_property.text.startswith("yarn.resourcemanager.webapp.address")
-                ):
-                    value_property = config_property.find("value")
-                    if value_property is not None and value_property.text is not None:
-                        return value_property.text
-
-        host_name = self._get_yarn_host_name(resource_manager_process)
-        return host_name + ":8088"
-
     def _guess_mesos_master_webapp_address(self, process: psutil.Process) -> str:
         """
         Selects the master address for a mesos-master running on this node. Uses master_address if given, or defaults
@@ -156,22 +129,7 @@ class BigDataSampler(Sampler):
         """
         return self._hostname + ":5050"
 
-    def _get_yarn_host_name(self, resource_manager_process: psutil.Process) -> str:
-        """
-        Selects the master adderss for a ResourceManager running on this node - this parses the YARN config to
-        get the hostname, and if not found, defaults to my hostname.
-        """
-        hostname = self._get_yarn_config_property(resource_manager_process, "yarn.resourcemanager.hostname")
-        if hostname is not None:
-            self._logger.debug(
-                "Selected hostname from yarn.resourcemanager.hostname config", resourcemanager_hostname=hostname
-            )
-        else:
-            hostname = self._hostname
-            self._logger.debug("Selected hostname from my hostname", resourcemanager_hostname=hostname)
-        return hostname
-
-    def _is_yarn_master_collector(self, resource_manager_process: psutil.Process) -> bool:
+    def _is_yarn_master_collector(self) -> bool:
         """
         yarn lists the addresses of the other masters in order communicate with
         other masters, so we can choose one of them (like rm1) and run the
@@ -187,33 +145,37 @@ class BigDataSampler(Sampler):
         'rm1 = hn0-nrt-hb.3e3rqto3nr5evmsjbqz0pkrj4g.tx.internal.cloudapp.net:8050'
         where the hostname is 'hn0-nrt-hb.3e3rqto3nr5evmsjbqz0pkrj4g'
         """
-        rm1_address = self._get_yarn_config_property(resource_manager_process, "yarn.resourcemanager.address.rm1", None)
-        host_name = self._get_yarn_host_name(resource_manager_process)
+        if self._yarn_node_info is None or not self._yarn_node_info.is_resource_manager:
+            return False
 
-        if rm1_address is None:
+        rm_addresses = self._yarn_node_info.resource_manager_webapp_addresses
+        rm1_address = self._yarn_node_info.first_resource_manager_webapp_address
+
+        if len(rm_addresses) == 1:
             self._logger.info(
                 "yarn.resourcemanager.address.rm1 is not defined in config, so it's a single master deployment,"
                 " enabling Spark collector"
             )
             return True
-        elif rm1_address.startswith(host_name):
+
+        if self._yarn_node_info.is_first_resource_manager:
             self._logger.info(
                 f"This is the collector master, because rm1: {rm1_address!r}"
-                f" starts with my host name: {host_name!r}, enabling Spark collector"
+                f" starts with my host name: {self._hostname!r}, enabling Spark collector"
             )
             return True
-        else:
-            self._logger.info(
-                f"This is not the collector master, because rm1: {rm1_address!r}"
-                f" does not start with my host name: {host_name!r}, skipping Spark collector on this YARN master"
-            )
-            return False
+
+        self._logger.info(
+            f"This is not the collector master, because rm1: {rm1_address!r}"
+            f" does not start with my host name: {self._hostname!r}, skipping Spark collector on this YARN master"
+        )
+        return False
 
     def _get_spark_manager_process(self) -> Optional[psutil.Process]:
         def is_master_process(process: psutil.Process) -> bool:
             try:
                 return (
-                    "org.apache.hadoop.yarn.server.resourcemanager.ResourceManager" in process.cmdline()
+                    YARN_RM_CLASSNAME in process.cmdline()
                     or "org.apache.spark.deploy.master.Master" in process.cmdline()
                     or "mesos-master" in process_exe(process)
                 )
@@ -238,11 +200,18 @@ class BigDataSampler(Sampler):
         if spark_master_process is None:
             return None
 
-        if "org.apache.hadoop.yarn.server.resourcemanager.ResourceManager" in spark_master_process.cmdline():
-            if not self._is_yarn_master_collector(spark_master_process):
+        if YARN_RM_CLASSNAME in spark_master_process.cmdline():
+            if (yarn_config := self._get_yarn_config(spark_master_process)) is None:
+                return None
+            self._yarn_node_info = get_yarn_node_info(
+                logger=self._logger, yarn_config=yarn_config, hostname=self._hostname
+            )
+            if self._yarn_node_info is None:
+                return None
+            if not self._is_yarn_master_collector():
                 return None
             spark_cluster_mode = SPARK_YARN_MODE
-            webapp_url = self._guess_yarn_resource_manager_webapp_address(spark_master_process)
+            webapp_url = self._yarn_node_info.first_resource_manager_webapp_address
         elif "org.apache.spark.deploy.master.Master" in spark_master_process.cmdline():
             spark_cluster_mode = SPARK_STANDALONE_MODE
             webapp_url = self._guess_standalone_master_webapp_address(spark_master_process)
@@ -271,8 +240,39 @@ class BigDataSampler(Sampler):
 
         if self._applications_metrics:
             self._collectors.append(
-                SparkApplicationMetricsCollector(self._cluster_mode, self._master_address, self._logger)
+                SparkApplicationMetricsCollector(
+                    self._cluster_mode,
+                    self._master_address,
+                    self._logger,
+                    self._spark_api_request_timeout,
+                    self._spark_api_request_verify_ssl,
+                )
             )
+
+    def _validate_manual_configuration(self) -> bool:
+        """
+        Validates the manual configuration of master_address and cluster_mode.
+        """
+        if self._cluster_mode == SPARK_YARN_MODE and self._yarn_node_info is None:
+            self._yarn_node_info = get_yarn_node_info(logger=self._logger)
+            if self._yarn_node_info is None:
+                self._logger.debug("YARN not detected")
+                return False
+            if not self._yarn_node_info.is_resource_manager:
+                self._logger.debug("This is not a ResourceManager node")
+                return False
+            if not self._yarn_node_info.is_first_resource_manager:
+                self._logger.debug("This is not the first ResourceManager node")
+                return False
+            rm1_address = self._yarn_node_info.first_resource_manager_webapp_address
+            if self._master_address != rm1_address:
+                self._logger.debug(
+                    f"ResourceManager address {rm1_address!r} does not match"
+                    f" manually configured address {self._master_address!r}"
+                )
+                return False
+
+        return True
 
     def discover(self) -> bool:
         """
@@ -287,14 +287,16 @@ class BigDataSampler(Sampler):
         have_conf = False
 
         if self._master_address is not None and self._cluster_mode is not None:
-            # No need to guess, manually configured
-            self._logger.debug(
-                "No need to guess cluster mode and master address, manually configured",
-                cluster_mode=self._cluster_mode,
-                master_address=self._master_address,
-            )
-            have_conf = True
-
+            if self._validate_manual_configuration():
+                # No need to guess, manually configured
+                self._logger.debug(
+                    "No need to guess cluster mode and master address, manually configured",
+                    cluster_mode=self._cluster_mode,
+                    master_address=self._master_address,
+                )
+                have_conf = True
+            else:
+                self._logger.error("Manually configured cluster mode and master address are invalid, skipping sampler")
         else:
             cluster_conf = self._guess_cluster_mode()
             if cluster_conf is not None:

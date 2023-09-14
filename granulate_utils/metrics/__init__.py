@@ -35,21 +35,25 @@ class MetricsSnapshot:
     samples: Tuple[Sample, ...]
 
 
-def rest_request(url: str, **kwargs: Any) -> requests.Response:
+def rest_request(url: str, requests_kwargs: Dict = None, **kwargs: Any) -> requests.Response:
     """
     Query the given URL and return the response
     """
-    response = requests.get(url, params={k: v for k, v in kwargs.items() if v is not None}, timeout=3)
+    requests_kwargs = requests_kwargs or {}
+    if "timeout" not in requests_kwargs:
+        requests_kwargs["timeout"] = 3
+
+    response = requests.get(url, params={k: v for k, v in kwargs.items() if v is not None}, **requests_kwargs)
     response.raise_for_status()
     return response
 
 
-def json_request(url: str, default: Any, **kwargs) -> Any:
+def json_request(url: str, default: Any, requests_kwargs: Dict = None, **kwargs) -> Any:
     """
     Query the given URL using HTTP GET and return the JSON response.
     :param kwargs: request parameters
     """
-    value = rest_request(url, **kwargs).json()
+    value = rest_request(url, requests_kwargs=requests_kwargs, **kwargs).json()
     return default if value is None else value
 
 
@@ -81,20 +85,22 @@ def bake_url(url: str, object_path: str, *args: Any) -> str:
     return url
 
 
-def rest_request_to_json(url: str, object_path: str, *args: Any, **kwargs: Any) -> Any:
+def rest_request_to_json(url: str, object_path: str, *args: Any, requests_kwargs: Dict = None, **kwargs: Any) -> Any:
     """
     Query url/object_path/args/... and return the JSON response
     """
     url = bake_url(url, object_path, *args)
-    return json_request(url, None, **kwargs)
+    return json_request(url, None, requests_kwargs=requests_kwargs, **kwargs)
 
 
-def rest_request_raw(url: str, object_path: str, *args: Any, **kwargs: Any) -> requests.Response:
+def rest_request_raw(
+    url: str, object_path: str, *args: Any, requests_kwargs: Dict = None, **kwargs: Any
+) -> requests.Response:
     """
-    Query the given URL and return the response in it's raw format
+    Query the given URL and return the response in its raw format
     """
     url = bake_url(url, object_path, *args)
-    return rest_request(url, **kwargs)
+    return rest_request(url, requests_kwargs=requests_kwargs, **kwargs)
 
 
 def join_url_dir(url: str, *args: Any) -> str:
