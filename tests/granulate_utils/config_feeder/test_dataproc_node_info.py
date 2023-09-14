@@ -23,7 +23,6 @@ async def test_should_collect_node_info() -> None:
             provider=CloudProvider.GCP,
             bigdata_platform=BigDataPlatform.DATAPROC,
             bigdata_platform_version="2.0",
-            hadoop_version="3.2.1",
             external_id=instance_id,
             external_cluster_id=cluster_uuid,
             is_master=True,

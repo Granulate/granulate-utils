@@ -4,7 +4,6 @@ from typing import Dict, Optional
 from granulate_utils.config_feeder.core.models.cluster import BigDataPlatform, CloudProvider
 from granulate_utils.config_feeder.core.models.node import NodeInfo
 from granulate_utils.metadata.bigdata import get_emr_version
-from granulate_utils.metadata.bigdata.emr import get_hadoop_version
 
 
 def get_emr_node_info() -> Optional[NodeInfo]:
@@ -21,7 +20,6 @@ def get_emr_node_info() -> Optional[NodeInfo]:
             provider=CloudProvider.AWS,
             bigdata_platform=BigDataPlatform.EMR,
             bigdata_platform_version=get_emr_version(),
-            hadoop_version=get_hadoop_version(),
         )
     return None
 
