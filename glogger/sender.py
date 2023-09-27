@@ -90,7 +90,7 @@ class Sender:
 
     def set_address(self, server_address: str, *, scheme: str = "https") -> None:
         """
-        Change the server address to send logs to.
+        Set the server address to send logs to.
         :param server_address: Address of server where to send messages.
         :param scheme: The scheme to use as string ('http' or 'https')
         """
