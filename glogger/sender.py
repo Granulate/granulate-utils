@@ -68,14 +68,13 @@ class Sender:
         """
 
         self.application_name = application_name
-        self.server_address = server_address
         self.send_interval = send_interval
         self.send_threshold = send_threshold
         self.send_min_interval = send_min_interval
 
         self.max_send_tries = max_send_tries
         self.stdout_logger = get_stdout_logger()
-        self.server_uri = f"{scheme}://{server_address}/api/v1/logs"
+        self.set_address(server_address, scheme=scheme)
         self.jsonify = JSONEncoder(separators=(",", ":"), default=repr).encode  # compact, no whitespace
         self.session = Session()
 
@@ -88,6 +87,14 @@ class Sender:
         self.session.verify = verify
         self.messages_buffer: Optional[MessagesBuffer] = None
         self.metadata_callback: Callable[[], Dict] = lambda: {}
+
+    def set_address(self, server_address: str, *, scheme: str = "https") -> None:
+        """
+        Set the server address to send logs to.
+        :param server_address: Address of server where to send messages.
+        :param scheme: The scheme to use as string ('http' or 'https')
+        """
+        self.server_uri = f"{scheme}://{server_address}/api/v1/logs"
 
     def start(self, messages_buffer: MessagesBuffer, metadata_callback: Callable[[], Dict]) -> None:
         assert self.messages_buffer is None, "Call start once"
