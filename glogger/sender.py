@@ -74,7 +74,7 @@ class Sender:
 
         self.max_send_tries = max_send_tries
         self.stdout_logger = get_stdout_logger()
-        self.configure_address(server_address, scheme=scheme)
+        self.set_address(server_address, scheme=scheme)
         self.jsonify = JSONEncoder(separators=(",", ":"), default=repr).encode  # compact, no whitespace
         self.session = Session()
 
@@ -88,7 +88,7 @@ class Sender:
         self.messages_buffer: Optional[MessagesBuffer] = None
         self.metadata_callback: Callable[[], Dict] = lambda: {}
 
-    def configure_address(self, server_address: str, *, scheme: str = "https") -> None:
+    def set_address(self, server_address: str, *, scheme: str = "https") -> None:
         """
         Change the server address to send logs to.
         :param server_address: Address of server where to send messages.
