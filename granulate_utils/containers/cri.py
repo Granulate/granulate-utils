@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from typing import List, Optional, Union
 
 import grpc  # type: ignore # no types-grpc sadly
+import psutil
 
 from granulate_utils.containers.container import Container, ContainersClientInterface, TimeInfo
 from granulate_utils.exceptions import ContainerNotFound, CriNotAvailableError
@@ -136,6 +137,6 @@ class CriClient(ContainersClientInterface):
             id=container.id,
             labels=container.labels,
             running=container.state == CONTAINER_RUNNING,
-            pid=pid,
+            process=psutil.Process(pid) if pid is not None else None,
             time_info=time_info,
         )

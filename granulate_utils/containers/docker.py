@@ -10,6 +10,7 @@ import docker
 import docker.errors
 import docker.models.containers
 from dateutil.parser import isoparse
+import psutil
 
 from granulate_utils.containers.container import Container, ContainersClientInterface, TimeInfo
 from granulate_utils.exceptions import ContainerNotFound
@@ -58,6 +59,6 @@ class DockerClient(ContainersClientInterface):
             id=container.id,
             labels=container.labels,
             running=container.status == "running",
-            pid=pid,
+            process=psutil.Process(pid) if pid is not None else None,
             time_info=time_info,
         )
