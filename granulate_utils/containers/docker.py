@@ -9,8 +9,8 @@ from typing import List, Optional
 import docker
 import docker.errors
 import docker.models.containers
-from dateutil.parser import isoparse
 import psutil
+from dateutil.parser import isoparse
 
 from granulate_utils.containers.container import Container, ContainersClientInterface, TimeInfo
 from granulate_utils.exceptions import ContainerNotFound
