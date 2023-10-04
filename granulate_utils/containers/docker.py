@@ -9,6 +9,7 @@ from typing import List, Optional
 import docker
 import docker.errors
 import docker.models.containers
+import psutil
 from dateutil.parser import isoparse
 
 from granulate_utils.containers.container import Container, ContainersClientInterface, TimeInfo
@@ -58,6 +59,6 @@ class DockerClient(ContainersClientInterface):
             id=container.id,
             labels=container.labels,
             running=container.status == "running",
-            pid=pid,
+            process=psutil.Process(pid) if pid is not None else None,
             time_info=time_info,
         )
