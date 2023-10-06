@@ -7,7 +7,7 @@
 #
 import re
 from functools import cached_property
-from typing import Any, Dict, List, Optional, Type, TypeVar, cast
+from typing import Any, Dict, List, Optional, Type, TypeVar
 
 from packaging.version import Version
 
