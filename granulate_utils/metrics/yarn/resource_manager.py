@@ -7,7 +7,7 @@
 #
 import re
 from functools import cached_property
-from typing import Any, Dict, List, Optional, TypeVar, cast
+from typing import Any, Dict, List, Optional, Type, TypeVar, cast
 
 from packaging.version import Version
 
@@ -52,10 +52,10 @@ class ResourceManagerAPI:
     def beans(self) -> List[Dict]:
         return json_request(self._jmx_url, {}).get("beans") or []
 
-    def request(self, url: str, return_path: str, return_type: T, **kwargs) -> T:
+    def request(self, url: str, return_path: str, return_type: Type[T], **kwargs) -> T:
         target_url = f"{self._rm_address}/{url}"
         response = json_request(target_url, {}, **kwargs)
-        return cast(return_type, self._parse_response(response, return_path.split(".")))
+        return self._parse_response(response, return_path.split("."))
 
     @staticmethod
     def _parse_response(response: Dict[str, Any], nested_attributes: List[str]) -> Any:
