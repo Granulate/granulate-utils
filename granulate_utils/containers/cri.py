@@ -3,6 +3,7 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 import json
+from contextlib import suppress
 from datetime import datetime, timezone
 from typing import List, Optional, Union
 
@@ -131,12 +132,16 @@ class CriClient(ContainersClientInterface):
             if started_at_ns != 0:
                 start_time = datetime.fromtimestamp(started_at_ns / 1e9, tz=timezone.utc)
             time_info = TimeInfo(create_time=create_time, start_time=start_time)
+        if pid is not None:
+            with suppress(psutil.NoSuchProcess):
+                process = psutil.Process(pid)
+
         return Container(
             runtime=runtime,
             name=cls._reconstruct_name(container),
             id=container.id,
             labels=container.labels,
             running=container.state == CONTAINER_RUNNING,
-            process=psutil.Process(pid) if pid is not None else None,
+            process=process,
             time_info=time_info,
         )

@@ -3,6 +3,7 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 
+from contextlib import suppress
 from datetime import datetime
 from typing import List, Optional
 
@@ -53,12 +54,17 @@ class DockerClient(ContainersClientInterface):
         assert created is not None
         started_at = cls._parse_docker_ts(container.attrs["State"]["StartedAt"])
         time_info = TimeInfo(create_time=created, start_time=started_at)
+        process: Optional[psutil.Process] = None
+        if pid is not None:
+            with suppress(psutil.NoSuchProcess):
+                process = psutil.Process(pid)
+
         return Container(
             runtime="docker",
             name=container.name,
             id=container.id,
             labels=container.labels,
             running=container.status == "running",
-            process=psutil.Process(pid) if pid is not None else None,
+            process=process,
             time_info=time_info,
         )
