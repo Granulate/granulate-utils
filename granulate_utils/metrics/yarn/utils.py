@@ -9,7 +9,6 @@ from functools import cached_property
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union
 
-from granulate_utils.config_feeder.core.utils import mask_sensitive_value
 
 REGEX_YARN_VAR = re.compile(r"\${([^}]+)}")
 RM_HIGH_AVAILABILITY_ENABLED_PROPERTY_KEY = "yarn.resourcemanager.ha.enabled"
@@ -29,6 +28,16 @@ YARN_HOME_DIR_KEY = "yarn.home.dir="
 YARN_HOME_DIR_KEY_LEN = len(YARN_HOME_DIR_KEY)
 
 RELATIVE_YARN_SITE_XML_PATH = "./etc/hadoop/yarn-site.xml"
+SENSITIVE_KEYS = ("password", "secret", "keytab", "principal")
+MASK = "*****"
+
+
+def mask_sensitive_value(key: str, value: Any) -> Any:
+    """
+    Mask sensitive info
+    """
+    key = key.lower()
+    return MASK if any(k in key for k in SENSITIVE_KEYS) else value
 
 
 class YarnConfigError(Exception):
