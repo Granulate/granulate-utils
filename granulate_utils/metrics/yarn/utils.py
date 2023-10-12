@@ -4,11 +4,11 @@ import re
 import socket
 import subprocess
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union
 
+from dataclasses import dataclass
 
 REGEX_YARN_VAR = re.compile(r"\${([^}]+)}")
 RM_HIGH_AVAILABILITY_ENABLED_PROPERTY_KEY = "yarn.resourcemanager.ha.enabled"
