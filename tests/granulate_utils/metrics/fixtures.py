@@ -25,7 +25,7 @@ class YarnNodeMock:
         self.mock_file("/home/hadoop/hadoop/etc/hadoop/yarn-site.xml", yarn_site_xml)
         self.mock_command_stdout(
             "ps -ax",
-            f"""12345 ?  Sl  0:04 java
+            """12345 ?  Sl  0:04 java
                 -Dyarn.home.dir=/home/hadoop/hadoop
                 -Dyarn.log.file=rm.log
                 org.apache.hadoop.yarn.server.resourcemanager.ResourceManager""",
