@@ -132,7 +132,9 @@ class CriClient(ContainersClientInterface):
             if started_at_ns != 0:
                 start_time = datetime.fromtimestamp(started_at_ns / 1e9, tz=timezone.utc)
             time_info = TimeInfo(create_time=create_time, start_time=start_time)
-        if pid is not None:
+
+        process: Optional[psutil.Process] = None
+        if pid is not None and pid != 0:
             with suppress(psutil.NoSuchProcess):
                 process = psutil.Process(pid)
 
