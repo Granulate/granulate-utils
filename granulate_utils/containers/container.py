@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Dict, List, Optional
 
+import psutil
+
 
 @dataclass
 class TimeInfo:
@@ -28,7 +30,7 @@ class Container:
     labels: Dict[str, str]
     running: bool
     # None if not requested / container is dead
-    pid: Optional[int]
+    process: Optional[psutil.Process]
     # None if not requested, make sure to pass all_info=True
     time_info: Optional[TimeInfo]
 

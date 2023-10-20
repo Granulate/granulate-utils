@@ -3,10 +3,12 @@
 # Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
 #
 import json
+from contextlib import suppress
 from datetime import datetime, timezone
 from typing import List, Optional, Union
 
 import grpc  # type: ignore # no types-grpc sadly
+import psutil
 
 from granulate_utils.containers.container import Container, ContainersClientInterface, TimeInfo
 from granulate_utils.exceptions import ContainerNotFound, CriNotAvailableError
@@ -130,12 +132,18 @@ class CriClient(ContainersClientInterface):
             if started_at_ns != 0:
                 start_time = datetime.fromtimestamp(started_at_ns / 1e9, tz=timezone.utc)
             time_info = TimeInfo(create_time=create_time, start_time=start_time)
+
+        process: Optional[psutil.Process] = None
+        if pid is not None and pid != 0:
+            with suppress(psutil.NoSuchProcess):
+                process = psutil.Process(pid)
+
         return Container(
             runtime=runtime,
             name=cls._reconstruct_name(container),
             id=container.id,
             labels=container.labels,
             running=container.state == CONTAINER_RUNNING,
-            pid=pid,
+            process=process,
             time_info=time_info,
         )

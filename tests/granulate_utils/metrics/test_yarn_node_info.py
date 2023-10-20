@@ -5,7 +5,7 @@ from unittest.mock import Mock
 import pytest
 
 from granulate_utils.metrics.yarn.utils import YarnNodeInfo, YarnNodeNotAResourceManagerError, get_yarn_node_info
-from tests.granulate_utils.config_feeder.fixtures.yarn import YarnNodeMock
+from tests.granulate_utils.metrics.fixtures import YarnNodeMock
 
 
 @pytest.mark.parametrize(
