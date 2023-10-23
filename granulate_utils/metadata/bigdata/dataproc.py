@@ -20,7 +20,7 @@ def _get_environment_info() -> Optional[List[str]]:
     return None
 
 
-def get_hadoop_version(logger: Union[logging.Logger, _LoggerAdapter]) -> Optional[str]:
+def get_hadoop_version(logger: Optional[Union[logging.Logger, _LoggerAdapter]]) -> Optional[str]:
     """
     Get the running hadoop version.
 
@@ -42,7 +42,8 @@ def get_hadoop_version(logger: Union[logging.Logger, _LoggerAdapter]) -> Optiona
         )
         return version_output.split(" ")[1]
     except (subprocess.CalledProcessError, IndexError):
-        logger.error("Failed to get hadoop version", exc_info=True)
+        if logger:
+            logger.error("Failed to get hadoop version", exc_info=True)
     return None
 
 

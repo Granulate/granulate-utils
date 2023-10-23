@@ -15,10 +15,11 @@ def get_databricks_version() -> Optional[str]:
         return None
 
 
-def get_hadoop_version(logger: Union[logging.Logger, _LoggerAdapter]) -> Optional[str]:
+def get_hadoop_version(logger: Optional[Union[logging.Logger, _LoggerAdapter]]) -> Optional[str]:
     try:
         with open("/databricks/spark/HADOOP_VERSION", "r") as f:
             return f.read().strip()
     except FileNotFoundError:
-        logger.error("Failed to get hadoop version", exc_info=True)
+        if logger:
+            logger.error("Failed to get hadoop version", exc_info=True)
     return None
