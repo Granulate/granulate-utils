@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Dict, Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Dict, Optional, Union
 
 if TYPE_CHECKING:
     _LoggerAdapter = logging.LoggerAdapter[logging.Logger]

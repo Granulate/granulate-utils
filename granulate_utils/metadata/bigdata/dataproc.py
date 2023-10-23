@@ -1,6 +1,6 @@
 import logging
 import subprocess
-from typing import List, Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 
 VERSION_KEY = "DATAPROC_IMAGE_VERSION="
 HADOOP_VERSION_CMD = "hadoop version"
