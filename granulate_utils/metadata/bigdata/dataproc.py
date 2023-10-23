@@ -20,7 +20,7 @@ def _get_environment_info() -> Optional[List[str]]:
     return None
 
 
-def get_hadoop_version(logger: Optional[Union[logging.Logger, _LoggerAdapter]]) -> Optional[str]:
+def get_hadoop_version(logger: Union[logging.Logger, _LoggerAdapter]) -> Optional[str]:
     """
     Get the running hadoop version.
 

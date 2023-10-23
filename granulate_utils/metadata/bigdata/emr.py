@@ -27,7 +27,7 @@ def get_emr_version() -> Optional[str]:
     return None
 
 
-def get_hadoop_version(logger: Optional[Union[logging.Logger, _LoggerAdapter]]) -> Optional[str]:
+def get_hadoop_version(logger: Union[logging.Logger, _LoggerAdapter]) -> Optional[str]:
     """
     Get the running hadoop version.
 
