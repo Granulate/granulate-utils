@@ -1,5 +1,11 @@
 import json
-from typing import Dict, Optional
+import logging
+from typing import Dict, Optional, TYPE_CHECKING, Union
+
+if TYPE_CHECKING:
+    _LoggerAdapter = logging.LoggerAdapter[logging.Logger]
+else:
+    _LoggerAdapter = logging.LoggerAdapter
 
 
 def _get_instance_data() -> Optional[Dict[str, str]]:
@@ -21,7 +27,7 @@ def get_emr_version() -> Optional[str]:
     return None
 
 
-def get_hadoop_version() -> Optional[str]:
+def get_hadoop_version(logger: Optional[Union[logging.Logger, _LoggerAdapter]]) -> Optional[str]:
     """
     Get the running hadoop version.
 
@@ -33,5 +39,5 @@ def get_hadoop_version() -> Optional[str]:
             try:
                 return hadoop_version.split("_", 1)[1].replace("_", ".")
             except IndexError:
-                pass
+                logger.error("Failed to get hadoop version", exc_info=True)
     return None

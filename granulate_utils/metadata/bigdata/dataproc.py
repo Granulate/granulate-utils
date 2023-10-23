@@ -1,8 +1,14 @@
+import logging
 import subprocess
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING, Union
 
 VERSION_KEY = "DATAPROC_IMAGE_VERSION="
 HADOOP_VERSION_CMD = "hadoop version"
+
+if TYPE_CHECKING:
+    _LoggerAdapter = logging.LoggerAdapter[logging.Logger]
+else:
+    _LoggerAdapter = logging.LoggerAdapter
 
 
 def _get_environment_info() -> Optional[List[str]]:
@@ -14,7 +20,7 @@ def _get_environment_info() -> Optional[List[str]]:
     return None
 
 
-def get_hadoop_version() -> Optional[str]:
+def get_hadoop_version(logger: Optional[Union[logging.Logger, _LoggerAdapter]]) -> Optional[str]:
     """
     Get the running hadoop version.
 
@@ -35,8 +41,8 @@ def get_hadoop_version() -> Optional[str]:
             .decode("utf-8")
         )
         return version_output.split(" ")[1]
-    except IndexError:
-        pass
+    except (subprocess.CalledProcessError, IndexError):
+        logger.error("Failed to get hadoop version", exc_info=True)
     return None
 
 
