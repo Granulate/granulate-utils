@@ -12,8 +12,8 @@ import psutil
 
 from granulate_utils.containers.container import Container, ContainersClientInterface, TimeInfo
 from granulate_utils.exceptions import ContainerNotFound, CriNotAvailableError
-from granulate_utils.generated.containers.cri import api_pb2 as api_pb2  # type: ignore
-from granulate_utils.generated.containers.cri.api_pb2_grpc import RuntimeServiceStub  # type: ignore
+from granulate_utils.generated.containers.cri.v1alpha2 import api_pb2 as api_pb2  # type: ignore
+from granulate_utils.generated.containers.cri.v1alpha2.api_pb2_grpc import RuntimeServiceStub  # type: ignore
 from granulate_utils.linux import ns
 from granulate_utils.type_utils import assert_cast
 

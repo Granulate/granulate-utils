@@ -7,7 +7,7 @@ import contextlib
 from typing import List, Optional
 
 from granulate_utils.containers.container import Container, ContainersClientInterface
-from granulate_utils.containers.cri import CriClient
+from granulate_utils.containers.cri.v1alpha2 import CriClient
 from granulate_utils.containers.docker import DockerClient
 from granulate_utils.exceptions import ContainerNotFound, NoContainerRuntimesError
 
