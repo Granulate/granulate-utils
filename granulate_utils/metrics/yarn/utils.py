@@ -242,9 +242,9 @@ def get_yarn_properties(config: Dict[str, Any]) -> Dict[str, Any]:
     """
     Return only YARN properties
     """
-    resource_names = ("yarn-site.xml", "programmatically")
+    resource_names = ("yarn-site.xml", "programmatically", "Dataproc Cluster Properties")
     return {
-        "properties": _get_properties(
+        "properties": filter_properties(
             config,
             lambda x: x["resource"] in resource_names and x["key"].startswith("yarn."),
         )
@@ -255,10 +255,10 @@ def get_all_properties(config: Dict[str, Any]) -> Dict[str, Any]:
     """
     Return all properties
     """
-    return {"properties": _get_properties(config, lambda x: True)}
+    return {"properties": filter_properties(config, lambda x: True)}
 
 
-def _get_properties(
+def filter_properties(
     config: Dict[str, Any],
     predicate: Callable[[Dict[str, Any]], bool],
 ) -> List[Dict[str, Any]]:
