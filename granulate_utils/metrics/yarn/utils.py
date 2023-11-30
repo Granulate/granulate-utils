@@ -9,6 +9,8 @@ from functools import cached_property
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union
 
+from psutil import Process
+
 REGEX_YARN_VAR = re.compile(r"\${([^}]+)}")
 RM_HIGH_AVAILABILITY_ENABLED_PROPERTY_KEY = "yarn.resourcemanager.ha.enabled"
 RM_HIGH_AVAILABILITY_IDS_PROPERTY_KEY = "yarn.resourcemanager.ha.rm-ids"
@@ -165,10 +167,26 @@ def find_yarn_home_dir(*, logger: Union[logging.Logger, logging.LoggerAdapter]) 
     Find YARN home directory from command line arguments
     """
     logger.debug("looking for running YARN processes")
-    lines = subprocess.run(["ps", "-ax"], capture_output=True, text=True).stdout.split(" -D")
+
+    lines = subprocess.run(["ps", "-ax"], capture_output=True, text=True).stdout
+    processes_records = lines.splitlines()
+    for process_rec in processes_records:
+        if "yarn" in process_rec:  # Assuming if 'yarn' in cmd, it is a yarn process.
+            try:
+                process_pid = int(process_rec.split(" ")[0])
+                process = Process(process_pid)
+                for env_key, env_val in process.environ().items():
+                    if "HADOOP_YARN_HOME" == env_key:
+                        return env_val
+            except Exception:
+                pass
+
+    # Fallback to parsing yarn.home.dir from command line arguments
+    lines = lines.split(" -D")
     for line in lines:
         if line.startswith(YARN_HOME_DIR_KEY) and (home_dir := line[YARN_HOME_DIR_KEY_LEN:].strip()):
             return home_dir
+
     logger.error("no YARN processes found")
     return None
 
