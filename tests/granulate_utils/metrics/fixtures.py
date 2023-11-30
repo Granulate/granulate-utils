@@ -5,6 +5,8 @@ from unittest.mock import Mock, mock_open, patch
 
 T = TypeVar("T", bound="YarnNodeMock")
 
+MOCK_DIR = "/home/hadoop/hadoop"
+
 
 class YarnNodeMock:
     def __init__(
@@ -15,6 +17,7 @@ class YarnNodeMock:
         ip: str = "",
     ) -> None:
         self._files: Dict[str, str] = {}
+        self._dirs: Set[str] = set()
         self._stdout: Dict[str, bytes | str] = {}
         self._requests: List[Tuple[str, str, Dict[str, Any]]] = []
         self._contexts: Set[ContextManager[Any]] = set()
@@ -23,10 +26,11 @@ class YarnNodeMock:
         self._mock = Mock()
 
         self.mock_file("/home/hadoop/hadoop/etc/hadoop/yarn-site.xml", yarn_site_xml)
+        self.mock_dir(MOCK_DIR)
         self.mock_command_stdout(
             "ps -ax",
-            """12345 ?  Sl  0:04 java
-                -Dyarn.home.dir=/home/hadoop/hadoop
+            f"""12345 ?  Sl  0:04 java
+                -Dyarn.home.dir={MOCK_DIR}
                 -Dyarn.log.file=rm.log
                 org.apache.hadoop.yarn.server.resourcemanager.ResourceManager""",
         )
@@ -63,6 +67,15 @@ class YarnNodeMock:
             patch(
                 "builtins.open",
                 lambda fname, *args: self._mock_file_open(str(fname)),
+            )
+        )
+
+    def mock_dir(self, dname: str) -> None:
+        self._dirs.add(dname)
+        self._contexts.add(
+            patch(
+                "pathlib.Path.is_dir",
+                lambda path: str(path) in self._dirs,
             )
         )
 

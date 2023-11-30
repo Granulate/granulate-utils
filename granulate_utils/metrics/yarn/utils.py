@@ -9,6 +9,8 @@ from functools import cached_property
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union
 
+import psutil
+
 REGEX_YARN_VAR = re.compile(r"\${([^}]+)}")
 RM_HIGH_AVAILABILITY_ENABLED_PROPERTY_KEY = "yarn.resourcemanager.ha.enabled"
 RM_HIGH_AVAILABILITY_IDS_PROPERTY_KEY = "yarn.resourcemanager.ha.rm-ids"
@@ -25,6 +27,7 @@ WORKER_ADDRESS = "http://0.0.0.0:8042"
 
 YARN_HOME_DIR_KEY = "yarn.home.dir="
 YARN_HOME_DIR_KEY_LEN = len(YARN_HOME_DIR_KEY)
+HADOOP_YARN_HOME_ENV_VAR = "HADOOP_YARN_HOME"
 
 RELATIVE_YARN_SITE_XML_PATH = "./etc/hadoop/yarn-site.xml"
 SENSITIVE_KEYS = ("password", "secret", "keytab", "principal")
@@ -164,12 +167,25 @@ def find_yarn_home_dir(*, logger: Union[logging.Logger, logging.LoggerAdapter]) 
     """
     Find YARN home directory from command line arguments
     """
-    logger.debug("looking for running YARN processes")
+    logger.debug("looking for yarn home dir")
+
     lines = subprocess.run(["ps", "-ax"], capture_output=True, text=True).stdout.split(" -D")
     for line in lines:
         if line.startswith(YARN_HOME_DIR_KEY) and (home_dir := line[YARN_HOME_DIR_KEY_LEN:].strip()):
-            return home_dir
-    logger.error("no YARN processes found")
+            if Path(home_dir).is_dir():
+                return home_dir
+
+    # fallback to search yarn home dir in environment variables
+    for process in psutil.process_iter():
+        try:
+            for env_key, env_val in process.environ().items():
+                if HADOOP_YARN_HOME_ENV_VAR == env_key:
+                    if Path(env_val).is_dir():
+                        return env_val
+        except (psutil.NoSuchProcess, psutil.ZombieProcess, psutil.AccessDenied):
+            pass
+
+    logger.error("Could not find yarn home dir")
     return None
 
 
