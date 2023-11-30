@@ -34,7 +34,6 @@ class YarnNodeMock:
                 -Dyarn.log.file=rm.log
                 org.apache.hadoop.yarn.server.resourcemanager.ResourceManager""",
         )
-        self.mock_path_is_dir()
         self.mock_hostname(hostname=hostname)
         self.mock_ip(ip=ip)
 
@@ -73,6 +72,12 @@ class YarnNodeMock:
 
     def mock_dir(self, dname: str) -> None:
         self._dirs.add(dname)
+        self._contexts.add(
+            patch(
+                "pathlib.Path.is_dir",
+                lambda path: str(path) in self._dirs,
+            )
+        )
 
     def mock_command_stdout(self, cmd: str, stdout: bytes | str):
         self._stdout[cmd] = stdout
@@ -92,9 +97,6 @@ class YarnNodeMock:
         cmd = " ".join(args[0])
         self._mock.stdout = self._stdout[cmd]
         return self._mock
-
-    def mock_path_is_dir(self) -> None:
-        self._contexts.add(patch("pathlib.Path.is_dir", lambda path: path in self._dirs))
 
     def _mock_local_ip(self, *args: Any, **kwargs: Any) -> Mock:
         self._mock.getsockname.return_value = (self._ip, 0)
