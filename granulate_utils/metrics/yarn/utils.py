@@ -182,7 +182,11 @@ def find_yarn_home_dir(*, logger: Union[logging.Logger, logging.LoggerAdapter]) 
                 if HADOOP_YARN_HOME_ENV_VAR == env_key:
                     if Path(env_val).is_dir():
                         return env_val
-        except psutil.NoSuchProcess | psutil.ZombieProcess | psutil.AccessDenied:
+        except psutil.NoSuchProcess:
+            pass
+        except psutil.ZombieProcess:
+            pass
+        except psutil.AccessDenied:
             pass
 
     logger.error("Could not find yarn home dir")
