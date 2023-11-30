@@ -87,12 +87,7 @@ class YarnNodeMock:
         return self._mock
 
     def mock_path_is_dir(self) -> None:
-        self._contexts.add(
-            patch(
-                "pathlib.Path.is_dir",
-                lambda path: True
-            )
-        )
+        self._contexts.add(patch("pathlib.Path.is_dir", lambda path: True))
 
     def _mock_local_ip(self, *args: Any, **kwargs: Any) -> Mock:
         self._mock.getsockname.return_value = (self._ip, 0)
