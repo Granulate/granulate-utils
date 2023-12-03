@@ -166,10 +166,8 @@ def detect_yarn_config(*, logger: Union[logging.Logger, logging.LoggerAdapter]) 
     # try to find YARN config in environment variable
     else:
         for process in psutil.process_iter():
-            for env_key, env_val in process.environ().items():
-                if YARN_CONF_DIR_ENV_VAR == env_key:
-                    logger.debug(f"found YARN conf dir in environment variable: {env_val}")
-                    return read_config_file(Path(env_val).joinpath(YARN_SITE_FILE_NAME), logger=logger)
+            if (yarn_conf_dir := process.environ().get(YARN_CONF_DIR_ENV_VAR)) is not None:
+                return read_config_file(Path(yarn_conf_dir).joinpath(RELATIVE_YARN_SITE_XML_PATH), logger=logger)
     return None
 
 
@@ -188,10 +186,8 @@ def find_yarn_home_dir(*, logger: Union[logging.Logger, logging.LoggerAdapter]) 
     # fallback to search yarn home dir in environment variables
     for process in psutil.process_iter():
         try:
-            for env_key, env_val in process.environ().items():
-                if HADOOP_YARN_HOME_ENV_VAR == env_key:
-                    if Path(env_val).is_dir():
-                        return env_val
+            if (yarn_home_dir := process.environ().get(HADOOP_YARN_HOME_ENV_VAR)) is not None:
+                return yarn_home_dir
         except (psutil.NoSuchProcess, psutil.ZombieProcess, psutil.AccessDenied):
             pass
 
