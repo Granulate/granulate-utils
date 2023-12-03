@@ -1,4 +1,3 @@
-import glob
 import logging
 import os
 import re
@@ -29,8 +28,10 @@ WORKER_ADDRESS = "http://0.0.0.0:8042"
 YARN_HOME_DIR_KEY = "yarn.home.dir="
 YARN_HOME_DIR_KEY_LEN = len(YARN_HOME_DIR_KEY)
 HADOOP_YARN_HOME_ENV_VAR = "HADOOP_YARN_HOME"
+YARN_CONF_DIR_ENV_VAR = "YARN_CONF_DIR"
 
 RELATIVE_YARN_SITE_XML_PATH = "./etc/hadoop/yarn-site.xml"
+YARN_SITE_FILE_NAME = "yarn-site.xml"
 SENSITIVE_KEYS = ("password", "secret", "keytab", "principal")
 MASK = "*****"
 
@@ -159,14 +160,16 @@ def detect_yarn_config(*, logger: Union[logging.Logger, logging.LoggerAdapter]) 
     """
     if yarn_home_dir := find_yarn_home_dir(logger=logger):
         logger.debug(f"found YARN home dir: {yarn_home_dir}")
-        try:
-            yarn_site_xml_file = glob.glob(f"{yarn_home_dir}/**/yarn-site.xml", recursive=True)[0]
-        except IndexError:
-            return None
-        yarn_site_xml_file_path = Path(yarn_site_xml_file)
-        if not yarn_site_xml_file_path.is_file():
-            return None
-        return read_config_file(yarn_site_xml_file_path, logger=logger)
+        yarn_site_xml_file = Path(yarn_home_dir).joinpath(RELATIVE_YARN_SITE_XML_PATH)
+        return read_config_file(yarn_site_xml_file, logger=logger)
+
+    # try to find YARN config in environment variable
+    else:
+        for process in psutil.process_iter():
+            for env_key, env_val in process.environ().items():
+                if YARN_CONF_DIR_ENV_VAR == env_key:
+                    logger.debug(f"found YARN conf dir in environment variable: {env_val}")
+                    return read_config_file(Path(env_val).joinpath(YARN_SITE_FILE_NAME), logger=logger)
     return None
 
 
