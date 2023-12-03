@@ -186,7 +186,9 @@ def find_yarn_home_dir(*, logger: Union[logging.Logger, logging.LoggerAdapter]) 
     # fallback to search yarn home dir in environment variables
     for process in psutil.process_iter():
         try:
-            if (yarn_home_dir := process.environ().get(HADOOP_YARN_HOME_ENV_VAR)) is not None:
+            if (yarn_home_dir := process.environ().get(HADOOP_YARN_HOME_ENV_VAR)) is not None and Path(
+                yarn_home_dir
+            ).is_dir():
                 return yarn_home_dir
         except (psutil.NoSuchProcess, psutil.ZombieProcess, psutil.AccessDenied):
             pass
