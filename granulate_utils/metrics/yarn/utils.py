@@ -167,7 +167,7 @@ def detect_yarn_config(*, logger: Union[logging.Logger, logging.LoggerAdapter]) 
     else:
         for process in psutil.process_iter():
             if (yarn_conf_dir := process.environ().get(YARN_CONF_DIR_ENV_VAR)) is not None:
-                return read_config_file(Path(yarn_conf_dir).joinpath(RELATIVE_YARN_SITE_XML_PATH), logger=logger)
+                return read_config_file(Path(yarn_conf_dir).joinpath(YARN_SITE_FILE_NAME), logger=logger)
     return None
 
 
