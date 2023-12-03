@@ -1,3 +1,4 @@
+import glob
 import logging
 import os
 import re
@@ -158,7 +159,13 @@ def detect_yarn_config(*, logger: Union[logging.Logger, logging.LoggerAdapter]) 
     """
     if yarn_home_dir := find_yarn_home_dir(logger=logger):
         logger.debug(f"found YARN home dir: {yarn_home_dir}")
-        yarn_site_xml_file = Path(yarn_home_dir).joinpath(RELATIVE_YARN_SITE_XML_PATH)
+        try:
+            yarn_site_xml_file = glob.glob(f"{yarn_home_dir}/**/yarn-site.xml", recursive=True)[0]
+        except IndexError:
+            return None
+        yarn_site_xml_file = Path(yarn_site_xml_file)
+        if not yarn_site_xml_file.is_file():
+            return None
         return read_config_file(yarn_site_xml_file, logger=logger)
     return None
 
