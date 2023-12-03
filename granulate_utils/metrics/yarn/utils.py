@@ -161,7 +161,8 @@ def detect_yarn_config(*, logger: Union[logging.Logger, logging.LoggerAdapter]) 
     if yarn_home_dir := find_yarn_home_dir(logger=logger):
         logger.debug(f"found YARN home dir: {yarn_home_dir}")
         yarn_site_xml_file = Path(yarn_home_dir).joinpath(RELATIVE_YARN_SITE_XML_PATH)
-        return read_config_file(yarn_site_xml_file, logger=logger)
+        if conf := read_config_file(yarn_site_xml_file, logger=logger):
+            return conf
 
     # try to find YARN config in environment variable
     else:
