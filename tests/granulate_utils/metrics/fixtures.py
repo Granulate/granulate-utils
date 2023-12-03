@@ -18,6 +18,7 @@ class YarnNodeMock:
     ) -> None:
         self._files: Dict[str, str] = {}
         self._dirs: Set[str] = set()
+        self._globs: Dict[str, str] = {}
         self._stdout: Dict[str, bytes | str] = {}
         self._requests: List[Tuple[str, str, Dict[str, Any]]] = []
         self._contexts: Set[ContextManager[Any]] = set()
@@ -26,6 +27,7 @@ class YarnNodeMock:
         self._mock = Mock()
 
         self.mock_file("/home/hadoop/hadoop/etc/hadoop/yarn-site.xml", yarn_site_xml)
+        self.mock_glob(f"{MOCK_DIR}/**/yarn-site.xml", ["/home/hadoop/hadoop/etc/hadoop/yarn-site.xml"])
         self.mock_dir(MOCK_DIR)
         self.mock_command_stdout(
             "ps -ax",
@@ -67,6 +69,21 @@ class YarnNodeMock:
             patch(
                 "builtins.open",
                 lambda fname, *args: self._mock_file_open(str(fname)),
+            )
+        )
+        self._contexts.add(
+            patch(
+                "pathlib.Path.is_file",
+                lambda path: str(path) in self._files,
+            )
+        )
+
+    def mock_glob(self, glob_path: str, res: list[str]) -> None:
+        self._globs[glob_path] = res
+        self._contexts.add(
+            patch(
+                "glob.glob",
+                lambda path, recursive: self._globs.get(str(path), []),
             )
         )
 
