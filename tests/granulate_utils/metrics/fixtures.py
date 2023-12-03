@@ -18,7 +18,7 @@ class YarnNodeMock:
     ) -> None:
         self._files: Dict[str, str] = {}
         self._dirs: Set[str] = set()
-        self._globs: Dict[str, str] = {}
+        self._globs: Dict[str, list[str]] = {}
         self._stdout: Dict[str, bytes | str] = {}
         self._requests: List[Tuple[str, str, Dict[str, Any]]] = []
         self._contexts: Set[ContextManager[Any]] = set()
