@@ -240,20 +240,22 @@ def _get_cgroup_from_path(controller: ControllerType, cgroup_path_or_full_path: 
     return cgroup_mount.build_object(cgroup_abs_path, cgroup_mount.cgroup_mount_path)
 
 
-def _get_controller_relative_path(controller: ControllerType, process: Optional[psutil.Process] = None) -> str:
+def _get_controller_relative_path(
+    controller: ControllerType, process: Optional[psutil.Process] = None
+) -> Optional[str]:
     for process_cgroup in get_process_cgroups(process):
         if controller in process_cgroup.controllers:
             return process_cgroup.relative_path.lstrip("/")
 
-    return ""
+    return None
 
 
-def _get_unified_controller_relative_path(process: Optional[psutil.Process] = None) -> str:
+def _get_unified_controller_relative_path(process: Optional[psutil.Process] = None) -> Optional[str]:
     for process_cgroup in get_process_cgroups(process):
         if process_cgroup.hier_id == "0":
             return process_cgroup.relative_path.lstrip("/")
 
-    return ""
+    return None
 
 
 def _get_cgroup_for_process(controller: ControllerType, process: Optional[psutil.Process] = None) -> CgroupCore:
@@ -264,13 +266,13 @@ def _get_cgroup_for_process(controller: ControllerType, process: Optional[psutil
 
     if cgroup_mount.is_v1:
         controller_cgroup_relative_path = _get_controller_relative_path(controller, process)
-        if controller_cgroup_relative_path != "":
+        if controller_cgroup_relative_path is not None:
             return cgroup_mount.build_object(
                 cgroup_mount.cgroup_abs_path / controller_cgroup_relative_path, cgroup_mount.cgroup_mount_path
             )
     elif cgroup_mount.is_v2:
         unified_cgroup_relative_path = _get_unified_controller_relative_path(process)
-        if unified_cgroup_relative_path != "":
+        if unified_cgroup_relative_path is not None:
             return cgroup_mount.build_object(
                 cgroup_mount.cgroup_abs_path / unified_cgroup_relative_path, cgroup_mount.cgroup_mount_path
             )
