@@ -163,10 +163,10 @@ def detect_yarn_config(*, logger: Union[logging.Logger, logging.LoggerAdapter]) 
             yarn_site_xml_file = glob.glob(f"{yarn_home_dir}/**/yarn-site.xml", recursive=True)[0]
         except IndexError:
             return None
-        yarn_site_xml_file = Path(yarn_site_xml_file)
-        if not yarn_site_xml_file.is_file():
+        yarn_site_xml_file_path = Path(yarn_site_xml_file)
+        if not yarn_site_xml_file_path.is_file():
             return None
-        return read_config_file(yarn_site_xml_file, logger=logger)
+        return read_config_file(yarn_site_xml_file_path, logger=logger)
     return None
 
 
