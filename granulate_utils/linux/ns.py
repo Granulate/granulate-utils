@@ -334,7 +334,7 @@ def get_host_pid(nspid: int, container_id: str) -> Optional[int]:
         try:
             if os.readlink(f"/proc/{process.pid}/ns/pid") == pid_namespace and get_process_nspid(process) == nspid:
                 return process.pid
-        except (FileNotFoundError, NoSuchProcess):
+        except (FileNotFoundError, NoSuchProcess, PermissionError):
             continue
 
     return None

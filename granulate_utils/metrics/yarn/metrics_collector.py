@@ -42,7 +42,7 @@ class YarnCollector(Collector):
                 for metric, value in node.get("resourceUtilization", {}).items():
                     node[metric] = value  # this will create all relevant metrics under same dictionary
 
-                labels = {"node_hostname": node["nodeHostName"]}
+                labels = {"node_hostname": node["nodeHostName"], "node_state": node["state"]}
                 yield from samples_from_json(labels, node, YARN_NODES_METRICS)
         except Exception:
             self.logger.exception("Could not gather yarn nodes metrics")

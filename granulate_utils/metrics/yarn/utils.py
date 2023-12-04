@@ -9,7 +9,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union
 
-from granulate_utils.config_feeder.core.utils import mask_sensitive_value
+import psutil
 
 REGEX_YARN_VAR = re.compile(r"\${([^}]+)}")
 RM_HIGH_AVAILABILITY_ENABLED_PROPERTY_KEY = "yarn.resourcemanager.ha.enabled"
@@ -27,8 +27,21 @@ WORKER_ADDRESS = "http://0.0.0.0:8042"
 
 YARN_HOME_DIR_KEY = "yarn.home.dir="
 YARN_HOME_DIR_KEY_LEN = len(YARN_HOME_DIR_KEY)
+HADOOP_YARN_HOME_ENV_VAR = "HADOOP_YARN_HOME"
+YARN_CONF_DIR_ENV_VAR = "YARN_CONF_DIR"
 
 RELATIVE_YARN_SITE_XML_PATH = "./etc/hadoop/yarn-site.xml"
+YARN_SITE_FILE_NAME = "yarn-site.xml"
+SENSITIVE_KEYS = ("password", "secret", "keytab", "principal")
+MASK = "*****"
+
+
+def mask_sensitive_value(key: str, value: Any) -> Any:
+    """
+    Mask sensitive info
+    """
+    key = key.lower()
+    return MASK if any(k in key for k in SENSITIVE_KEYS) else value
 
 
 class YarnConfigError(Exception):
@@ -148,7 +161,15 @@ def detect_yarn_config(*, logger: Union[logging.Logger, logging.LoggerAdapter]) 
     if yarn_home_dir := find_yarn_home_dir(logger=logger):
         logger.debug(f"found YARN home dir: {yarn_home_dir}")
         yarn_site_xml_file = Path(yarn_home_dir).joinpath(RELATIVE_YARN_SITE_XML_PATH)
-        return read_config_file(yarn_site_xml_file, logger=logger)
+        if yarn_site_xml_file.is_file() and (conf := read_config_file(yarn_site_xml_file, logger=logger)) is not None:
+            return conf
+
+    # try to find YARN config in environment variable
+    for process in psutil.process_iter():
+        if (yarn_conf_dir := process.environ().get(YARN_CONF_DIR_ENV_VAR)) is not None:
+            yarn_conf_path = Path(yarn_conf_dir).joinpath(YARN_SITE_FILE_NAME)
+            if yarn_conf_path.is_file():
+                return read_config_file(yarn_conf_path, logger=logger)
     return None
 
 
@@ -156,12 +177,25 @@ def find_yarn_home_dir(*, logger: Union[logging.Logger, logging.LoggerAdapter]) 
     """
     Find YARN home directory from command line arguments
     """
-    logger.debug("looking for running YARN processes")
+    logger.debug("looking for yarn home dir")
+
     lines = subprocess.run(["ps", "-ax"], capture_output=True, text=True).stdout.split(" -D")
     for line in lines:
         if line.startswith(YARN_HOME_DIR_KEY) and (home_dir := line[YARN_HOME_DIR_KEY_LEN:].strip()):
-            return home_dir
-    logger.error("no YARN processes found")
+            if Path(home_dir).is_dir():
+                return home_dir
+
+    # fallback to search yarn home dir in environment variables
+    for process in psutil.process_iter():
+        try:
+            if (yarn_home_dir := process.environ().get(HADOOP_YARN_HOME_ENV_VAR)) is not None and Path(
+                yarn_home_dir
+            ).is_dir():
+                return yarn_home_dir
+        except (psutil.NoSuchProcess, psutil.ZombieProcess, psutil.AccessDenied):
+            pass
+
+    logger.error("Could not find yarn home dir")
     return None
 
 
@@ -234,9 +268,9 @@ def get_yarn_properties(config: Dict[str, Any]) -> Dict[str, Any]:
     """
     Return only YARN properties
     """
-    resource_names = ("yarn-site.xml", "programmatically")
+    resource_names = ("yarn-site.xml", "programmatically", "Dataproc Cluster Properties")
     return {
-        "properties": _get_properties(
+        "properties": filter_properties(
             config,
             lambda x: x["resource"] in resource_names and x["key"].startswith("yarn."),
         )
@@ -247,10 +281,10 @@ def get_all_properties(config: Dict[str, Any]) -> Dict[str, Any]:
     """
     Return all properties
     """
-    return {"properties": _get_properties(config, lambda x: True)}
+    return {"properties": filter_properties(config, lambda x: True)}
 
 
-def _get_properties(
+def filter_properties(
     config: Dict[str, Any],
     predicate: Callable[[Dict[str, Any]], bool],
 ) -> List[Dict[str, Any]]:
