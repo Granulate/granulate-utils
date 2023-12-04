@@ -1,3 +1,4 @@
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -128,3 +129,21 @@ def test_invalid_version() -> None:
     ):
         with pytest.raises(InvalidResourceManagerVersionError, match="Invalid ResourceManager version: my-version"):
             ResourceManagerAPI(RM_ADDRESS).is_version_at_least("3.3.4")
+
+
+@pytest.mark.parametrize(
+    "response, return_path, expected",
+    [
+        pytest.param({"one": "value"}, "one", "value", id="level1-attribute"),
+        pytest.param({"one": {"two": "value"}}, "one.two", "value", id="level2-attribute"),
+        pytest.param({"one": {"two": {"three": "value"}}}, "one.two.three", "value", id="level3-attribute"),
+        pytest.param({"one": {"two": {}}}, "one.two.three", {}, id="level3-missing"),
+    ],
+)
+def test_generic_request(response, return_path, expected) -> None:
+    with patch(
+        "granulate_utils.metrics.yarn.yarn_web_service.json_request",
+        return_value=response,
+    ) as mock_json_request:
+        assert ResourceManagerAPI(RM_ADDRESS).request("path1", return_path, type(Any), **PARAMS) == expected
+        mock_json_request.assert_called_once_with(f"{RM_ADDRESS}/path1", {}, **PARAMS)

@@ -7,26 +7,24 @@
 #
 import re
 from functools import cached_property
-from typing import Any, Dict, List, Optional, Type, TypeVar
+from typing import Dict, List, Optional
 
 from packaging.version import Version
 
 from granulate_utils.metrics import json_request
+from granulate_utils.metrics.yarn.yarn_web_service import YarnWebService
 
 YARN_RM_CLASSNAME = "org.apache.hadoop.yarn.server.resourcemanager.ResourceManager"
 REGEX_SEM_VER = re.compile(r"(\d+\.\d+\.\d+)")
-
-
-T = TypeVar("T")
 
 
 class InvalidResourceManagerVersionError(Exception):
     pass
 
 
-class ResourceManagerAPI:
+class ResourceManagerAPI(YarnWebService):
     def __init__(self, rm_address: str):
-        self._rm_address = rm_address
+        super().__init__(rm_address)
         self._apps_url = f"{rm_address}/ws/v1/cluster/apps"
         self._metrics_url = f"{rm_address}/ws/v1/cluster/metrics"
         self._nodes_url = f"{rm_address}/ws/v1/cluster/nodes"
@@ -51,17 +49,6 @@ class ResourceManagerAPI:
 
     def beans(self) -> List[Dict]:
         return json_request(self._jmx_url, {}).get("beans") or []
-
-    def request(self, url: str, return_path: str, return_type: Type[T], **kwargs) -> T:
-        target_url = f"{self._rm_address}/{url}"
-        response = json_request(target_url, {}, **kwargs)
-        return self._parse_response(response, return_path.split("."))
-
-    @staticmethod
-    def _parse_response(response: Dict[str, Any], nested_attributes: List[str]) -> Any:
-        for attribute in nested_attributes:
-            response = response.get(attribute) or {}
-        return response
 
     @cached_property
     def version(self) -> str:
