@@ -161,13 +161,15 @@ def detect_yarn_config(*, logger: Union[logging.Logger, logging.LoggerAdapter]) 
     if yarn_home_dir := find_yarn_home_dir(logger=logger):
         logger.debug(f"found YARN home dir: {yarn_home_dir}")
         yarn_site_xml_file = Path(yarn_home_dir).joinpath(RELATIVE_YARN_SITE_XML_PATH)
-        if (conf := read_config_file(yarn_site_xml_file, logger=logger)) is not None:
+        if yarn_site_xml_file.is_file() and (conf := read_config_file(yarn_site_xml_file, logger=logger)) is not None:
             return conf
 
     # try to find YARN config in environment variable
     for process in psutil.process_iter():
         if (yarn_conf_dir := process.environ().get(YARN_CONF_DIR_ENV_VAR)) is not None:
-            return read_config_file(Path(yarn_conf_dir).joinpath(YARN_SITE_FILE_NAME), logger=logger)
+            yarn_conf_path = Path(yarn_conf_dir).joinpath(YARN_SITE_FILE_NAME)
+            if yarn_conf_path.is_file():
+                return read_config_file(yarn_conf_path, logger=logger)
     return None
 
 
