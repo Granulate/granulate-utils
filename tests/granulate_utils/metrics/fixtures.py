@@ -69,6 +69,7 @@ class YarnNodeMock:
                 lambda fname, *args: self._mock_file_open(str(fname)),
             )
         )
+        self._contexts.add(patch("pathlib.Path.is_file", lambda path: str(path) in self._files))
 
     def mock_dir(self, dname: str) -> None:
         self._dirs.add(dname)
