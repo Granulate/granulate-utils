@@ -19,6 +19,7 @@ class YarnConfig:
     rm: Optional[ResourceManagerAPI] = None
     nm: Optional[NodeManagerAPI] = None
     use_first_rm: bool = True
+    use_https: bool = False
 
 
 class Yarn:
@@ -36,6 +37,7 @@ class Yarn:
         self._rm = yarn_config.rm
         self._nm = yarn_config.nm
         self._use_first_rm = yarn_config.use_first_rm
+        self._use_https = yarn_config.use_https
 
     @property
     def rm(self) -> ResourceManagerAPI:
@@ -63,6 +65,12 @@ class Yarn:
                 if self._use_first_rm
                 else yarn_node_info.get_own_resource_manager_webapp_address()
             )
+            if not rm_address.startswith("http"):
+                rm_address = (
+                    f"https://{rm_address}"
+                    if (self._use_https or yarn_node_info.config.get("yarn.http.policy", "HTTP_ONLY") == "HTTPS_ONLY")
+                    else f"http://{rm_address}"
+                )
             self.logger.debug(f"found ResourceManager address: {rm_address}")
             return rm_address
         else:
