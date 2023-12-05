@@ -59,6 +59,7 @@ class BigDataSampler(Sampler):
         hostname: str,
         master_address: Optional[str],
         cluster_mode: Optional[str],
+        yarn_https_only: Optional[bool],
         applications_metrics: Optional[bool] = False,
         spark_api_request_timeout: Optional[int] = None,
         spark_api_verify_ssl: bool = True,
@@ -73,14 +74,15 @@ class BigDataSampler(Sampler):
         self._spark_api_request_timeout = spark_api_request_timeout
         self._spark_api_request_verify_ssl = spark_api_verify_ssl
 
-        assert (cluster_mode is None) == (
-            master_address is None
-        ), "cluster_mode and master_address must be configured together, or not at all"
+        assert (
+            (cluster_mode is None) == (master_address is None) == (yarn_https_only is None)
+        ), "cluster_mode and master_address and yarn_https_only must be configured together, or not at all"
 
-        if (cluster_mode is not None) and (master_address is not None):
+        if (cluster_mode is not None) and (master_address is not None) and (yarn_https_only is not None):
             # No need to guess cluster mode and master address
             self._cluster_mode = cluster_mode
-            self._master_address = f"http://{master_address}"
+            self._master_address = f"{'http://' if yarn_https_only is False else 'https://'}{master_address}"
+            self._logger.info(f"Master address from config is {self._master_address}")
 
     def _get_yarn_config_path(self, process: psutil.Process) -> str:
         env = process.environ()
@@ -298,10 +300,17 @@ class BigDataSampler(Sampler):
             else:
                 self._logger.error("Manually configured cluster mode and master address are invalid, skipping sampler")
         else:
+            rest_request_protocol = "http://"
             cluster_conf = self._guess_cluster_mode()
             if cluster_conf is not None:
                 master_address, self._cluster_mode = cluster_conf
-                self._master_address = f"http://{master_address}"
+                if self._cluster_mode == SPARK_YARN_MODE:
+                    rest_request_protocol = (
+                        "https://" if self._yarn_node_info.config.get("yarn.http.policy") else "http://"
+                    )
+
+                self._master_address = f"{rest_request_protocol}{master_address}"
+                self._logger.info(f"Master address from discovery is {self._master_address}")
                 have_conf = True
 
         if have_conf:
