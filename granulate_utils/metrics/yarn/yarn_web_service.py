@@ -8,7 +8,7 @@ T = TypeVar("T")
 
 class YarnWebService(ABC):
     def __init__(self, address: str):
-        self._address = address
+        self.address = address
         self._conf_url = f"{address}/conf"
 
     def conf(self) -> List[Dict[str, Any]]:
@@ -22,7 +22,7 @@ class YarnWebService(ABC):
         return json_request(self._conf_url, {}).get("properties") or []
 
     def request(self, path: str, return_path: str, return_type: Type[T], **kwargs) -> T:
-        target_url = f"{self._address}/{path}"
+        target_url = f"{self.address}/{path}"
         response = json_request(target_url, {}, **kwargs)
         return self._parse_response(response, return_path.split("."))
 
