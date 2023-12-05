@@ -310,12 +310,13 @@ class BigDataSampler(Sampler):
                     )
 
                 self._master_address = f"{rest_request_protocol}{master_address}"
-                self._logger.info(f"Master address from discovery is {self._master_address}")
+
                 have_conf = True
 
         if have_conf:
             self._init_collectors()
 
+        self._logger.info(f"Master address from discovery is {self._master_address}")
         return have_conf
 
     def snapshot(self) -> Optional[MetricsSnapshot]:
