@@ -26,9 +26,11 @@ class Yarn:
         self,
         *,
         logger: Union[logging.Logger, logging.LoggerAdapter],
-        yarn_config: YarnConfig = YarnConfig(),
+        yarn_config: Optional[YarnConfig] = None,
     ):
         self.logger = logger
+        if yarn_config is None:
+            yarn_config = YarnConfig()
         self._rm_address = yarn_config.rm_address
         self._nm_address = yarn_config.nm_address or WORKER_ADDRESS
         self._rm = yarn_config.rm
