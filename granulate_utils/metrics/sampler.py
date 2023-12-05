@@ -299,16 +299,16 @@ class BigDataSampler(Sampler):
             else:
                 self._logger.error("Manually configured cluster mode and master address are invalid, skipping sampler")
         else:
-            rest_request_protocol = "http://"
+            protocol_prefix = "http://"
             cluster_conf = self._guess_cluster_mode()
             if cluster_conf is not None:
                 master_address, self._cluster_mode = cluster_conf
                 if self._cluster_mode == SPARK_YARN_MODE:
-                    rest_request_protocol = (
+                    protocol_prefix = (
                         "https://" if self._yarn_node_info.config.get("yarn.http.policy") else "http://"
                     )
 
-                self._master_address = f"{rest_request_protocol}{master_address}"
+                self._master_address = f"{protocol_prefix}{master_address}"
 
                 have_conf = True
 
