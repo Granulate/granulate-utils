@@ -82,7 +82,6 @@ class BigDataSampler(Sampler):
             # No need to guess cluster mode and master address
             self._cluster_mode = cluster_mode
             self._master_address = f"{'http://' if yarn_https_only is False else 'https://'}{master_address}"
-            self._logger.info(f"Master address from config is {self._master_address}")
 
     def _get_yarn_config_path(self, process: psutil.Process) -> str:
         env = process.environ()
@@ -316,7 +315,6 @@ class BigDataSampler(Sampler):
         if have_conf:
             self._init_collectors()
 
-        self._logger.info(f"Master address from discovery is {self._master_address}")
         return have_conf
 
     def snapshot(self) -> Optional[MetricsSnapshot]:
