@@ -304,6 +304,7 @@ class BigDataSampler(Sampler):
             if cluster_conf is not None:
                 master_address, self._cluster_mode = cluster_conf
                 if self._cluster_mode == SPARK_YARN_MODE:
+                    assert self._yarn_node_info is not None, "YARN node info should be set"
                     protocol_prefix = "https://" if self._yarn_node_info.config.get("yarn.http.policy") else "http://"
 
                 self._master_address = f"{protocol_prefix}{master_address}"
