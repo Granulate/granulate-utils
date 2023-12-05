@@ -76,7 +76,7 @@ class BigDataSampler(Sampler):
 
         assert (
             (cluster_mode is None) == (master_address is None) == (yarn_https_only is None)
-        ), "cluster_mode and master_address and yarn_https_only must be configured together, or not at all"
+        ), "cluster_mode, master_address and yarn_https_only must be configured together, or not at all"
 
         if (cluster_mode is not None) and (master_address is not None) and (yarn_https_only is not None):
             # No need to guess cluster mode and master address
