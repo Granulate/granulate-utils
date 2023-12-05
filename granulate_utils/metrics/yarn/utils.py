@@ -12,13 +12,16 @@ from typing import Any, Callable, Dict, List, Optional, Union
 import psutil
 
 REGEX_YARN_VAR = re.compile(r"\${([^}]+)}")
+RM_HTTP_POLICY_PROPERTY_KEY = "yarn.http.policy"
 RM_HIGH_AVAILABILITY_ENABLED_PROPERTY_KEY = "yarn.resourcemanager.ha.enabled"
 RM_HIGH_AVAILABILITY_IDS_PROPERTY_KEY = "yarn.resourcemanager.ha.rm-ids"
 RM_HOSTNAME_PROPERTY_KEY = "yarn.resourcemanager.hostname"
 RM_WEB_ADDRESS_PROPERTY_KEY = "yarn.resourcemanager.webapp.address"
+RM_HTTPS_WEB_ADDRESS_PROPERTY_KEY = "yarn.resourcemanager.webapp.https.address"
 RM_DEFAULTS = {
     RM_HOSTNAME_PROPERTY_KEY: "0.0.0.0",
     RM_WEB_ADDRESS_PROPERTY_KEY: "${yarn.resourcemanager.hostname}:8088",
+    RM_HTTPS_WEB_ADDRESS_PROPERTY_KEY: "${yarn.resourcemanager.hostname}:8090",
     RM_HIGH_AVAILABILITY_ENABLED_PROPERTY_KEY: "false",
 }
 
@@ -111,6 +114,13 @@ def get_yarn_node_info(
     return None
 
 
+def is_https_only(yarn_config: Dict[str, str]) -> bool:
+    """
+    Return True if YARN is configured to use HTTPS only
+    """
+    return yarn_config.get(RM_HTTP_POLICY_PROPERTY_KEY, "HTTP_ONLY") == "HTTPS_ONLY"
+
+
 def get_rm_index(
     rm_addresses: List[str],
     *,
@@ -147,7 +157,9 @@ def get_resource_manager_addresses(
             logger.debug("high availability enabled, looking for RM addresses")
             return get_all_rm_addresses(config)
         # single RM
-        elif rm_address := config.get(RM_WEB_ADDRESS_PROPERTY_KEY):
+        elif rm_address := config.get(
+            RM_HTTPS_WEB_ADDRESS_PROPERTY_KEY if is_https_only(config) else RM_WEB_ADDRESS_PROPERTY_KEY
+        ):
             return [resolve_variables(config, rm_address)]
     except YarnConfigError as e:
         logger.error("YARN config error", extra={"error": str(e)})
@@ -236,10 +248,16 @@ def get_all_rm_addresses(yarn_config: Dict[str, Any]) -> List[str]:
     if not rm_ids:
         raise YarnConfigError(f"no {RM_HIGH_AVAILABILITY_IDS_PROPERTY_KEY} found")
     result = []
+
+    rm_web_address_property_key = (
+        RM_HTTPS_WEB_ADDRESS_PROPERTY_KEY if is_https_only(yarn_config) else RM_WEB_ADDRESS_PROPERTY_KEY
+    )
+    rm_webapp_port = "8090" if is_https_only(yarn_config) else "8088"
+
     for rm_id in map(str.strip, rm_ids.split(",")):
         webapp_address = yarn_config.get(
-            f"{RM_WEB_ADDRESS_PROPERTY_KEY}.{rm_id}",
-            f"${{{RM_HOSTNAME_PROPERTY_KEY}.{rm_id}}}:8088",
+            f"{rm_web_address_property_key}.{rm_id}",
+            f"${{{RM_HOSTNAME_PROPERTY_KEY}.{rm_id}}}:{rm_webapp_port}",
         )
         result.append(resolve_variables(yarn_config, webapp_address))
     return result
