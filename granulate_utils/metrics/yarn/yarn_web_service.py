@@ -19,7 +19,7 @@ class YarnWebService(ABC):
 
         supported version: 2.8.3+
         """
-        return json_request(self._conf_url, {}).get("properties") or []
+        return json_request(self._conf_url, {}, {"headers": {"Accept": "application/json"}}).get("properties") or []
 
     def request(self, path: str, return_path: str, return_type: Type[T], **kwargs) -> T:
         target_url = f"{self.address}/{path}"
