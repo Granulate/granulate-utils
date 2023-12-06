@@ -16,6 +16,7 @@ RM_HTTP_POLICY_PROPERTY_KEY = "yarn.http.policy"
 RM_HIGH_AVAILABILITY_ENABLED_PROPERTY_KEY = "yarn.resourcemanager.ha.enabled"
 RM_HIGH_AVAILABILITY_IDS_PROPERTY_KEY = "yarn.resourcemanager.ha.rm-ids"
 RM_HOSTNAME_PROPERTY_KEY = "yarn.resourcemanager.hostname"
+NM_HOSTNAME_PROPERTY_KEY = "yarn.nodemanager.hostname"
 RM_WEB_ADDRESS_PROPERTY_KEY = "yarn.resourcemanager.webapp.address"
 RM_HTTPS_WEB_ADDRESS_PROPERTY_KEY = "yarn.resourcemanager.webapp.https.address"
 NM_WEB_ADDRESS_PROPERTY_KEY = "yarn.nodemanager.webapp.address"
@@ -23,6 +24,7 @@ NM_HTTPS_WEB_ADDRESS_PROPERTY_KEY = "yarn.nodemanager.webapp.https.address"
 
 RM_DEFAULTS = {
     RM_HOSTNAME_PROPERTY_KEY: "0.0.0.0",
+    NM_HOSTNAME_PROPERTY_KEY: "0.0.0.0",
     RM_WEB_ADDRESS_PROPERTY_KEY: "${yarn.resourcemanager.hostname}:8088",
     RM_HTTPS_WEB_ADDRESS_PROPERTY_KEY: "${yarn.resourcemanager.hostname}:8090",
     NM_WEB_ADDRESS_PROPERTY_KEY: "${yarn.nodemanager.hostname}:8042",
