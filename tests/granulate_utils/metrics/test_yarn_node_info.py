@@ -9,9 +9,9 @@ from tests.granulate_utils.metrics.fixtures import YarnNodeMock
 
 
 @pytest.mark.parametrize(
-    "options, expected_index, expected_addresses",
+    "options, expected_index, expected_addresses, expected_nm_address",
     [
-        pytest.param({}, 0, ["0.0.0.0:8088"], id="yarn-defaults"),
+        pytest.param({}, 0, ["0.0.0.0:8088"], None, id="yarn-defaults"),
         pytest.param(
             {
                 "yarn_config": {"yarn.resourcemanager.hostname": "172.31.34.239"},
@@ -19,7 +19,18 @@ from tests.granulate_utils.metrics.fixtures import YarnNodeMock
             },
             0,
             ["172.31.34.239:8088"],
+            None,
             id="single-rm__config-hostname__on-first-rm",
+        ),
+        pytest.param(
+            {
+                "yarn_config": {"yarn.resourcemanager.hostname": "172.31.34.239", "yarn.http.policy": "HTTPS_ONLY"},
+                "ip": "172.31.34.239",
+            },
+            0,
+            ["172.31.34.239:8090"],
+            None,
+            id="single-rm_https_config-hostname__on-first-rm",
         ),
         pytest.param(
             {
@@ -31,7 +42,38 @@ from tests.granulate_utils.metrics.fixtures import YarnNodeMock
             },
             0,
             ["ip-172-31-34-239.ec2.internal:8088"],
+            None,
             id="single-rm__config-webapp-address__on-first-rm",
+        ),
+        pytest.param(
+            {
+                "yarn_config": {
+                    "yarn.resourcemanager.hostname": "172.31.34.239",
+                    "yarn.resourcemanager.webapp.address": "ip-172-31-34-239.ec2.internal:8088",
+                    "yarn.resourcemanager.webapp.https.address": "ip-172-31-34-239.ec2.internal:8090",
+                    "yarn.http.policy": "HTTPS_ONLY",
+                },
+                "hostname": "ip-172-31-34-239",
+            },
+            0,
+            ["ip-172-31-34-239.ec2.internal:8090"],
+            None,
+            id="single-rm_https_config-webapp-address__on-first-rm",
+        ),
+        pytest.param(
+            {
+                "yarn_config": {
+                    "yarn.resourcemanager.hostname": "172.31.34.239",
+                    "yarn.resourcemanager.webapp.address": "ip-172-31-34-239.ec2.internal:8088",
+                    "yarn.resourcemanager.webapp.https.address": "ip-172-31-34-239.ec2.internal:8090",
+                    "yarn.http.policy": "HTTP_ONLY",
+                },
+                "hostname": "ip-172-31-34-239",
+            },
+            0,
+            ["ip-172-31-34-239.ec2.internal:8088"],
+            None,
+            id="single-rm_https_turned_off_config-webapp-address__on-first-rm",
         ),
         pytest.param(
             {
@@ -45,7 +87,24 @@ from tests.granulate_utils.metrics.fixtures import YarnNodeMock
             },
             0,
             ["172.31.34.91:8088", "172.31.34.239:8088"],
+            None,
             id="multiple-rms__config-hostname__on-first-rm",
+        ),
+        pytest.param(
+            {
+                "yarn_config": {
+                    "yarn.resourcemanager.ha.enabled": "true",
+                    "yarn.resourcemanager.ha.rm-ids": "foo1, foo2",
+                    "yarn.resourcemanager.hostname.foo2": "172.31.34.239",
+                    "yarn.resourcemanager.hostname.foo1": "172.31.34.91",
+                    "yarn.http.policy": "HTTPS_ONLY",
+                },
+                "ip": "172.31.34.91",
+            },
+            0,
+            ["172.31.34.91:8090", "172.31.34.239:8090"],
+            None,
+            id="multiple-rms_https_config-hostname__on-first-rm",
         ),
         pytest.param(
             {
@@ -61,7 +120,28 @@ from tests.granulate_utils.metrics.fixtures import YarnNodeMock
             },
             1,
             ["ip-172-31-34-91.ec2.internal:8088", "ip-172-31-34-239.ec2.internal:8088"],
+            None,
             id="multiple-rms__config-webapp-address__on-second-rm",
+        ),
+        pytest.param(
+            {
+                "yarn_config": {
+                    "yarn.resourcemanager.ha.enabled": "true",
+                    "yarn.resourcemanager.ha.rm-ids": "foo1, foo2",
+                    "yarn.resourcemanager.hostname.foo2": "172.31.34.239",
+                    "yarn.resourcemanager.hostname.foo1": "172.31.34.91",
+                    "yarn.resourcemanager.webapp.address.foo2": "ip-172-31-34-239.ec2.internal:8088",
+                    "yarn.resourcemanager.webapp.address.foo1": "ip-172-31-34-91.ec2.internal:8088",
+                    "yarn.resourcemanager.webapp.https.address.foo2": "ip-172-31-34-239.ec2.internal:8090",
+                    "yarn.resourcemanager.webapp.https.address.foo1": "ip-172-31-34-91.ec2.internal:8090",
+                    "yarn.http.policy": "HTTPS_ONLY",
+                },
+                "hostname": "ip-172-31-34-239",
+            },
+            1,
+            ["ip-172-31-34-91.ec2.internal:8090", "ip-172-31-34-239.ec2.internal:8090"],
+            None,
+            id="multiple-rms_https_config-webapp-address__on-second-rm",
         ),
         pytest.param(
             {
@@ -76,6 +156,7 @@ from tests.granulate_utils.metrics.fixtures import YarnNodeMock
             },
             2,
             ["abcd.internal:8088", "abc.internal:8088", "ab.internal:8088"],
+            None,
             id="multiple-rms__config-webapp-address__on-third-rm",
         ),
         pytest.param(
@@ -88,6 +169,7 @@ from tests.granulate_utils.metrics.fixtures import YarnNodeMock
             },
             0,
             ["0.0.0.0:8088"],
+            None,
             id="fallback-to-defaults-when-ha-disabled",
         ),
         pytest.param(
@@ -97,6 +179,7 @@ from tests.granulate_utils.metrics.fixtures import YarnNodeMock
             },
             None,
             ["172.31.34.239:8088"],
+            None,
             id="single-rm__config-hostname__on-worker",
         ),
         pytest.param(
@@ -109,6 +192,7 @@ from tests.granulate_utils.metrics.fixtures import YarnNodeMock
             },
             None,
             ["ip-172-31-34-239.ec2.internal:8088"],
+            None,
             id="single-rm__config-web-address__on-worker",
         ),
         pytest.param(
@@ -123,7 +207,73 @@ from tests.granulate_utils.metrics.fixtures import YarnNodeMock
             },
             None,
             ["172.31.34.91:8088", "172.31.34.239:8088"],
+            None,
             id="multiple-rms__config-hostname__on-worker",
+        ),
+        pytest.param(
+            {
+                "is_node_manager": True,
+                "yarn_config": {
+                    "yarn.nodemanager.hostname": "ip-172-31-34-31",
+                    "yarn.resourcemanager.hostname": "172.31.34.239",
+                    "yarn.resourcemanager.webapp.address": "ip-172-31-34-239.ec2.internal:8088",
+                },
+                "hostname": "ip-172-31-34-31",
+            },
+            None,
+            ["ip-172-31-34-239.ec2.internal:8088"],
+            "ip-172-31-34-31:8042",
+            id="nm_hostname_config",
+        ),
+        pytest.param(
+            {
+                "is_node_manager": True,
+                "yarn_config": {
+                    "yarn.nodemanager.hostname": "ip-172-31-34-31",
+                    "yarn.resourcemanager.hostname": "172.31.34.239",
+                    "yarn.resourcemanager.webapp.address": "ip-172-31-34-239.ec2.internal:8088",
+                    "yarn.http.policy": "HTTPS_ONLY",
+                },
+                "hostname": "ip-172-31-34-31",
+            },
+            None,
+            ["172.31.34.239:8090"],
+            "ip-172-31-34-31:8044",
+            id="nm_https_hostname_config",
+        ),
+        pytest.param(
+            {
+                "is_node_manager": True,
+                "yarn_config": {
+                    "yarn.nodemanager.hostname": "ip-172-31-34-31",
+                    "yarn.nodemanager.webapp.address": "nodemanager:8042",
+                    "yarn.resourcemanager.hostname": "172.31.34.239",
+                    "yarn.resourcemanager.webapp.address": "ip-172-31-34-239.ec2.internal:8088",
+                },
+                "hostname": "ip-172-31-34-31",
+            },
+            None,
+            ["ip-172-31-34-239.ec2.internal:8088"],
+            "nodemanager:8042",
+            id="nm_webapp_config",
+        ),
+        pytest.param(
+            {
+                "is_node_manager": True,
+                "yarn_config": {
+                    "yarn.nodemanager.hostname": "ip-172-31-34-31",
+                    "yarn.nodemanager.webapp.address": "nodemanager:8042",
+                    "yarn.nodemanager.webapp.https.address": "nodemanager:8044",
+                    "yarn.resourcemanager.hostname": "172.31.34.239",
+                    "yarn.resourcemanager.webapp.address": "ip-172-31-34-239.ec2.internal:8088",
+                    "yarn.http.policy": "HTTPS_ONLY",
+                },
+                "hostname": "ip-172-31-34-31",
+            },
+            None,
+            ["172.31.34.239:8090"],
+            "nodemanager:8044",
+            id="nm_https_webapp_config",
         ),
     ],
 )
@@ -132,6 +282,8 @@ def test_detect_resource_manager_addresses(
     options: Dict[str, Any],
     expected_index: Optional[int],
     expected_addresses: List[str],
+    expected_nm_address: Optional[str],
+    request,
 ) -> None:
     yarn_config = options.get("yarn_config", {})
     yarn_site_xml = f"""<?xml version="1.0"?>
@@ -141,6 +293,7 @@ def test_detect_resource_manager_addresses(
 
     with YarnNodeMock(
         yarn_site_xml=yarn_site_xml,
+        is_node_manager=options.get("is_node_manager", False),
         hostname=options.get("hostname", "unknown"),
         ip=options.get("ip", "unknown"),
     ):
@@ -148,6 +301,7 @@ def test_detect_resource_manager_addresses(
         assert yarn_node_info == YarnNodeInfo(
             resource_manager_index=expected_index,
             resource_manager_webapp_addresses=expected_addresses,
+            node_manager_webapp_address=expected_nm_address,
             config=yarn_config,
         )
         assert yarn_node_info.is_resource_manager == (expected_index is not None)
