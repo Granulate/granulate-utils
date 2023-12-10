@@ -20,7 +20,7 @@ from granulate_utils.metrics import Collector, MetricsSnapshot, Sample
 from granulate_utils.metrics.mode import SPARK_MESOS_MODE, SPARK_STANDALONE_MODE, SPARK_YARN_MODE
 from granulate_utils.metrics.spark import SparkApplicationMetricsCollector
 from granulate_utils.metrics.yarn import YARN_RM_CLASSNAME, YarnCollector, YarnNodeInfo, get_yarn_node_info
-from granulate_utils.metrics.yarn.utils import parse_config_xml
+from granulate_utils.metrics.yarn.utils import is_https_only, parse_config_xml
 
 FIND_CLUSTER_TIMEOUT_SECS = 10 * 60
 
@@ -305,7 +305,7 @@ class BigDataSampler(Sampler):
                 master_address, self._cluster_mode = cluster_conf
                 if self._cluster_mode == SPARK_YARN_MODE:
                     assert self._yarn_node_info is not None, "YARN node info should be set"
-                    protocol_prefix = "https://" if self._yarn_node_info.config.get("yarn.http.policy") else "http://"
+                    protocol_prefix = "https://" if is_https_only(self._yarn_node_info.config) else "http://"
 
                 self._master_address = f"{protocol_prefix}{master_address}"
 

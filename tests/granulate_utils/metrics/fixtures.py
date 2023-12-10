@@ -13,7 +13,6 @@ class YarnNodeMock:
         self,
         *,
         yarn_site_xml: str = "",
-        is_node_manager: bool = False,
         hostname: str = "",
         ip: str = "",
     ) -> None:
@@ -35,7 +34,6 @@ class YarnNodeMock:
                 -Dyarn.log.file=rm.log
                 org.apache.hadoop.yarn.server.resourcemanager.ResourceManager""",
         )
-        self._mock_is_node_manager_running(is_node_manager=is_node_manager)
         self.mock_hostname(hostname=hostname)
         self.mock_ip(ip=ip)
 
@@ -104,14 +102,6 @@ class YarnNodeMock:
     def _mock_local_ip(self, *args: Any, **kwargs: Any) -> Mock:
         self._mock.getsockname.return_value = (self._ip, 0)
         return self._mock
-
-    def _mock_is_node_manager_running(self, is_node_manager: bool = False) -> None:
-        self._contexts.add(
-            patch(
-                "granulate_utils.metrics.yarn.utils.is_node_manager_running",
-                return_value=is_node_manager,
-            )
-        )
 
     def __enter__(self: T) -> T:
         for ctx in self._contexts:

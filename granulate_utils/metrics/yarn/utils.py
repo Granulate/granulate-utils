@@ -32,9 +32,6 @@ RM_DEFAULTS = {
     RM_HIGH_AVAILABILITY_ENABLED_PROPERTY_KEY: "false",
 }
 
-RM_DEFAULT_ADDRESS = "http://0.0.0.0:8088"
-WORKER_ADDRESS = "http://0.0.0.0:8042"
-
 YARN_HOME_DIR_KEY = "yarn.home.dir="
 YARN_HOME_DIR_KEY_LEN = len(YARN_HOME_DIR_KEY)
 HADOOP_YARN_HOME_ENV_VAR = "HADOOP_YARN_HOME"
@@ -80,7 +77,7 @@ class YarnNodeInfo:
     config: Dict[str, str]
     resource_manager_webapp_addresses: List[str]
     resource_manager_index: Optional[int] = None
-    node_manager_webapp_address: Optional[str] = None
+    node_manager_webapp_address: str = None
 
     @cached_property
     def is_resource_manager(self) -> bool:
@@ -98,6 +95,18 @@ class YarnNodeInfo:
     @cached_property
     def first_resource_manager_webapp_address(self) -> str:
         return self.resource_manager_webapp_addresses[0]
+
+    def is_node_manager_running(self) -> bool:
+        """
+        Return True if NodeManager is running
+        """
+        for process in psutil.process_iter():
+            try:
+                if "org.apache.hadoop.yarn.server.nodemanager.NodeManager" in process.cmdline():
+                    return True
+            except (psutil.AccessDenied, psutil.NoSuchProcess, psutil.ZombieProcess):
+                pass
+        return False
 
 
 def get_yarn_node_info(
@@ -177,33 +186,18 @@ def get_resource_manager_addresses(
 
 def get_node_manager_address(
     yarn_config: Dict[str, str], *, logger: Union[logging.Logger, logging.LoggerAdapter]
-) -> Optional[str]:
+) -> str:
     """
     Return NodeManager address from YARN config
     """
-    if is_node_manager_running():
-        try:
-            config = {**RM_DEFAULTS, **yarn_config}
-            if nm_address := config.get(
-                NM_HTTPS_WEB_ADDRESS_PROPERTY_KEY if is_https_only(config) else NM_WEB_ADDRESS_PROPERTY_KEY
-            ):
-                return resolve_variables(config, nm_address)
-        except YarnConfigError as e:
-            logger.error("YARN config error", extra={"error": str(e)})
-    return None
-
-
-def is_node_manager_running() -> bool:
-    """
-    Return True if NodeManager is running
-    """
-    for process in psutil.process_iter():
-        try:
-            if "org.apache.hadoop.yarn.server.nodemanager.NodeManager" in process.cmdline():
-                return True
-        except (psutil.AccessDenied, psutil.NoSuchProcess, psutil.ZombieProcess):
-            pass
-    return False
+    try:
+        config = {**RM_DEFAULTS, **yarn_config}
+        if nm_address := config.get(
+            NM_HTTPS_WEB_ADDRESS_PROPERTY_KEY if is_https_only(config) else NM_WEB_ADDRESS_PROPERTY_KEY
+        ):
+            return resolve_variables(config, nm_address)
+    except YarnConfigError as e:
+        logger.error("YARN config error", extra={"error": str(e)})
 
 
 def detect_yarn_config(*, logger: Union[logging.Logger, logging.LoggerAdapter]) -> Optional[Dict[str, str]]:
