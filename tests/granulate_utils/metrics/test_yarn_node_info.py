@@ -278,7 +278,7 @@ def test_detect_resource_manager_addresses(
     options: Dict[str, Any],
     expected_index: Optional[int],
     expected_addresses: List[str],
-    expected_nm_address: Optional[str],
+    expected_nm_address: str,
 ) -> None:
     yarn_config = options.get("yarn_config", {})
     yarn_site_xml = f"""<?xml version="1.0"?>
