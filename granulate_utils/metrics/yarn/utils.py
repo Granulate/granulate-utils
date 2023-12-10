@@ -76,8 +76,8 @@ class YarnNodeInfo:
 
     config: Dict[str, str]
     resource_manager_webapp_addresses: List[str]
+    node_manager_webapp_address: str
     resource_manager_index: Optional[int] = None
-    node_manager_webapp_address: str = None
 
     @cached_property
     def is_resource_manager(self) -> bool:
@@ -122,11 +122,13 @@ def get_yarn_node_info(
     config = detect_yarn_config(logger=logger) if yarn_config is None else yarn_config
     if config is None:
         return None
-    if rm_addresses := get_resource_manager_addresses(config, logger=logger):
+    if (rm_addresses := get_resource_manager_addresses(config, logger=logger)) and (
+        nm_address := get_node_manager_address(config, logger=logger)
+    ):
         return YarnNodeInfo(
             resource_manager_index=get_rm_index(rm_addresses, logger=logger, hostname=hostname, ip=ip),
             resource_manager_webapp_addresses=rm_addresses,
-            node_manager_webapp_address=get_node_manager_address(config, logger=logger),
+            node_manager_webapp_address=nm_address,
             config=config,
         )
     return None
