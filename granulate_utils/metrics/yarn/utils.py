@@ -188,7 +188,7 @@ def get_resource_manager_addresses(
 
 def get_node_manager_address(
     yarn_config: Dict[str, str], *, logger: Union[logging.Logger, logging.LoggerAdapter]
-) -> str:
+) -> Optional[str]:
     """
     Return NodeManager address from YARN config
     """
@@ -200,6 +200,7 @@ def get_node_manager_address(
             return resolve_variables(config, nm_address)
     except YarnConfigError as e:
         logger.error("YARN config error", extra={"error": str(e)})
+    return None
 
 
 def detect_yarn_config(*, logger: Union[logging.Logger, logging.LoggerAdapter]) -> Optional[Dict[str, str]]:
