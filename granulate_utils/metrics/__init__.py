@@ -10,7 +10,7 @@ import subprocess
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, Iterable, Tuple, Union
+from typing import Any, Dict, Iterable, Tuple, Union, List
 from urllib.parse import urljoin, urlparse
 
 import requests
@@ -37,7 +37,7 @@ class MetricsSnapshot:
     samples: Tuple[Sample, ...]
 
 
-def run_command(cmd: list[str], **kwargs) -> str:
+def run_command(cmd: List[str], **kwargs) -> str:
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, check=True, **kwargs)
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
@@ -56,7 +56,7 @@ def rest_request(url: str, requests_kwargs: Dict = None, **kwargs: Any) -> reque
     if "kerberos_enabled" in kwargs and kwargs["kerberos_enabled"]:
         # Ideally we wanted to use kerberos_requests which wrap the authentication process
         # but this library depend on a native library, and sAgent pyoxidizer building does not support it.
-        curl_response = run_command(["/bin/curl", "--negotiate", "-u", ":", url], requests_kwargs)
+        curl_response = run_command(["/bin/curl", "--negotiate", "-u", ":", url], **requests_kwargs)
         return json.loads(curl_response)
 
     response = requests.get(url, params={k: v for k, v in kwargs.items() if v is not None}, **requests_kwargs)
