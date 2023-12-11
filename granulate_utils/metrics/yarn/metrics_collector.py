@@ -17,9 +17,10 @@ from granulate_utils.metrics.yarn.resource_manager import ResourceManagerAPI
 class YarnCollector(Collector):
     name = "yarn"
 
-    def __init__(self, rm_address: str, logger: logging.LoggerAdapter) -> None:
+    def __init__(self, rm_address: str, kerberos_enabled: bool, logger: logging.LoggerAdapter) -> None:
         self.rm_address = rm_address
         self.rm = ResourceManagerAPI(self.rm_address)
+        self.kerberos_enabled = kerberos_enabled
         self.logger = logger
 
     def collect(self) -> Iterable[Sample]:
@@ -31,14 +32,14 @@ class YarnCollector(Collector):
 
     def _cluster_metrics(self) -> Iterable[Sample]:
         try:
-            if cluster_metrics := self.rm.metrics():
+            if cluster_metrics := self.rm.metrics(kerberos_enabled=self.kerberos_enabled):
                 yield from samples_from_json({}, cluster_metrics, YARN_CLUSTER_METRICS)
         except Exception:
             self.logger.exception("Could not gather yarn cluster metrics")
 
     def _nodes_metrics(self) -> Iterable[Sample]:
         try:
-            for node in self.rm.nodes(states=self._active_node_states):
+            for node in self.rm.nodes(kerberos_enabled=self.kerberos_enabled, states=self._active_node_states):
                 for metric, value in node.get("resourceUtilization", {}).items():
                     node[metric] = value  # this will create all relevant metrics under same dictionary
 

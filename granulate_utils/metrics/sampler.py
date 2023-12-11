@@ -62,6 +62,7 @@ class BigDataSampler(Sampler):
         applications_metrics: Optional[bool] = False,
         spark_api_request_timeout: Optional[int] = None,
         spark_api_verify_ssl: bool = True,
+        kerberos_enabled: bool = False,
     ):
         self._logger = logger
         self._hostname = hostname
@@ -72,6 +73,7 @@ class BigDataSampler(Sampler):
         self._yarn_node_info: Optional[YarnNodeInfo] = None
         self._spark_api_request_timeout = spark_api_request_timeout
         self._spark_api_request_verify_ssl = spark_api_verify_ssl
+        self.kerberos_enabled = kerberos_enabled
 
         assert (cluster_mode is None) == (
             master_address is None
@@ -232,7 +234,7 @@ class BigDataSampler(Sampler):
         This function fills in self._spark_samplers with the appropriate collectors.
         """
         if self._cluster_mode == SPARK_YARN_MODE:
-            self._collectors.append(YarnCollector(self._master_address, self._logger))
+            self._collectors.append(YarnCollector(self._master_address, self.kerberos_enabled, self._logger))
 
         # In Standalone and Mesos we'd use applications metrics
         if self._cluster_mode in (SPARK_STANDALONE_MODE, SPARK_MESOS_MODE):
@@ -246,6 +248,7 @@ class BigDataSampler(Sampler):
                     self._logger,
                     self._spark_api_request_timeout,
                     self._spark_api_request_verify_ssl,
+                    self.kerberos_enabled,
                 )
             )
 

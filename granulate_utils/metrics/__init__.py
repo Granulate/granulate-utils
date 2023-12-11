@@ -5,6 +5,8 @@
 # (C) Datadog, Inc. 2018-present. All rights reserved.
 # Licensed under a 3-clause BSD style license (see LICENSE.bsd3).
 #
+import json
+import subprocess
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
@@ -35,6 +37,15 @@ class MetricsSnapshot:
     samples: Tuple[Sample, ...]
 
 
+def run_command(cmd: list[str], **kwargs) -> str:
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, check=True, **kwargs)
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        # TODO: add handling?
+        raise
+    return proc.stdout
+
+
 def rest_request(url: str, requests_kwargs: Dict = None, **kwargs: Any) -> requests.Response:
     """
     Query the given URL and return the response
@@ -42,6 +53,11 @@ def rest_request(url: str, requests_kwargs: Dict = None, **kwargs: Any) -> reque
     requests_kwargs = requests_kwargs or {}
     if "timeout" not in requests_kwargs:
         requests_kwargs["timeout"] = 3
+    if "kerberos_enabled" in kwargs and kwargs["kerberos_enabled"]:
+        # Ideally we wanted to use kerberos_requests which wrap the authentication process
+        # but this library depend on a native library, and sAgent pyoxidizer building does not support it.
+        curl_response = run_command(["/bin/curl", "--negotiate", "-u", ":", url], requests_kwargs)
+        return json.loads(curl_response)
 
     response = requests.get(url, params={k: v for k, v in kwargs.items() if v is not None}, **requests_kwargs)
     response.raise_for_status()
