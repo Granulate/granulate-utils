@@ -1,7 +1,8 @@
+import xml.etree.ElementTree as ET
 from abc import ABC
 from typing import Any, Dict, List, Type, TypeVar
 
-from granulate_utils.metrics import json_request
+from granulate_utils.metrics import json_request, rest_request
 
 T = TypeVar("T")
 
@@ -17,9 +18,16 @@ class YarnWebService(ABC):
 
         most recent config is returned
 
-        supported version: 2.8.3+
+        supported version: 2.6.5+
         """
-        return json_request(self._conf_url, {}, {"headers": {"Accept": "application/json"}}).get("properties") or []
+        requests_kwargs = {"headers": {"Accept": "application/json"}}
+        resp = rest_request(self._conf_url, requests_kwargs=requests_kwargs)
+        content_type = resp.headers.get("Content-Type", "")
+        if "application/json" in content_type:
+            return resp.json().get("properties") or []
+        if "text/xml" in content_type:
+            return self._parse_xml_config(resp.text)
+        raise ValueError(f"unsupported content type: {content_type}")
 
     def request(self, path: str, return_path: str, return_type: Type[T], **kwargs) -> T:
         target_url = f"{self.address}/{path}"
@@ -31,3 +39,15 @@ class YarnWebService(ABC):
         for attribute in nested_attributes:
             response = response.get(attribute) or {}
         return response
+
+    @staticmethod
+    def _parse_xml_config(xml_config: str) -> List[Dict[str, Any]]:
+        root = ET.fromstring(xml_config)
+        result = []
+        for prop in root.findall("./property"):
+            name = prop.find("name")
+            value = prop.find("value")
+            resource = prop.find("source")
+            if name is not None and value is not None and resource is not None:
+                result.append({"key": name.text, "value": value.text, "resource": resource.text})
+        return result
