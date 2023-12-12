@@ -1,11 +1,11 @@
 import logging
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Dict, Optional, Union
 
 from granulate_utils.metrics.yarn import get_yarn_node_info
 from granulate_utils.metrics.yarn.node_manager import NodeManagerAPI
 from granulate_utils.metrics.yarn.resource_manager import ResourceManagerAPI
-from granulate_utils.metrics.yarn.utils import WORKER_ADDRESS, YarnNodeInfo
+from granulate_utils.metrics.yarn.utils import YarnNodeInfo
 
 
 class YarnNotFound(Exception):
@@ -33,7 +33,7 @@ class Yarn:
         if yarn_config is None:
             yarn_config = YarnConfig()
         self._rm_address = yarn_config.rm_address
-        self._nm_address = yarn_config.nm_address or WORKER_ADDRESS
+        self._nm_address = yarn_config.nm_address
         self._rm = yarn_config.rm
         self._nm = yarn_config.nm
         self._use_first_rm = yarn_config.use_first_rm
@@ -51,8 +51,12 @@ class Yarn:
 
     @property
     def nm(self) -> NodeManagerAPI:
-        if self._nm is None:
-            self._nm = NodeManagerAPI(self._nm_address)
+        if self._nm is not None:
+            return self._nm
+        self._nm_address = self._nm_address or self._detect_node_manager_address()
+        if self._nm_address is None:
+            raise YarnNotFound("could not resolve NodeManager address")
+        self._nm = NodeManagerAPI(self._nm_address)
         return self._nm
 
     def get_yarn_node_info(self) -> Optional[YarnNodeInfo]:
@@ -65,14 +69,27 @@ class Yarn:
                 if self._use_first_rm
                 else yarn_node_info.get_own_resource_manager_webapp_address()
             )
-            if not rm_address.startswith("http"):
-                rm_address = (
-                    f"https://{rm_address}"
-                    if (self._use_https or yarn_node_info.config.get("yarn.http.policy", "HTTP_ONLY") == "HTTPS_ONLY")
-                    else f"http://{rm_address}"
-                )
+            rm_address = self._add_scheme_if_missing(yarn_node_info.config, rm_address)
             self.logger.debug(f"found ResourceManager address: {rm_address}")
             return rm_address
         else:
             self.logger.error("could not resolve ResourceManager address")
         return None
+
+    def _detect_node_manager_address(self) -> Optional[str]:
+        if yarn_node_info := get_yarn_node_info(logger=self.logger):
+            nm_address = self._add_scheme_if_missing(yarn_node_info.config, yarn_node_info.node_manager_webapp_address)
+            self.logger.debug(f"found NodeManager address: {nm_address}")
+            return nm_address
+        else:
+            self.logger.error("could not resolve NodeManager address")
+        return None
+
+    def _add_scheme_if_missing(self, config: Dict[str, str], address: str) -> str:
+        if not address.startswith("http"):
+            address = (
+                f"https://{address}"
+                if (self._use_https or config.get("yarn.http.policy", "HTTP_ONLY") == "HTTPS_ONLY")
+                else f"http://{address}"
+            )
+        return address
