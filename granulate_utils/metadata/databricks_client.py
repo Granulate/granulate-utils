@@ -87,10 +87,13 @@ class DBXWebUIEnvWrapper:
             resp.raise_for_status()
             return resp
         except requests.exceptions.RequestException as e:
-            raise SparkAPIException(
-                f"Failed to perform REST HTTP GET on {url=} response_text={e.response.text},"
-                f"code={e.response.status_code}"
-            ) from e
+            if e.response is not None:
+                raise SparkAPIException(
+                    f"Failed to perform REST HTTP GET on {url=} response_text={e.response.text},"
+                    f"code={e.response.status_code}"
+                ) from e
+            else:
+                raise SparkAPIException(f"An error occurred: {str(e)}") from e
 
     @staticmethod
     def get_webui_address() -> Optional[str]:
