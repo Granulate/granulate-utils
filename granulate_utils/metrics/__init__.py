@@ -64,7 +64,7 @@ def rest_request(url: str, requests_kwargs: Dict = None, **kwargs: Any) -> reque
     requests_kwargs = requests_kwargs or {}
     if "timeout" not in requests_kwargs:
         requests_kwargs["timeout"] = 3
-    if "kerberos_enabled" in kwargs and kwargs["kerberos_enabled"]:
+    if requests_kwargs.get("kerberos_enabled"):
         # Ideally we wanted to use kerberos_requests which wrap the authentication process
         # but this library depend on a native library, and sAgent pyoxidizer building does not support it.
         curl_response = run_curl(url, requests_kwargs)
