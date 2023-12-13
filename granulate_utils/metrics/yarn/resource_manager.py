@@ -25,8 +25,9 @@ class InvalidResourceManagerVersionError(Exception):
 
 
 class ResourceManagerAPI:
-    def __init__(self, rm_address: str):
+    def __init__(self, rm_address: str, kerberos_enabled: bool = False) -> None:
         self._rm_address = rm_address
+        self._requests_kwargs = {"kerberos_enabled": kerberos_enabled}
         self._apps_url = f"{rm_address}/ws/v1/cluster/apps"
         self._metrics_url = f"{rm_address}/ws/v1/cluster/metrics"
         self._nodes_url = f"{rm_address}/ws/v1/cluster/nodes"
@@ -35,26 +36,26 @@ class ResourceManagerAPI:
         self._jmx_url = f"{rm_address}/jmx"
 
     def apps(self, **kwargs) -> List[Dict]:
-        apps = json_request(self._apps_url, {}, **kwargs).get("apps") or {}
+        apps = json_request(self._apps_url, self._requests_kwargs, **kwargs).get("apps") or {}
         return apps.get("app", [])
 
     def metrics(self, **kwargs) -> Optional[Dict]:
-        return json_request(self._metrics_url, {}, **kwargs).get("clusterMetrics")
+        return json_request(self._metrics_url, self._requests_kwargs, **kwargs).get("clusterMetrics")
 
     def nodes(self, **kwargs) -> List[Dict]:
-        nodes = json_request(self._nodes_url, {}, **kwargs).get("nodes") or {}
+        nodes = json_request(self._nodes_url, self._requests_kwargs, **kwargs).get("nodes") or {}
         return nodes.get("node", [])
 
     def scheduler(self, **kwargs) -> Optional[Dict]:
-        scheduler = json_request(self._scheduler_url, {}, **kwargs).get("scheduler") or {}
+        scheduler = json_request(self._scheduler_url, self._requests_kwargs, **kwargs).get("scheduler") or {}
         return scheduler.get("schedulerInfo")
 
     def beans(self) -> List[Dict]:
-        return json_request(self._jmx_url, {}).get("beans") or []
+        return json_request(self._jmx_url, self._requests_kwargs).get("beans") or []
 
     def request(self, url: str, return_path: str, return_type: Type[T], **kwargs) -> T:
         target_url = f"{self._rm_address}/{url}"
-        response = json_request(target_url, {}, **kwargs)
+        response = json_request(target_url, self._requests_kwargs, **kwargs)
         return self._parse_response(response, return_path.split("."))
 
     @staticmethod
@@ -65,7 +66,7 @@ class ResourceManagerAPI:
 
     @cached_property
     def version(self) -> str:
-        return json_request(self._info_url, {})["clusterInfo"]["resourceManagerVersion"]
+        return json_request(self._info_url, self._requests_kwargs)["clusterInfo"]["resourceManagerVersion"]
 
     @cached_property
     def sem_version(self) -> Version:
