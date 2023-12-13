@@ -5,12 +5,11 @@
 # (C) Datadog, Inc. 2018-present. All rights reserved.
 # Licensed under a 3-clause BSD style license (see LICENSE.bsd3).
 #
-import json
 import subprocess
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, Iterable, Tuple, Union, List
+from typing import Any, Dict, Iterable, List, Tuple, Union
 from urllib.parse import urljoin, urlparse
 
 import requests
@@ -37,13 +36,25 @@ class MetricsSnapshot:
     samples: Tuple[Sample, ...]
 
 
-def run_command(cmd: List[str], **kwargs) -> str:
+def run_command(cmd: List[str]) -> str:
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, check=True, **kwargs)
+        proc = subprocess.run(cmd, capture_output=True, text=True, check=True)
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
         # TODO: add handling?
         raise
     return proc.stdout
+
+
+def run_curl(url: str, requests_kwargs: Dict = None) -> requests.Response:
+    requests_kwargs = requests_kwargs or {}
+    timeout = str(requests_kwargs.get("timeout", 3))
+
+    curl_output = run_command(["/bin/curl", "--max-time", timeout, "--negotiate", "-u", ":", url])
+
+    resp = requests.models.Response()
+    resp.status_code = 200
+    resp._content = curl_output.encode("utf-8")
+    return resp
 
 
 def rest_request(url: str, requests_kwargs: Dict = None, **kwargs: Any) -> requests.Response:
@@ -56,8 +67,8 @@ def rest_request(url: str, requests_kwargs: Dict = None, **kwargs: Any) -> reque
     if "kerberos_enabled" in kwargs and kwargs["kerberos_enabled"]:
         # Ideally we wanted to use kerberos_requests which wrap the authentication process
         # but this library depend on a native library, and sAgent pyoxidizer building does not support it.
-        curl_response = run_command(["/bin/curl", "--negotiate", "-u", ":", url], **requests_kwargs)
-        return json.loads(curl_response)
+        curl_response = run_curl(url, requests_kwargs)
+        return curl_response
 
     response = requests.get(url, params={k: v for k, v in kwargs.items() if v is not None}, **requests_kwargs)
     response.raise_for_status()
