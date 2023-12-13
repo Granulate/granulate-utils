@@ -27,7 +27,9 @@ class InvalidResourceManagerVersionError(Exception):
 class ResourceManagerAPI:
     def __init__(self, rm_address: str, kerberos_enabled: bool = False) -> None:
         self._rm_address = rm_address
-        self._requests_kwargs = {"kerberos_enabled": kerberos_enabled}
+        self._requests_kwargs = {}
+        if kerberos_enabled:
+            self._requests_kwargs["kerberos_enabled"] = kerberos_enabled
         self._apps_url = f"{rm_address}/ws/v1/cluster/apps"
         self._metrics_url = f"{rm_address}/ws/v1/cluster/metrics"
         self._nodes_url = f"{rm_address}/ws/v1/cluster/nodes"
