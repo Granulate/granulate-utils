@@ -69,7 +69,7 @@ class SparkRunningApps:
         spark_apps = {}
         for app_id, (app_name, tracking_url) in running_apps.items():
             try:
-                response = rest_request_to_json(tracking_url, SPARK_APPS_PATH, **self._request_kwargs)
+                response = rest_request_to_json(tracking_url, SPARK_APPS_PATH)
 
                 for app in response:
                     app_id = app.get("id")
@@ -86,7 +86,7 @@ class SparkRunningApps:
         """
         Return a dictionary of {app_id: (app_name, tracking_url)} for running Spark applications.
         """
-        return self._yarn_get_spark_apps(states="RUNNING", applicationTypes="SPARK", **self._request_kwargs)
+        return self._yarn_get_spark_apps(states="RUNNING", applicationTypes="SPARK")
 
     def _yarn_get_spark_apps(self, *args: Any, **kwargs: Any) -> Dict[str, Tuple[str, str]]:
         metrics_json = rest_request_to_json(self._master_address, YARN_APPS_PATH, *args, **kwargs)
@@ -178,13 +178,12 @@ class SparkApplicationMetricsCollector(Collector):
         logger: logging.LoggerAdapter,
         spark_api_request_timeout: Optional[int] = None,
         spark_api_verify_ssl: bool = True,
-        kerberos_enabled: bool = False,
     ) -> None:
         self.master_address = master_address
         self._cluster_mode = cluster_mode
         self.logger = logger
 
-        self._requests_kwargs: Dict[str, Any] = {"verify": spark_api_verify_ssl, "kerberos_enabled": kerberos_enabled}
+        self._requests_kwargs: Dict[str, Any] = {"verify": spark_api_verify_ssl}
         if spark_api_request_timeout is not None:
             self._requests_kwargs["timeout"] = spark_api_request_timeout
 

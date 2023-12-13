@@ -249,7 +249,6 @@ class BigDataSampler(Sampler):
                     self._logger,
                     self._spark_api_request_timeout,
                     self._spark_api_request_verify_ssl,
-                    self.kerberos_enabled,
                 )
             )
 
