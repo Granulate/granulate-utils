@@ -37,12 +37,7 @@ class MetricsSnapshot:
 
 
 def run_command(cmd: List[str]) -> str:
-    try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, check=True)
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
-        # TODO: add handling?
-        raise
-    return proc.stdout
+    return subprocess.run(cmd, capture_output=True, text=True, check=True).stdout
 
 
 def run_curl(url: str, requests_kwargs: Dict = None) -> requests.Response:
