@@ -67,6 +67,7 @@ def rest_request(url: str, requests_kwargs: Dict = None, **kwargs: Any) -> reque
     if requests_kwargs.get("kerberos_enabled"):
         # Ideally we wanted to use kerberos_requests which wrap the authentication process
         # but this library depend on a native library, and sAgent pyoxidizer building does not support it.
+        # Relevant slack thread: https://granulate.slack.com/archives/C0223N85P2M/p1701619780404349
         curl_response = run_curl(url, requests_kwargs)
         return curl_response
 
