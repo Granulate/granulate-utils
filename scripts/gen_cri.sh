@@ -22,7 +22,6 @@ wget -O gogo.proto https://raw.githubusercontent.com/gogo/protobuf/v1.3.2/gogopr
 protoc -I. --python_out=. gogo.proto
 
 mkdir -p v1 v1alpha2
-touch v1/__init__.py v1alpha2/__init__.py
 
 # Support kubernetes 1.22-1.28
 # 1.22 is the last version with v1alpha2 API, corresponding to containerd v1.5
@@ -39,3 +38,7 @@ sed -i'.bak' "s,import gogo_pb2,import granulate_utils.generated.containers.cri.
 sed -i'.bak' 's,from v1,from granulate_utils.generated.containers.cri.v1,' v1/api_pb2_grpc.py
 sed -i'.bak' 's,from v1alpha2,from granulate_utils.generated.containers.cri.v1alpha2,' v1alpha2/api_pb2_grpc.py
 rm gogo.proto */*.proto */*.bak
+
+# when importing v1/v1alpha2 immediately import the generated modules:
+printf "from . import api_pb2, api_pb2_grpc\n" > v1/__init__.py
+printf "from . import api_pb2, api_pb2_grpc\n" > v1alpha2/__init__.py
