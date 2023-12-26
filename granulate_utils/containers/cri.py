@@ -74,8 +74,6 @@ class _Client:
                 return None
             raise
         else:
-            if status_response is None:
-                return None
             pid: Optional[int] = json.loads(status_response.info.get("info", "{}")).get("pid")
             return self._create_container(status_response.status, pid)
 
