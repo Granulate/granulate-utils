@@ -64,7 +64,7 @@ def test_resolve_proc_root_links_compound_links(tmpdir_factory: TempdirFactory):
 
     # Make sure resolve_proc_root_links got it correct as well
     proc_root = "/proc/self/root"
-    assert resolve_proc_root_links(proc_root, str(link)) == str(expected_resolved_path)
+    assert resolve_proc_root_links(proc_root, str(link)) == proc_root + str(expected_resolved_path)
 
     # Make sure the old implementation got it wrong
     assert resolve_proc_root_links_old(proc_root, str(link)) == proc_root + str(a / "c")
@@ -94,7 +94,7 @@ def test_resolve_proc_root_links_relative_compound_links(tmpdir_factory: Tempdir
 
     # Make sure resolve_proc_root_links got it correct as well
     proc_root = "/proc/self/root"
-    assert resolve_proc_root_links(proc_root, str(link)) == str(expected_resolved_path)
+    assert resolve_proc_root_links(proc_root, str(link)) == proc_root + str(expected_resolved_path)
 
     # Make sure the old implementation got it wrong
-    assert resolve_proc_root_links_old(proc_root, str(link)) == str(a / "c")
+    assert resolve_proc_root_links_old(proc_root, str(link)) == proc_root + str(a / "c")
