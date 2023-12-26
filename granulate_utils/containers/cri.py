@@ -55,36 +55,33 @@ class _Client:
     def list_containers(self, all_info: bool) -> List[Container]:
         containers = []
         with self.stub() as stub:
-            for container in stub.ListContainers(self.api.api_pb2.ListContainersRequest()).containers:
+            for runtime_container in stub.ListContainers(self.api.api_pb2.ListContainersRequest()).containers:
                 if all_info:
-                    # need verbose=True to get the info which contains the PID
-                    status_response = self._container_status_request(stub, container.id, verbose=True)
-                    if status_response is None:
-                        # container probably went down
-                        continue
-                    pid: Optional[int] = json.loads(status_response.info.get("info", "{}")).get("pid")
-                    containers.append(self._create_container(status_response.status, pid))
+                    container = self._get_container(stub, runtime_container.id, verbose=True)
+                    if container is not None:
+                        containers.append(container)
                 else:
-                    containers.append(self._create_container(container, None))
+                    containers.append(self._create_container(runtime_container, None))
         return containers
 
-    def _container_status_request(self, stub, container_id: str, *, verbose: bool):
+    def _get_container(self, stub, container_id: str, *, verbose: bool) -> Optional[Container]:
         try:
-            return stub.ContainerStatus(
+            status_response = stub.ContainerStatus(
                 self.api.api_pb2.ContainerStatusRequest(container_id=container_id, verbose=verbose)
             )
         except grpc._channel._InactiveRpcError as e:
             if e.code() == grpc.StatusCode.NOT_FOUND:
                 return None
             raise
-
-    def get_container(self, container_id: str, all_info: bool) -> Optional[Container]:
-        with self.stub() as stub:
-            status_response = self._container_status_request(stub, container_id, verbose=all_info)
+        else:
             if status_response is None:
                 return None
             pid: Optional[int] = json.loads(status_response.info.get("info", "{}")).get("pid")
             return self._create_container(status_response.status, pid)
+
+    def get_container(self, container_id: str, all_info: bool) -> Optional[Container]:
+        with self.stub() as stub:
+            return self._get_container(stub, container_id, verbose=all_info)
 
     def _create_container(
         self,
