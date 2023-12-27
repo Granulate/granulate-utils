@@ -1,6 +1,7 @@
 import os
-from pathlib import Path
+import pytest
 
+from pathlib import Path
 from pytest import TempdirFactory
 
 from granulate_utils.linux.ns import resolve_proc_root_links
@@ -40,7 +41,8 @@ def resolve_proc_root_links_old(proc_root: str, ns_path: str) -> str:
     return path
 
 
-def test_resolve_proc_root_links_compound_links(tmpdir_factory: TempdirFactory):
+@pytest.mark.parametrize('relative', [True, False])
+def test_resolve_proc_root_links_compound_links(relative: bool, tmpdir_factory: TempdirFactory):
     """
     We construct the following case:
     {tmpdir}/link
@@ -51,40 +53,10 @@ def test_resolve_proc_root_links_compound_links(tmpdir_factory: TempdirFactory):
     tmpdir = Path(tmpdir_factory.mktemp("tmpdir"))
 
     link = tmpdir.joinpath("link")
-    link.symlink_to(tmpdir / "a" / "c", target_is_directory=True)
+    link.symlink_to("a/c" if relative else (tmpdir / "a" / "c"), target_is_directory=True)
 
     a = tmpdir / "a"
-    a.symlink_to(tmpdir / "b", target_is_directory=True)
-
-    expected_resolved_path = tmpdir / "b" / "c"
-    expected_resolved_path.mkdir(parents=True)
-
-    # Make sure we got the directory structure correct
-    assert link.resolve() == expected_resolved_path
-
-    # Make sure resolve_proc_root_links got it correct as well
-    proc_root = "/proc/self/root"
-    assert resolve_proc_root_links(proc_root, str(link)) == proc_root + str(expected_resolved_path)
-
-    # Make sure the old implementation got it wrong
-    assert resolve_proc_root_links_old(proc_root, str(link)) == proc_root + str(a / "c")
-
-
-def test_resolve_proc_root_links_relative_compound_links(tmpdir_factory: TempdirFactory):
-    """
-    We construct the following case:
-    {tmpdir}/link
-        link -> a/c
-        a -> b
-    Eventually we expect {tmpdir}/link to resolve to {tmpdir}/b/c
-    """
-    tmpdir = Path(tmpdir_factory.mktemp("tmpdir"))
-
-    link = tmpdir.joinpath("link")
-    link.symlink_to("a/c", target_is_directory=True)
-
-    a = tmpdir / "a"
-    a.symlink_to("b", target_is_directory=True)
+    a.symlink_to("b" if relative else (tmpdir / "b"), target_is_directory=True)
 
     expected_resolved_path = tmpdir / "b" / "c"
     expected_resolved_path.mkdir(parents=True)
