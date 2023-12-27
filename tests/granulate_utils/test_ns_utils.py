@@ -1,7 +1,7 @@
 import os
-import pytest
-
 from pathlib import Path
+
+import pytest
 from pytest import TempdirFactory
 
 from granulate_utils.linux.ns import resolve_proc_root_links
@@ -41,7 +41,7 @@ def resolve_proc_root_links_old(proc_root: str, ns_path: str) -> str:
     return path
 
 
-@pytest.mark.parametrize('relative', [True, False])
+@pytest.mark.parametrize("relative", [True, False])
 def test_resolve_proc_root_links_compound_links(relative: bool, tmpdir_factory: TempdirFactory):
     """
     We construct the following case:
