@@ -7,9 +7,10 @@ import ctypes
 import enum
 import os
 import re
+from collections import deque
 from pathlib import Path
 from threading import Thread
-from typing import Callable, List, Optional, TypeVar, Union
+from typing import Callable, Collection, List, Optional, TypeVar, Union
 
 from psutil import NoSuchProcess, Process, process_iter
 
@@ -52,6 +53,12 @@ def resolve_host_root_links(ns_path: str) -> str:
     return resolve_proc_root_links(HOST_ROOT_PREFIX, ns_path)
 
 
+def abs_path_name_parts(path: str) -> Collection[str]:
+    parts = Path(path).parts
+    assert parts[0].startswith("/"), f"Expected {path!r} to be absolute"
+    return parts[1:]
+
+
 def resolve_proc_root_links(proc_root: str, ns_path: str) -> str:
     """
     Resolves "ns_path" which (possibly) resides in another mount namespace.
@@ -62,25 +69,32 @@ def resolve_proc_root_links(proc_root: str, ns_path: str) -> str:
     To work around that, we resolve the path component by component; if any component "escapes", we
     add the /proc/pid/root prefix once again.
     """
-    assert ns_path[0] == "/", f"expected {ns_path!r} to be absolute"
-    parts = Path(ns_path).parts
-
+    parts = deque(abs_path_name_parts(ns_path))
     path = proc_root
     seen = set()
-    for part in parts[1:]:  # skip the / (or multiple /// as .parts gives them)
-        next_path = os.path.join(path, part)
-        while os.path.islink(next_path):
-            if next_path in seen:
-                raise RuntimeError("Symlink loop from %r" % os.path.join(path, part))
-            seen.add(next_path)
-            link = os.readlink(next_path)
-            if os.path.isabs(link):
-                # absolute - prefix with proc_root
-                next_path = proc_root + link
-            else:
-                # relative: just join
-                next_path = os.path.join(os.path.dirname(next_path), link)
-        path = next_path
+
+    while parts:
+        part = parts.popleft()
+        path = os.path.join(path, part)
+
+        if not os.path.islink(path):
+            continue
+
+        # detect symlink loops
+        if path in seen:
+            raise RuntimeError("Symlink loop from %r" % os.path.join(path, part))
+        seen.add(path)
+
+        # resolve the part
+        ns_link = os.readlink(path)
+        if os.path.isabs(ns_link):
+            # absolute - reset to root and encode the resolved absolute link in parts
+            path = proc_root
+            parts = deque(abs_path_name_parts(ns_link)) + parts
+        else:
+            # relative - use the parent dir as we resolved the last part and encode the new resolved ones
+            path = os.path.dirname(path)
+            parts = deque(Path(ns_link).parts) + parts
 
     return path
 
