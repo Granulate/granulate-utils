@@ -7,7 +7,7 @@ from pytest import TempdirFactory
 from granulate_utils.linux.ns import resolve_proc_root_links
 
 
-# Here for comparison purposes
+# Here for comparison purposes (taken from revision: cb6b26477e8c95bc09e653dd74b5f5c18ecd537b)
 def resolve_proc_root_links_old(proc_root: str, ns_path: str) -> str:
     """
     Resolves "ns_path" which (possibly) resides in another mount namespace.

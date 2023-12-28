@@ -54,8 +54,9 @@ def resolve_host_root_links(ns_path: str) -> str:
 
 
 def abs_path_name_parts(path: str) -> Collection[str]:
-    assert os.path.isabs(path), f"Expected {path!r} to be absolute"
-    return Path(path).parts[1:]  # skip the / (or multiple /// as .parts gives them)
+    parts = Path(path).parts
+    assert parts[0].startswith("/"), f"Expected {path!r} to be absolute"
+    return parts[1:]
 
 
 def resolve_proc_root_links(proc_root: str, ns_path: str) -> str:
