@@ -49,3 +49,40 @@ class MissingExePath(Exception):
 class AlreadyInCgroup(Exception):
     def __init__(self, subsystem: str, cgroup: str) -> None:
         super().__init__(f"{subsystem!r} subsystem is already in a predefined cgroup: {cgroup!r}")
+
+
+class DatabricksMetadataFetchException(Exception):
+    pass
+
+
+class SparkAPIException(DatabricksMetadataFetchException):
+    pass
+
+
+class SparkNotReadyException(SparkAPIException):
+    pass
+
+
+class SparkAppsURLDiscoveryException(DatabricksMetadataFetchException):
+    pass
+
+
+class DatabricksTagsExtractionException(DatabricksMetadataFetchException):
+    pass
+
+
+class DatabricksJobNameDiscoverException(DatabricksMetadataFetchException):
+    def __init__(self, msg: str) -> None:
+        super().__init__(msg)
+
+
+class CgroupInterfaceNotSupported(Exception):
+    def __init__(self, interface_name: str, cgroup_version: str):
+        super(CgroupInterfaceNotSupported, self).__init__(
+            f"Interface file {interface_name} is not supported in cGroup {cgroup_version}"
+        )
+
+
+class CgroupControllerNotMounted(Exception):
+    def __init__(self, controller_name: str):
+        super(CgroupControllerNotMounted, self).__init__(f"Controller {controller_name} is not mounted on the system")

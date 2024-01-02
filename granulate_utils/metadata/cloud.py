@@ -4,6 +4,7 @@
 #
 
 import logging
+import os
 from dataclasses import dataclass
 from http.client import NOT_FOUND
 from typing import Dict, List, Optional, Union
@@ -21,12 +22,12 @@ METADATA_REQUEST_TIMEOUT = 5
 
 
 @dataclass
-class InstanceMetadataBase:
+class CloudMetadataBase:
     provider: str
 
 
 @dataclass
-class AwsInstanceMetadata(InstanceMetadataBase):
+class AwsInstanceMetadata(CloudMetadataBase):
     region: str
     zone: str
     instance_type: str
@@ -37,7 +38,14 @@ class AwsInstanceMetadata(InstanceMetadataBase):
 
 
 @dataclass
-class GcpInstanceMetadata(InstanceMetadataBase):
+class AwsContainerMetadata(CloudMetadataBase):
+    execution_env: str
+    region: str
+    container_arn: str
+
+
+@dataclass
+class GcpInstanceMetadata(CloudMetadataBase):
     provider: str
     zone: str
     instance_type: str
@@ -49,7 +57,7 @@ class GcpInstanceMetadata(InstanceMetadataBase):
 
 
 @dataclass
-class AzureInstanceMetadata(InstanceMetadataBase):
+class AzureInstanceMetadata(CloudMetadataBase):
     provider: str
     instance_type: str
     zone: str
@@ -62,7 +70,15 @@ class AzureInstanceMetadata(InstanceMetadataBase):
     image_info: Optional[Dict[str, str]]
 
 
-def get_aws_metadata() -> Optional[AwsInstanceMetadata]:
+def get_aws_metadata() -> Optional[Union[AwsInstanceMetadata, AwsContainerMetadata]]:
+    aws_execution_env = get_aws_execution_env()
+    if aws_execution_env == "AWS_ECS_FARGATE":
+        return get_aws_container_metadata()
+    else:
+        return get_aws_instance_metadata()
+
+
+def get_aws_instance_metadata() -> Optional[AwsInstanceMetadata]:
     # Documentation:
     # on the format: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-categories.html
     # on the protocol: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html
@@ -91,6 +107,22 @@ def get_aws_metadata() -> Optional[AwsInstanceMetadata]:
         account_id=instance["accountId"],
         image_id=instance["imageId"],
         instance_id=instance["instanceId"],
+    )
+
+
+def get_aws_container_metadata() -> Optional[AwsContainerMetadata]:
+    ecs_container_metadata_uri_v4 = os.environ.get("ECS_CONTAINER_METADATA_URI_V4")
+    if ecs_container_metadata_uri_v4 is None:
+        return None
+    response = send_request(ecs_container_metadata_uri_v4)
+    if response is None:
+        return None
+    metadata = response.json()
+    return AwsContainerMetadata(
+        provider="aws",
+        execution_env=os.environ["AWS_EXECUTION_ENV"],
+        region=os.environ["AWS_REGION"],
+        container_arn=metadata["ContainerARN"],
     )
 
 
@@ -164,9 +196,13 @@ def send_request(url: str, headers: Dict[str, str] = None, method: str = "get") 
     return response
 
 
-def get_static_cloud_instance_metadata(logger: Union[logging.LoggerAdapter, logging.Logger]) -> Optional[Metadata]:
+def get_static_cloud_metadata(logger: Union[logging.LoggerAdapter, logging.Logger]) -> Optional[Metadata]:
     raised_exceptions: List[Exception] = []
-    cloud_metadata_fetchers = [get_aws_metadata, get_gcp_metadata, get_azure_metadata]
+    cloud_metadata_fetchers = [
+        get_aws_metadata,
+        get_gcp_metadata,
+        get_azure_metadata,
+    ]
 
     def _fetch() -> Optional[Metadata]:
         for future in call_in_parallel(cloud_metadata_fetchers, timeout=METADATA_REQUEST_TIMEOUT + 1):
@@ -196,3 +232,13 @@ def get_static_cloud_instance_metadata(logger: Union[logging.LoggerAdapter, logg
         " The most likely reason is that we're not installed on a an AWS, GCP or Azure instance."
     )
     return None
+
+
+def get_aws_execution_env() -> Optional[str]:
+    """
+    Possible values include:
+    - AWS_ECS_FARGATE
+    - AWS_ECS_EC2
+    - CloudShell
+    """
+    return os.environ.get("AWS_EXECUTION_ENV")

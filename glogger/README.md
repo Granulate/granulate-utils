@@ -10,9 +10,9 @@ The most trivial way to use gLogger is like so:
 ```python
 import logging
 from glogger.handler import BatchRequestsHandler
-from glogger.sender import Sender
+from glogger.sender import Sender, AuthToken
 
-handler = BatchRequestsHandler(Sender("my_app", AUTH_TOKEN, "logs.example.com"))
+handler = BatchRequestsHandler(Sender("my_app", "logs.example.com", auth=AuthToken(AUTH_TOKEN)))
 logging.basicConfig(handlers=[handler])
 ```
 

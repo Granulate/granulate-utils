@@ -2,6 +2,7 @@
 
 # User-specific stuff
 .idea/
+.vscode/
 
 ### Python template
 # Byte-compiled / optimized / DLL files

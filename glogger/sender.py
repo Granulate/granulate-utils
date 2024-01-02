@@ -10,6 +10,7 @@ from json import JSONEncoder
 from typing import Callable, Dict, List, NamedTuple, Optional, Tuple, Union
 
 from requests import Session
+from requests.auth import HTTPBasicAuth
 
 from glogger.messages_buffer import MessagesBuffer
 
@@ -26,6 +27,15 @@ class SendBatch(NamedTuple):
     lost_logs_count: int
 
 
+class AuthToken(str):
+    pass
+
+
+class BasicAuthCredentials(NamedTuple):
+    username: str
+    password: str
+
+
 class Sender:
     # If Tuple[float, float], then the first value is connection-timeout and the second read-timeout.
     # See https://requests.readthedocs.io/en/latest/user/advanced/#timeouts
@@ -34,9 +44,9 @@ class Sender:
     def __init__(
         self,
         application_name: str,
-        auth_token: str,
         server_address: str,
         *,
+        auth: Union[AuthToken, BasicAuthCredentials] = None,
         scheme: str = "https",
         send_interval: float = 30.0,
         send_threshold: float = 0.8,
@@ -48,7 +58,7 @@ class Sender:
         Create a new Sender and start flushing log messages in a background thread.
 
         :param application_name: Unique identifier requests coming from this handler.
-        :param auth_token: Token for authenticating requests to the server.
+        :param auth: The auth to use for this handler. One of AuthToken or BasicAuthCredentials.
         :param server_address: Address of server where to send messages.
         :param scheme: The scheme to use as string ('http' or 'https')
         :param send_interval: Seconds between sending batches.
@@ -58,20 +68,33 @@ class Sender:
         """
 
         self.application_name = application_name
-        self.auth_token = auth_token
-        self.server_address = server_address
         self.send_interval = send_interval
         self.send_threshold = send_threshold
         self.send_min_interval = send_min_interval
-        self.max_send_tries = max_send_tries
 
+        self.max_send_tries = max_send_tries
         self.stdout_logger = get_stdout_logger()
-        self.server_uri = f"{scheme}://{server_address}/api/v1/logs"
+        self.set_address(server_address, scheme=scheme)
         self.jsonify = JSONEncoder(separators=(",", ":"), default=repr).encode  # compact, no whitespace
         self.session = Session()
+
+        # Set up auth
+        if isinstance(auth, BasicAuthCredentials):
+            self.session.auth = HTTPBasicAuth(*auth)
+        elif isinstance(auth, AuthToken):
+            self.session.headers["X-Token"] = str(auth)
+
         self.session.verify = verify
         self.messages_buffer: Optional[MessagesBuffer] = None
         self.metadata_callback: Callable[[], Dict] = lambda: {}
+
+    def set_address(self, server_address: str, *, scheme: str = "https") -> None:
+        """
+        Set the server address to send logs to.
+        :param server_address: Address of server where to send messages.
+        :param scheme: The scheme to use as string ('http' or 'https')
+        """
+        self.server_uri = f"{scheme}://{server_address}/api/v1/logs"
 
     def start(self, messages_buffer: MessagesBuffer, metadata_callback: Callable[[], Dict]) -> None:
         assert self.messages_buffer is None, "Call start once"
@@ -161,7 +184,6 @@ class Sender:
             "Content-Encoding": "gzip",
             "Content-Type": "application/json",
             "X-Application-Name": self.application_name,
-            "X-Token": self.auth_token,
         }
 
         # Default compression level (9) is slowest. Level 6 trades a bit of compression for speed.

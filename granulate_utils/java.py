@@ -145,7 +145,7 @@ def parse_jvm_version(version_string: str) -> JvmVersion:
     # version is always in quotes
     _, version_str, _ = lines[0].split('"')
     # matches the build string from e.g (build 25.212-b04, mixed mode) -> "25.212-b04"
-    m = re.search(r"\(build ([^,)]+?)(?:,|\))", version_string)
+    m = re.search(r"\((?:product )?build ([^,)]+?)(?:,|\))", version_string)
     assert m is not None, f"did not find build_str in {version_string!r}"
     build_str = m.group(1)
 
@@ -190,17 +190,19 @@ def parse_jvm_version(version_string: str) -> JvmVersion:
         assert matched, f"Unexpected build number format in new-style java version: {build_str!r}"
         build = int(matched[0])
 
-    # There is no real format here, just use the entire description string
-    vm_name = lines[2].split("(build")[0].strip()
+    # There is no real format here, just use the entire description string until the part which describes the build.
+    m = re.match(r"(.*?) (?:\(.*\))?\((?:product )?build", lines[2])
+    assert m is not None, f"Missing build description? {lines[2]}"
+    vm_name = m.group(1)
 
-    if vm_name.startswith("OpenJDK"):
+    if vm_name.startswith("OpenJDK") or vm_name.startswith("Java HotSpot"):
         vm_type: VmType = "HotSpot"
     elif vm_name.startswith("Zing"):
         vm_type = "Zing"
     elif vm_name == "Eclipse OpenJ9 VM":
         vm_type = "OpenJ9"
     else:
-        # TODO: additional types?
+        # There may be additional types that have not yet been categorized.
         vm_type = None
 
     if vm_type == "Zing":
@@ -210,7 +212,7 @@ def parse_jvm_version(version_string: str) -> JvmVersion:
         if m is None:
             # Zing <= 20 versions have a different format
             # this matches the "20" out of (build 1.8.0-zing_20.03.0.0-b1).
-            m = re.search(r"\(build[^\)]+zing_(\d+\.\d+\.\d+)\.[^\(]+\)", version_string)
+            m = re.search(r"\((?:product )?build[^\)]+zing_(\d+\.\d+\.\d+)\.[^\(]+\)", version_string)
             assert m is not None, f"Missing old format of Zing version? {version_string!r}"
         zing_version: Optional[Version] = Version(m.group(1))
     else:

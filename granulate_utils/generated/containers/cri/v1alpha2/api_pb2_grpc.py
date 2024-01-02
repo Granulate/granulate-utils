@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import granulate_utils.generated.containers.cri.api_pb2 as api__pb2
+from granulate_utils.generated.containers.cri.v1alpha2 import api_pb2 as v1alpha2_dot_api__pb2
 
 
 class RuntimeServiceStub(object):
@@ -17,123 +17,123 @@ class RuntimeServiceStub(object):
         """
         self.Version = channel.unary_unary(
                 '/runtime.v1alpha2.RuntimeService/Version',
-                request_serializer=api__pb2.VersionRequest.SerializeToString,
-                response_deserializer=api__pb2.VersionResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.VersionRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.VersionResponse.FromString,
                 )
         self.RunPodSandbox = channel.unary_unary(
                 '/runtime.v1alpha2.RuntimeService/RunPodSandbox',
-                request_serializer=api__pb2.RunPodSandboxRequest.SerializeToString,
-                response_deserializer=api__pb2.RunPodSandboxResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.RunPodSandboxRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.RunPodSandboxResponse.FromString,
                 )
         self.StopPodSandbox = channel.unary_unary(
                 '/runtime.v1alpha2.RuntimeService/StopPodSandbox',
-                request_serializer=api__pb2.StopPodSandboxRequest.SerializeToString,
-                response_deserializer=api__pb2.StopPodSandboxResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.StopPodSandboxRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.StopPodSandboxResponse.FromString,
                 )
         self.RemovePodSandbox = channel.unary_unary(
                 '/runtime.v1alpha2.RuntimeService/RemovePodSandbox',
-                request_serializer=api__pb2.RemovePodSandboxRequest.SerializeToString,
-                response_deserializer=api__pb2.RemovePodSandboxResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.RemovePodSandboxRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.RemovePodSandboxResponse.FromString,
                 )
         self.PodSandboxStatus = channel.unary_unary(
                 '/runtime.v1alpha2.RuntimeService/PodSandboxStatus',
-                request_serializer=api__pb2.PodSandboxStatusRequest.SerializeToString,
-                response_deserializer=api__pb2.PodSandboxStatusResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.PodSandboxStatusRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.PodSandboxStatusResponse.FromString,
                 )
         self.ListPodSandbox = channel.unary_unary(
                 '/runtime.v1alpha2.RuntimeService/ListPodSandbox',
-                request_serializer=api__pb2.ListPodSandboxRequest.SerializeToString,
-                response_deserializer=api__pb2.ListPodSandboxResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.ListPodSandboxRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.ListPodSandboxResponse.FromString,
                 )
         self.CreateContainer = channel.unary_unary(
                 '/runtime.v1alpha2.RuntimeService/CreateContainer',
-                request_serializer=api__pb2.CreateContainerRequest.SerializeToString,
-                response_deserializer=api__pb2.CreateContainerResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.CreateContainerRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.CreateContainerResponse.FromString,
                 )
         self.StartContainer = channel.unary_unary(
                 '/runtime.v1alpha2.RuntimeService/StartContainer',
-                request_serializer=api__pb2.StartContainerRequest.SerializeToString,
-                response_deserializer=api__pb2.StartContainerResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.StartContainerRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.StartContainerResponse.FromString,
                 )
         self.StopContainer = channel.unary_unary(
                 '/runtime.v1alpha2.RuntimeService/StopContainer',
-                request_serializer=api__pb2.StopContainerRequest.SerializeToString,
-                response_deserializer=api__pb2.StopContainerResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.StopContainerRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.StopContainerResponse.FromString,
                 )
         self.RemoveContainer = channel.unary_unary(
                 '/runtime.v1alpha2.RuntimeService/RemoveContainer',
-                request_serializer=api__pb2.RemoveContainerRequest.SerializeToString,
-                response_deserializer=api__pb2.RemoveContainerResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.RemoveContainerRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.RemoveContainerResponse.FromString,
                 )
         self.ListContainers = channel.unary_unary(
                 '/runtime.v1alpha2.RuntimeService/ListContainers',
-                request_serializer=api__pb2.ListContainersRequest.SerializeToString,
-                response_deserializer=api__pb2.ListContainersResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.ListContainersRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.ListContainersResponse.FromString,
                 )
         self.ContainerStatus = channel.unary_unary(
                 '/runtime.v1alpha2.RuntimeService/ContainerStatus',
-                request_serializer=api__pb2.ContainerStatusRequest.SerializeToString,
-                response_deserializer=api__pb2.ContainerStatusResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.ContainerStatusRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.ContainerStatusResponse.FromString,
                 )
         self.UpdateContainerResources = channel.unary_unary(
                 '/runtime.v1alpha2.RuntimeService/UpdateContainerResources',
-                request_serializer=api__pb2.UpdateContainerResourcesRequest.SerializeToString,
-                response_deserializer=api__pb2.UpdateContainerResourcesResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.UpdateContainerResourcesRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.UpdateContainerResourcesResponse.FromString,
                 )
         self.ReopenContainerLog = channel.unary_unary(
                 '/runtime.v1alpha2.RuntimeService/ReopenContainerLog',
-                request_serializer=api__pb2.ReopenContainerLogRequest.SerializeToString,
-                response_deserializer=api__pb2.ReopenContainerLogResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.ReopenContainerLogRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.ReopenContainerLogResponse.FromString,
                 )
         self.ExecSync = channel.unary_unary(
                 '/runtime.v1alpha2.RuntimeService/ExecSync',
-                request_serializer=api__pb2.ExecSyncRequest.SerializeToString,
-                response_deserializer=api__pb2.ExecSyncResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.ExecSyncRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.ExecSyncResponse.FromString,
                 )
         self.Exec = channel.unary_unary(
                 '/runtime.v1alpha2.RuntimeService/Exec',
-                request_serializer=api__pb2.ExecRequest.SerializeToString,
-                response_deserializer=api__pb2.ExecResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.ExecRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.ExecResponse.FromString,
                 )
         self.Attach = channel.unary_unary(
                 '/runtime.v1alpha2.RuntimeService/Attach',
-                request_serializer=api__pb2.AttachRequest.SerializeToString,
-                response_deserializer=api__pb2.AttachResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.AttachRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.AttachResponse.FromString,
                 )
         self.PortForward = channel.unary_unary(
                 '/runtime.v1alpha2.RuntimeService/PortForward',
-                request_serializer=api__pb2.PortForwardRequest.SerializeToString,
-                response_deserializer=api__pb2.PortForwardResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.PortForwardRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.PortForwardResponse.FromString,
                 )
         self.ContainerStats = channel.unary_unary(
                 '/runtime.v1alpha2.RuntimeService/ContainerStats',
-                request_serializer=api__pb2.ContainerStatsRequest.SerializeToString,
-                response_deserializer=api__pb2.ContainerStatsResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.ContainerStatsRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.ContainerStatsResponse.FromString,
                 )
         self.ListContainerStats = channel.unary_unary(
                 '/runtime.v1alpha2.RuntimeService/ListContainerStats',
-                request_serializer=api__pb2.ListContainerStatsRequest.SerializeToString,
-                response_deserializer=api__pb2.ListContainerStatsResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.ListContainerStatsRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.ListContainerStatsResponse.FromString,
                 )
         self.PodSandboxStats = channel.unary_unary(
                 '/runtime.v1alpha2.RuntimeService/PodSandboxStats',
-                request_serializer=api__pb2.PodSandboxStatsRequest.SerializeToString,
-                response_deserializer=api__pb2.PodSandboxStatsResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.PodSandboxStatsRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.PodSandboxStatsResponse.FromString,
                 )
         self.ListPodSandboxStats = channel.unary_unary(
                 '/runtime.v1alpha2.RuntimeService/ListPodSandboxStats',
-                request_serializer=api__pb2.ListPodSandboxStatsRequest.SerializeToString,
-                response_deserializer=api__pb2.ListPodSandboxStatsResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.ListPodSandboxStatsRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.ListPodSandboxStatsResponse.FromString,
                 )
         self.UpdateRuntimeConfig = channel.unary_unary(
                 '/runtime.v1alpha2.RuntimeService/UpdateRuntimeConfig',
-                request_serializer=api__pb2.UpdateRuntimeConfigRequest.SerializeToString,
-                response_deserializer=api__pb2.UpdateRuntimeConfigResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.UpdateRuntimeConfigRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.UpdateRuntimeConfigResponse.FromString,
                 )
         self.Status = channel.unary_unary(
                 '/runtime.v1alpha2.RuntimeService/Status',
-                request_serializer=api__pb2.StatusRequest.SerializeToString,
-                response_deserializer=api__pb2.StatusResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.StatusRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.StatusResponse.FromString,
                 )
 
 
@@ -247,7 +247,8 @@ class RuntimeServiceServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def UpdateContainerResources(self, request, context):
-        """UpdateContainerResources updates ContainerConfig of the container.
+        """UpdateContainerResources updates ContainerConfig of the container synchronously.
+        If runtime fails to transactionally update the requested resources, an error is returned.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -341,123 +342,123 @@ def add_RuntimeServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'Version': grpc.unary_unary_rpc_method_handler(
                     servicer.Version,
-                    request_deserializer=api__pb2.VersionRequest.FromString,
-                    response_serializer=api__pb2.VersionResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.VersionRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.VersionResponse.SerializeToString,
             ),
             'RunPodSandbox': grpc.unary_unary_rpc_method_handler(
                     servicer.RunPodSandbox,
-                    request_deserializer=api__pb2.RunPodSandboxRequest.FromString,
-                    response_serializer=api__pb2.RunPodSandboxResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.RunPodSandboxRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.RunPodSandboxResponse.SerializeToString,
             ),
             'StopPodSandbox': grpc.unary_unary_rpc_method_handler(
                     servicer.StopPodSandbox,
-                    request_deserializer=api__pb2.StopPodSandboxRequest.FromString,
-                    response_serializer=api__pb2.StopPodSandboxResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.StopPodSandboxRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.StopPodSandboxResponse.SerializeToString,
             ),
             'RemovePodSandbox': grpc.unary_unary_rpc_method_handler(
                     servicer.RemovePodSandbox,
-                    request_deserializer=api__pb2.RemovePodSandboxRequest.FromString,
-                    response_serializer=api__pb2.RemovePodSandboxResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.RemovePodSandboxRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.RemovePodSandboxResponse.SerializeToString,
             ),
             'PodSandboxStatus': grpc.unary_unary_rpc_method_handler(
                     servicer.PodSandboxStatus,
-                    request_deserializer=api__pb2.PodSandboxStatusRequest.FromString,
-                    response_serializer=api__pb2.PodSandboxStatusResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.PodSandboxStatusRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.PodSandboxStatusResponse.SerializeToString,
             ),
             'ListPodSandbox': grpc.unary_unary_rpc_method_handler(
                     servicer.ListPodSandbox,
-                    request_deserializer=api__pb2.ListPodSandboxRequest.FromString,
-                    response_serializer=api__pb2.ListPodSandboxResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.ListPodSandboxRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.ListPodSandboxResponse.SerializeToString,
             ),
             'CreateContainer': grpc.unary_unary_rpc_method_handler(
                     servicer.CreateContainer,
-                    request_deserializer=api__pb2.CreateContainerRequest.FromString,
-                    response_serializer=api__pb2.CreateContainerResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.CreateContainerRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.CreateContainerResponse.SerializeToString,
             ),
             'StartContainer': grpc.unary_unary_rpc_method_handler(
                     servicer.StartContainer,
-                    request_deserializer=api__pb2.StartContainerRequest.FromString,
-                    response_serializer=api__pb2.StartContainerResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.StartContainerRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.StartContainerResponse.SerializeToString,
             ),
             'StopContainer': grpc.unary_unary_rpc_method_handler(
                     servicer.StopContainer,
-                    request_deserializer=api__pb2.StopContainerRequest.FromString,
-                    response_serializer=api__pb2.StopContainerResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.StopContainerRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.StopContainerResponse.SerializeToString,
             ),
             'RemoveContainer': grpc.unary_unary_rpc_method_handler(
                     servicer.RemoveContainer,
-                    request_deserializer=api__pb2.RemoveContainerRequest.FromString,
-                    response_serializer=api__pb2.RemoveContainerResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.RemoveContainerRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.RemoveContainerResponse.SerializeToString,
             ),
             'ListContainers': grpc.unary_unary_rpc_method_handler(
                     servicer.ListContainers,
-                    request_deserializer=api__pb2.ListContainersRequest.FromString,
-                    response_serializer=api__pb2.ListContainersResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.ListContainersRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.ListContainersResponse.SerializeToString,
             ),
             'ContainerStatus': grpc.unary_unary_rpc_method_handler(
                     servicer.ContainerStatus,
-                    request_deserializer=api__pb2.ContainerStatusRequest.FromString,
-                    response_serializer=api__pb2.ContainerStatusResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.ContainerStatusRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.ContainerStatusResponse.SerializeToString,
             ),
             'UpdateContainerResources': grpc.unary_unary_rpc_method_handler(
                     servicer.UpdateContainerResources,
-                    request_deserializer=api__pb2.UpdateContainerResourcesRequest.FromString,
-                    response_serializer=api__pb2.UpdateContainerResourcesResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.UpdateContainerResourcesRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.UpdateContainerResourcesResponse.SerializeToString,
             ),
             'ReopenContainerLog': grpc.unary_unary_rpc_method_handler(
                     servicer.ReopenContainerLog,
-                    request_deserializer=api__pb2.ReopenContainerLogRequest.FromString,
-                    response_serializer=api__pb2.ReopenContainerLogResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.ReopenContainerLogRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.ReopenContainerLogResponse.SerializeToString,
             ),
             'ExecSync': grpc.unary_unary_rpc_method_handler(
                     servicer.ExecSync,
-                    request_deserializer=api__pb2.ExecSyncRequest.FromString,
-                    response_serializer=api__pb2.ExecSyncResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.ExecSyncRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.ExecSyncResponse.SerializeToString,
             ),
             'Exec': grpc.unary_unary_rpc_method_handler(
                     servicer.Exec,
-                    request_deserializer=api__pb2.ExecRequest.FromString,
-                    response_serializer=api__pb2.ExecResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.ExecRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.ExecResponse.SerializeToString,
             ),
             'Attach': grpc.unary_unary_rpc_method_handler(
                     servicer.Attach,
-                    request_deserializer=api__pb2.AttachRequest.FromString,
-                    response_serializer=api__pb2.AttachResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.AttachRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.AttachResponse.SerializeToString,
             ),
             'PortForward': grpc.unary_unary_rpc_method_handler(
                     servicer.PortForward,
-                    request_deserializer=api__pb2.PortForwardRequest.FromString,
-                    response_serializer=api__pb2.PortForwardResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.PortForwardRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.PortForwardResponse.SerializeToString,
             ),
             'ContainerStats': grpc.unary_unary_rpc_method_handler(
                     servicer.ContainerStats,
-                    request_deserializer=api__pb2.ContainerStatsRequest.FromString,
-                    response_serializer=api__pb2.ContainerStatsResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.ContainerStatsRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.ContainerStatsResponse.SerializeToString,
             ),
             'ListContainerStats': grpc.unary_unary_rpc_method_handler(
                     servicer.ListContainerStats,
-                    request_deserializer=api__pb2.ListContainerStatsRequest.FromString,
-                    response_serializer=api__pb2.ListContainerStatsResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.ListContainerStatsRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.ListContainerStatsResponse.SerializeToString,
             ),
             'PodSandboxStats': grpc.unary_unary_rpc_method_handler(
                     servicer.PodSandboxStats,
-                    request_deserializer=api__pb2.PodSandboxStatsRequest.FromString,
-                    response_serializer=api__pb2.PodSandboxStatsResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.PodSandboxStatsRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.PodSandboxStatsResponse.SerializeToString,
             ),
             'ListPodSandboxStats': grpc.unary_unary_rpc_method_handler(
                     servicer.ListPodSandboxStats,
-                    request_deserializer=api__pb2.ListPodSandboxStatsRequest.FromString,
-                    response_serializer=api__pb2.ListPodSandboxStatsResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.ListPodSandboxStatsRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.ListPodSandboxStatsResponse.SerializeToString,
             ),
             'UpdateRuntimeConfig': grpc.unary_unary_rpc_method_handler(
                     servicer.UpdateRuntimeConfig,
-                    request_deserializer=api__pb2.UpdateRuntimeConfigRequest.FromString,
-                    response_serializer=api__pb2.UpdateRuntimeConfigResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.UpdateRuntimeConfigRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.UpdateRuntimeConfigResponse.SerializeToString,
             ),
             'Status': grpc.unary_unary_rpc_method_handler(
                     servicer.Status,
-                    request_deserializer=api__pb2.StatusRequest.FromString,
-                    response_serializer=api__pb2.StatusResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.StatusRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.StatusResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -482,8 +483,8 @@ class RuntimeService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.RuntimeService/Version',
-            api__pb2.VersionRequest.SerializeToString,
-            api__pb2.VersionResponse.FromString,
+            v1alpha2_dot_api__pb2.VersionRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.VersionResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -499,8 +500,8 @@ class RuntimeService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.RuntimeService/RunPodSandbox',
-            api__pb2.RunPodSandboxRequest.SerializeToString,
-            api__pb2.RunPodSandboxResponse.FromString,
+            v1alpha2_dot_api__pb2.RunPodSandboxRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.RunPodSandboxResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -516,8 +517,8 @@ class RuntimeService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.RuntimeService/StopPodSandbox',
-            api__pb2.StopPodSandboxRequest.SerializeToString,
-            api__pb2.StopPodSandboxResponse.FromString,
+            v1alpha2_dot_api__pb2.StopPodSandboxRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.StopPodSandboxResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -533,8 +534,8 @@ class RuntimeService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.RuntimeService/RemovePodSandbox',
-            api__pb2.RemovePodSandboxRequest.SerializeToString,
-            api__pb2.RemovePodSandboxResponse.FromString,
+            v1alpha2_dot_api__pb2.RemovePodSandboxRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.RemovePodSandboxResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -550,8 +551,8 @@ class RuntimeService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.RuntimeService/PodSandboxStatus',
-            api__pb2.PodSandboxStatusRequest.SerializeToString,
-            api__pb2.PodSandboxStatusResponse.FromString,
+            v1alpha2_dot_api__pb2.PodSandboxStatusRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.PodSandboxStatusResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -567,8 +568,8 @@ class RuntimeService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.RuntimeService/ListPodSandbox',
-            api__pb2.ListPodSandboxRequest.SerializeToString,
-            api__pb2.ListPodSandboxResponse.FromString,
+            v1alpha2_dot_api__pb2.ListPodSandboxRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.ListPodSandboxResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -584,8 +585,8 @@ class RuntimeService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.RuntimeService/CreateContainer',
-            api__pb2.CreateContainerRequest.SerializeToString,
-            api__pb2.CreateContainerResponse.FromString,
+            v1alpha2_dot_api__pb2.CreateContainerRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.CreateContainerResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -601,8 +602,8 @@ class RuntimeService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.RuntimeService/StartContainer',
-            api__pb2.StartContainerRequest.SerializeToString,
-            api__pb2.StartContainerResponse.FromString,
+            v1alpha2_dot_api__pb2.StartContainerRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.StartContainerResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -618,8 +619,8 @@ class RuntimeService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.RuntimeService/StopContainer',
-            api__pb2.StopContainerRequest.SerializeToString,
-            api__pb2.StopContainerResponse.FromString,
+            v1alpha2_dot_api__pb2.StopContainerRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.StopContainerResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -635,8 +636,8 @@ class RuntimeService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.RuntimeService/RemoveContainer',
-            api__pb2.RemoveContainerRequest.SerializeToString,
-            api__pb2.RemoveContainerResponse.FromString,
+            v1alpha2_dot_api__pb2.RemoveContainerRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.RemoveContainerResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -652,8 +653,8 @@ class RuntimeService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.RuntimeService/ListContainers',
-            api__pb2.ListContainersRequest.SerializeToString,
-            api__pb2.ListContainersResponse.FromString,
+            v1alpha2_dot_api__pb2.ListContainersRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.ListContainersResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -669,8 +670,8 @@ class RuntimeService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.RuntimeService/ContainerStatus',
-            api__pb2.ContainerStatusRequest.SerializeToString,
-            api__pb2.ContainerStatusResponse.FromString,
+            v1alpha2_dot_api__pb2.ContainerStatusRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.ContainerStatusResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -686,8 +687,8 @@ class RuntimeService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.RuntimeService/UpdateContainerResources',
-            api__pb2.UpdateContainerResourcesRequest.SerializeToString,
-            api__pb2.UpdateContainerResourcesResponse.FromString,
+            v1alpha2_dot_api__pb2.UpdateContainerResourcesRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.UpdateContainerResourcesResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -703,8 +704,8 @@ class RuntimeService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.RuntimeService/ReopenContainerLog',
-            api__pb2.ReopenContainerLogRequest.SerializeToString,
-            api__pb2.ReopenContainerLogResponse.FromString,
+            v1alpha2_dot_api__pb2.ReopenContainerLogRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.ReopenContainerLogResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -720,8 +721,8 @@ class RuntimeService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.RuntimeService/ExecSync',
-            api__pb2.ExecSyncRequest.SerializeToString,
-            api__pb2.ExecSyncResponse.FromString,
+            v1alpha2_dot_api__pb2.ExecSyncRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.ExecSyncResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -737,8 +738,8 @@ class RuntimeService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.RuntimeService/Exec',
-            api__pb2.ExecRequest.SerializeToString,
-            api__pb2.ExecResponse.FromString,
+            v1alpha2_dot_api__pb2.ExecRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.ExecResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -754,8 +755,8 @@ class RuntimeService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.RuntimeService/Attach',
-            api__pb2.AttachRequest.SerializeToString,
-            api__pb2.AttachResponse.FromString,
+            v1alpha2_dot_api__pb2.AttachRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.AttachResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -771,8 +772,8 @@ class RuntimeService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.RuntimeService/PortForward',
-            api__pb2.PortForwardRequest.SerializeToString,
-            api__pb2.PortForwardResponse.FromString,
+            v1alpha2_dot_api__pb2.PortForwardRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.PortForwardResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -788,8 +789,8 @@ class RuntimeService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.RuntimeService/ContainerStats',
-            api__pb2.ContainerStatsRequest.SerializeToString,
-            api__pb2.ContainerStatsResponse.FromString,
+            v1alpha2_dot_api__pb2.ContainerStatsRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.ContainerStatsResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -805,8 +806,8 @@ class RuntimeService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.RuntimeService/ListContainerStats',
-            api__pb2.ListContainerStatsRequest.SerializeToString,
-            api__pb2.ListContainerStatsResponse.FromString,
+            v1alpha2_dot_api__pb2.ListContainerStatsRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.ListContainerStatsResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -822,8 +823,8 @@ class RuntimeService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.RuntimeService/PodSandboxStats',
-            api__pb2.PodSandboxStatsRequest.SerializeToString,
-            api__pb2.PodSandboxStatsResponse.FromString,
+            v1alpha2_dot_api__pb2.PodSandboxStatsRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.PodSandboxStatsResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -839,8 +840,8 @@ class RuntimeService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.RuntimeService/ListPodSandboxStats',
-            api__pb2.ListPodSandboxStatsRequest.SerializeToString,
-            api__pb2.ListPodSandboxStatsResponse.FromString,
+            v1alpha2_dot_api__pb2.ListPodSandboxStatsRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.ListPodSandboxStatsResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -856,8 +857,8 @@ class RuntimeService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.RuntimeService/UpdateRuntimeConfig',
-            api__pb2.UpdateRuntimeConfigRequest.SerializeToString,
-            api__pb2.UpdateRuntimeConfigResponse.FromString,
+            v1alpha2_dot_api__pb2.UpdateRuntimeConfigRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.UpdateRuntimeConfigResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -873,8 +874,8 @@ class RuntimeService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.RuntimeService/Status',
-            api__pb2.StatusRequest.SerializeToString,
-            api__pb2.StatusResponse.FromString,
+            v1alpha2_dot_api__pb2.StatusRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.StatusResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -891,28 +892,28 @@ class ImageServiceStub(object):
         """
         self.ListImages = channel.unary_unary(
                 '/runtime.v1alpha2.ImageService/ListImages',
-                request_serializer=api__pb2.ListImagesRequest.SerializeToString,
-                response_deserializer=api__pb2.ListImagesResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.ListImagesRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.ListImagesResponse.FromString,
                 )
         self.ImageStatus = channel.unary_unary(
                 '/runtime.v1alpha2.ImageService/ImageStatus',
-                request_serializer=api__pb2.ImageStatusRequest.SerializeToString,
-                response_deserializer=api__pb2.ImageStatusResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.ImageStatusRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.ImageStatusResponse.FromString,
                 )
         self.PullImage = channel.unary_unary(
                 '/runtime.v1alpha2.ImageService/PullImage',
-                request_serializer=api__pb2.PullImageRequest.SerializeToString,
-                response_deserializer=api__pb2.PullImageResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.PullImageRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.PullImageResponse.FromString,
                 )
         self.RemoveImage = channel.unary_unary(
                 '/runtime.v1alpha2.ImageService/RemoveImage',
-                request_serializer=api__pb2.RemoveImageRequest.SerializeToString,
-                response_deserializer=api__pb2.RemoveImageResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.RemoveImageRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.RemoveImageResponse.FromString,
                 )
         self.ImageFsInfo = channel.unary_unary(
                 '/runtime.v1alpha2.ImageService/ImageFsInfo',
-                request_serializer=api__pb2.ImageFsInfoRequest.SerializeToString,
-                response_deserializer=api__pb2.ImageFsInfoResponse.FromString,
+                request_serializer=v1alpha2_dot_api__pb2.ImageFsInfoRequest.SerializeToString,
+                response_deserializer=v1alpha2_dot_api__pb2.ImageFsInfoResponse.FromString,
                 )
 
 
@@ -964,28 +965,28 @@ def add_ImageServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'ListImages': grpc.unary_unary_rpc_method_handler(
                     servicer.ListImages,
-                    request_deserializer=api__pb2.ListImagesRequest.FromString,
-                    response_serializer=api__pb2.ListImagesResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.ListImagesRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.ListImagesResponse.SerializeToString,
             ),
             'ImageStatus': grpc.unary_unary_rpc_method_handler(
                     servicer.ImageStatus,
-                    request_deserializer=api__pb2.ImageStatusRequest.FromString,
-                    response_serializer=api__pb2.ImageStatusResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.ImageStatusRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.ImageStatusResponse.SerializeToString,
             ),
             'PullImage': grpc.unary_unary_rpc_method_handler(
                     servicer.PullImage,
-                    request_deserializer=api__pb2.PullImageRequest.FromString,
-                    response_serializer=api__pb2.PullImageResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.PullImageRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.PullImageResponse.SerializeToString,
             ),
             'RemoveImage': grpc.unary_unary_rpc_method_handler(
                     servicer.RemoveImage,
-                    request_deserializer=api__pb2.RemoveImageRequest.FromString,
-                    response_serializer=api__pb2.RemoveImageResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.RemoveImageRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.RemoveImageResponse.SerializeToString,
             ),
             'ImageFsInfo': grpc.unary_unary_rpc_method_handler(
                     servicer.ImageFsInfo,
-                    request_deserializer=api__pb2.ImageFsInfoRequest.FromString,
-                    response_serializer=api__pb2.ImageFsInfoResponse.SerializeToString,
+                    request_deserializer=v1alpha2_dot_api__pb2.ImageFsInfoRequest.FromString,
+                    response_serializer=v1alpha2_dot_api__pb2.ImageFsInfoResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -1010,8 +1011,8 @@ class ImageService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.ImageService/ListImages',
-            api__pb2.ListImagesRequest.SerializeToString,
-            api__pb2.ListImagesResponse.FromString,
+            v1alpha2_dot_api__pb2.ListImagesRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.ListImagesResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -1027,8 +1028,8 @@ class ImageService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.ImageService/ImageStatus',
-            api__pb2.ImageStatusRequest.SerializeToString,
-            api__pb2.ImageStatusResponse.FromString,
+            v1alpha2_dot_api__pb2.ImageStatusRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.ImageStatusResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -1044,8 +1045,8 @@ class ImageService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.ImageService/PullImage',
-            api__pb2.PullImageRequest.SerializeToString,
-            api__pb2.PullImageResponse.FromString,
+            v1alpha2_dot_api__pb2.PullImageRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.PullImageResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -1061,8 +1062,8 @@ class ImageService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.ImageService/RemoveImage',
-            api__pb2.RemoveImageRequest.SerializeToString,
-            api__pb2.RemoveImageResponse.FromString,
+            v1alpha2_dot_api__pb2.RemoveImageRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.RemoveImageResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
@@ -1078,7 +1079,7 @@ class ImageService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/runtime.v1alpha2.ImageService/ImageFsInfo',
-            api__pb2.ImageFsInfoRequest.SerializeToString,
-            api__pb2.ImageFsInfoResponse.FromString,
+            v1alpha2_dot_api__pb2.ImageFsInfoRequest.SerializeToString,
+            v1alpha2_dot_api__pb2.ImageFsInfoResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

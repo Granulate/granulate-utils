@@ -6,7 +6,6 @@
 import hashlib
 from contextlib import contextmanager
 from enum import Enum, auto
-from functools import wraps
 from pathlib import Path
 from typing import Callable, List, Optional, TypeVar, Union, cast
 
@@ -21,27 +20,20 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 
-def raise_nosuchprocess(func: Callable[P, R]) -> Callable[P, R]:
-    @wraps(func)
-    def inner(*args: P.args, **kwargs: P.kwargs):
-        try:
-            return func(*args, **kwargs)
-        except FileNotFoundError as e:
-            # Check if filename is /proc/{pid}/*
-            if e.filename.startswith("/proc/"):
-                if e.filename.split("/")[2].isalnum():
-                    # Take pid from /proc/{pid}/*
-                    pid = int(e.filename.split("/")[2])
-                    # Check if number from /proc/{pid} is actually a pid number
-                    with open("/proc/sys/kernel/pid_max") as pid_max_file:
-                        pid_max = int(pid_max_file.read())
-                    if pid <= pid_max:
-                        # Check if pid is running
-                        if not psutil.pid_exists(pid):
-                            raise psutil.NoSuchProcess(pid)
-            raise e
-
-    return inner
+def wrap_as_nosuchprocess(exc: FileNotFoundError) -> Union[FileNotFoundError, psutil.NoSuchProcess]:
+    # Check if filename is /proc/{pid}/*
+    if exc.filename.startswith("/proc/"):
+        if exc.filename.split("/")[2].isalnum():
+            # Take pid from /proc/{pid}/*
+            pid = int(exc.filename.split("/")[2])
+            # Check if number from /proc/{pid} is actually a pid number
+            with open("/proc/sys/kernel/pid_max") as pid_max_file:
+                pid_max = int(pid_max_file.read())
+            if pid <= pid_max:
+                # Check if pid is running
+                if not psutil.pid_exists(pid):
+                    raise psutil.NoSuchProcess(pid)
+    raise exc
 
 
 class LibcType(Enum):
@@ -59,8 +51,11 @@ def open_elf(elf: ELFType) -> ELFFile:
     if isinstance(elf, ELFFile):
         yield elf
     else:
-        with open(elf, "rb") as f:
-            yield ELFFile(f)
+        try:
+            with open(elf, "rb") as f:
+                yield ELFFile(f)
+        except FileNotFoundError as e:
+            raise wrap_as_nosuchprocess(e)
 
 
 def get_elf_arch(elf: ELFType) -> str:
@@ -71,24 +66,34 @@ def get_elf_arch(elf: ELFType) -> str:
         return elf.get_machine_arch()
 
 
-def get_elf_buildid(elf: ELFType) -> Optional[str]:
+def elf_arch_to_uname_arch(arch: str) -> str:
     """
-    Gets the build ID embedded in an ELF file section as a hex string,
+    Translates from the value returned by get_elf_arch to the value you'd receive from "uname -m"
+    """
+    return {
+        "x64": "x86_64",
+        "AArch64": "aarch64",
+    }[arch]
+
+
+def get_elf_buildid(elf: ELFType, section: str, note_check: Callable[[NoteSection], bool]) -> Optional[str]:
+    """
+    Gets the build ID embedded in an ELF file note section as a string,
     or None if not present.
+    Lambda argument is used to verify that note meets caller's requirements.
     """
     with open_elf(elf) as elf:
-        build_id_section = elf.get_section_by_name(".note.gnu.build-id")
-        if build_id_section is None or not isinstance(build_id_section, NoteSection):
+        note_section = elf.get_section_by_name(section)
+        if note_section is None or not isinstance(note_section, NoteSection):
             return None
 
-        for note in build_id_section.iter_notes():
-            if note.n_type == "NT_GNU_BUILD_ID":
+        for note in note_section.iter_notes():
+            if note_check(note):
                 return cast(str, note.n_desc)
         else:
             return None
 
 
-@raise_nosuchprocess
 def get_elf_id(elf: ELFType) -> str:
     """
     Gets an identifier for this ELF.
@@ -96,7 +101,7 @@ def get_elf_id(elf: ELFType) -> str:
     we instead grab its SHA1.
     """
     with open_elf(elf) as elf:
-        buildid = get_elf_buildid(elf)
+        buildid = get_elf_buildid(elf, ".note.gnu.build-id", lambda note: note.n_type == "NT_GNU_BUILD_ID")
         if buildid is not None:
             return f"buildid:{buildid}"
 
@@ -183,3 +188,8 @@ def get_libc_type(elf: ELFType) -> LibcType:
             return LibcType.STATIC_LIBC
 
         return LibcType.STATIC_NO_LIBC
+
+
+def elf_is_stripped(elf: ELFType) -> bool:
+    with open_elf(elf) as elf:
+        return elf.get_section_by_name(".symtab") is None
