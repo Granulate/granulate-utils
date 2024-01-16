@@ -29,6 +29,8 @@ def process_exe(process: psutil.Process) -> str:
 
     See https://github.com/giampaolo/psutil/pull/2062
     """
+    # Clear the "exe" cache on the process object. It can change after being cached if the process execed.
+    process._exe = None  # type: ignore
     exe = process.exe()
     if exe == "":
         if is_process_zombie(process):
