@@ -15,6 +15,13 @@ class TimeInfo:
     create_time: datetime  # Creation time of the container (UTC)
     start_time: Optional[datetime]  # Start time of the container (UTC) - None=not started
 
+@dataclass
+class Network:
+    name: str
+    rx_bytes: int
+    rx_errors: int
+    tx_bytes: int
+    tx_errors: int
 
 @dataclass
 class Container:
@@ -33,9 +40,9 @@ class Container:
     process: Optional[psutil.Process]
     # None if not requested, make sure to pass all_info=True
     time_info: Optional[TimeInfo]
+    networks: Network
 
-
-class ContainersClientInterface:
+class ContainersClientInterface:    
     def list_containers(self, all_info: bool) -> List[Container]:
         raise NotImplementedError
 
@@ -44,3 +51,7 @@ class ContainersClientInterface:
 
     def get_runtimes(self) -> List[str]:
         raise NotImplementedError
+    
+    def get_networks(self, container_id: str) -> list[Network]:
+        raise NotImplementedError
+

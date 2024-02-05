@@ -5,7 +5,8 @@
 
 from contextlib import suppress
 from datetime import datetime
-from typing import List, Optional
+import json
+from typing import Any, List, Optional
 
 import docker
 import docker.errors
@@ -13,7 +14,7 @@ import docker.models.containers
 import psutil
 from dateutil.parser import isoparse
 
-from granulate_utils.containers.container import Container, ContainersClientInterface, TimeInfo
+from granulate_utils.containers.container import Container, ContainersClientInterface, TimeInfo, Network
 from granulate_utils.exceptions import ContainerNotFound
 from granulate_utils.linux import ns
 
@@ -37,7 +38,23 @@ class DockerClient(ContainersClientInterface):
 
     def get_runtimes(self) -> List[str]:
         return ["docker"]
+    
+    def get_networks(self, container_id: str) -> Network:
+        container = self._docker.containers.get(container_id)
+        networks_dict = json.loads(next(container.stats()))['networks']
+        networks_filtered_dict = {k: v for k, v in networks_dict.items() if k.startswith("eth")}
 
+        return [
+            Network(
+                name=k,
+                rx_bytes=v["rx_bytes"],
+                rx_errors=v["rx_errors"],
+                tx_bytes=v["tx_bytes"],
+                tx_errors=v["tx_errors"],
+            )
+            for k, v in networks_filtered_dict.items()
+        ]
+    
     @staticmethod
     def _parse_docker_ts(ts: str) -> Optional[datetime]:
         assert ts.endswith("Z")  # assert UTC
@@ -67,4 +84,5 @@ class DockerClient(ContainersClientInterface):
             running=container.status == "running",
             process=process,
             time_info=time_info,
+            networks=json.loads(next(container.stats()))['networks'],
         )

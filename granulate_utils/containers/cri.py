@@ -7,12 +7,12 @@ from __future__ import annotations
 import json
 from contextlib import contextmanager, suppress
 from datetime import datetime, timezone
-from typing import Any, List, Optional, Type, TypeVar
+from typing import Any, Callable, List, Optional, Type, TypeVar
 
 import grpc  # type: ignore # no types-grpc sadly
 import psutil
 
-from granulate_utils.containers.container import Container, ContainersClientInterface, TimeInfo
+from granulate_utils.containers.container import Container, ContainersClientInterface, TimeInfo, Network
 from granulate_utils.exceptions import ContainerNotFound, CriNotAvailableError
 from granulate_utils.generated.containers.cri import v1, v1alpha2  # type: ignore
 from granulate_utils.linux import ns
@@ -63,23 +63,60 @@ class _Client:
                 else:
                     containers.append(self._create_container(runtime_container, None))
         return containers
-
-    def _get_container(self, stub, container_id: str, *, verbose: bool) -> Optional[Container]:
+    
+    R = TypeVar("R")
+    
+    @staticmethod
+    def _wrap_grpc_request(func: Callable[[], R]) -> Optional[R]:
         try:
-            status_response = stub.ContainerStatus(
-                self.api.api_pb2.ContainerStatusRequest(container_id=container_id, verbose=verbose)
-            )
+            return func()
         except grpc._channel._InactiveRpcError as e:
             if e.code() == grpc.StatusCode.NOT_FOUND:
                 return None
             raise
-        else:
-            pid: Optional[int] = json.loads(status_response.info.get("info", "{}")).get("pid")
-            return self._create_container(status_response.status, pid)
+
+    def _get_container(self, stub, container_id: str, *, verbose: bool) -> Optional[Container]:
+        status_response = self._wrap_grpc_request(lambda: stub.ContainerStatus(self.api.api_pb2.ContainerStatusRequest(container_id=container_id, verbose=verbose)))
+        if status_response is None:
+            return None
+        
+        pid: Optional[int] = json.loads(status_response.info.get("info", "{}")).get("pid")
+        return self._create_container(status_response.status, pid)  
 
     def get_container(self, container_id: str, all_info: bool) -> Optional[Container]:
         with self.stub() as stub:
             return self._get_container(stub, container_id, verbose=all_info)
+    
+  
+    def _get_networks(self, stub, pod_sandbox_id: str) -> Any:
+        stats = self._wrap_grpc_request(lambda: stub.PodSandboxStats(self.api.api_pb2.PodSandboxStatsRequest(pod_sandbox_id=pod_sandbox_id)))
+        if stats is None:
+            return None
+        return stats.stats.linux.network.interfaces
+    
+    def _container_sandbox_mapping(self, stub) -> dict[str, str]:
+        containers = self._wrap_grpc_request(lambda: stub.ListContainers(self.api.api_pb2.ListContainersRequest()))
+        return {
+            container.id: container.pod_sandbox_id
+            for container in containers.containers
+        }        
+    
+    def get_networks(self, container_id: str) -> Network:       
+        with self.stub() as stub:
+            sandbox_id = self._container_sandbox_mapping(stub)[container_id]
+            net_interfaces = self._get_networks(stub, sandbox_id)
+            
+            return [
+                Network(
+                    name=net_interface.name,
+                    rx_bytes=net_interface.rx_bytes,
+                    rx_errors=net_interface.rx_errors,
+                    tx_bytes=net_interface.tx_bytes,
+                    tx_errors=net_interface.tx_errors,
+                )
+                for net_interface in net_interfaces
+                if net_interface.name.startswith("eth")
+            ]
 
     def _create_container(
         self,
