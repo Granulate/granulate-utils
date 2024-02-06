@@ -40,20 +40,7 @@ class DockerClient(ContainersClientInterface):
         return ["docker"]
     
     def get_networks(self, container_id: str) -> Network:
-        container = self._docker.containers.get(container_id)
-        networks_dict: dict[str, Any] = json.loads(next(container.stats()))['networks']
-        networks_filtered_dict = {k: v for k, v in networks_dict.items() if k.startswith("eth")}
-
-        return [
-            Network(
-                name=k,
-                rx_bytes=v["rx_bytes"],
-                rx_errors=v["rx_errors"],
-                tx_bytes=v["tx_bytes"],
-                tx_errors=v["tx_errors"],
-            )
-            for k, v in networks_filtered_dict.items()
-        ]
+        return self.get_container(container_id, False).networks
     
     @staticmethod
     def _parse_docker_ts(ts: str) -> Optional[datetime]:
@@ -75,6 +62,19 @@ class DockerClient(ContainersClientInterface):
         if pid is not None:
             with suppress(psutil.NoSuchProcess):
                 process = psutil.Process(pid)
+        
+        networks: dict[str, Any] = json.loads(next(container.stats()))['networks']
+        networks_list = [
+            Network(
+                name=name,
+                rx_bytes=net_interface['rx_bytes'],
+                rx_errors=net_interface['rx_errors'],
+                tx_bytes=net_interface['tx_bytes'],
+                tx_errors=net_interface['tx_errors'],
+            )
+            for name, net_interface in networks.items()
+            if name.startswith("eth")
+        ]
 
         return Container(
             runtime="docker",
@@ -84,5 +84,5 @@ class DockerClient(ContainersClientInterface):
             running=container.status == "running",
             process=process,
             time_info=time_info,
-            networks=json.loads(next(container.stats()))['networks'],
+            networks=networks_list,
         )
