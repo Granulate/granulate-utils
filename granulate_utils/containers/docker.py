@@ -41,7 +41,7 @@ class DockerClient(ContainersClientInterface):
     
     def get_networks(self, container_id: str) -> Network:
         container = self._docker.containers.get(container_id)
-        networks_dict = json.loads(next(container.stats()))['networks']
+        networks_dict: dict[str, Any] = json.loads(next(container.stats()))['networks']
         networks_filtered_dict = {k: v for k, v in networks_dict.items() if k.startswith("eth")}
 
         return [
