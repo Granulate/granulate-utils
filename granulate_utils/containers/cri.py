@@ -101,7 +101,7 @@ class _Client:
             for container in containers.containers
         }        
     
-    def get_networks(self, container_id: str) -> Network:       
+    def get_networks(self, container_id: str) -> list[Network]:       
         with self.stub() as stub:
             sandbox_id = self._container_sandbox_mapping(stub)[container_id]
             net_interfaces = self._get_networks(stub, sandbox_id)
@@ -147,6 +147,7 @@ class _Client:
             running=container.state == self.api.api_pb2.CONTAINER_RUNNING,
             process=process,
             time_info=time_info,
+            networks=self.get_networks(container.id),
         )
 
 
