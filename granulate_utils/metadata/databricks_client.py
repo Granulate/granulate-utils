@@ -56,12 +56,12 @@ RUN_ID_REGEX = "-run-\\d+"
 
 class DBXWebUIEnvWrapper:
     def __init__(
-        self,
-        logger: logging.LoggerAdapter,
-        enable_retries: bool = True,
-        http_request_timeout: int = DEFAULT_REQUEST_TIMEOUT,
-        raise_on_failure: bool = False,
-        verify_request_ssl: bool = DEFAULT_REQUEST_VERIFY_SSL,
+            self,
+            logger: logging.LoggerAdapter,
+            enable_retries: bool = True,
+            http_request_timeout: int = DEFAULT_REQUEST_TIMEOUT,
+            raise_on_failure: bool = False,
+            verify_request_ssl: bool = DEFAULT_REQUEST_VERIFY_SSL,
     ) -> None:
         if raise_on_failure:
             assert not enable_retries, "enable_retries and raise_on_failure can't be both True"
@@ -100,7 +100,9 @@ class DBXWebUIEnvWrapper:
         with open(DATABRICKS_METRICS_PROP_PATH) as f:
             properties = f.read()
         try:
-            host = dict([line.split("=", 1) for line in properties.splitlines()])[HOST_KEY_NAME]
+            properties_values = dict(line.split("=", 1) for line in properties.splitlines()
+                                     if line.count("=") == 1 and not line.startswith("#"))
+            host = properties_values[HOST_KEY_NAME]
         except KeyError as e:
             if e.args[0] == HOST_KEY_NAME:
                 # Might happen while provisioning the cluster, retry.
@@ -209,7 +211,7 @@ class DBXWebUIEnvWrapper:
         # First, trying to extract `CLUSTER_USAGE_ALL_TAGS_PROP` property, in case not redacted.
         result: Dict[str, str] = {}
         if (
-            cluster_all_tags_value := spark_properties.get(CLUSTER_USAGE_ALL_TAGS_PROP)
+                cluster_all_tags_value := spark_properties.get(CLUSTER_USAGE_ALL_TAGS_PROP)
         ) is not None and DATABRICKS_REDACTED_STR not in cluster_all_tags_value:
             try:
                 cluster_all_tags_value_json = json.loads(cluster_all_tags_value)
