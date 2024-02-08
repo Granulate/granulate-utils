@@ -100,9 +100,9 @@ class DBXWebUIEnvWrapper:
         with open(DATABRICKS_METRICS_PROP_PATH) as f:
             properties = f.read()
         try:
+            # Ignore line without `=` declaration
             properties_values = dict(line.split("=", 1) for line in properties.splitlines() if "=" in line)
             host = properties_values[HOST_KEY_NAME]
-
         except KeyError as e:
             if e.args[0] == HOST_KEY_NAME:
                 # Might happen while provisioning the cluster, retry.
