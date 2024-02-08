@@ -103,6 +103,7 @@ class DBXWebUIEnvWrapper:
             properties_values = dict(line.split("=", 1) for line in properties.splitlines()
                                      if line.count("=") == 1 and not line.startswith("#"))
             host = properties_values[HOST_KEY_NAME]
+
         except KeyError as e:
             if e.args[0] == HOST_KEY_NAME:
                 # Might happen while provisioning the cluster, retry.
