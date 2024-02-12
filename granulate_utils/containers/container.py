@@ -40,7 +40,7 @@ class Container:
     process: Optional[psutil.Process]
     # None if not requested, make sure to pass all_info=True
     time_info: Optional[TimeInfo]
-    networks: Network
+    networks: list[Network]
 
 class ContainersClientInterface:    
     def list_containers(self, all_info: bool) -> List[Container]:
