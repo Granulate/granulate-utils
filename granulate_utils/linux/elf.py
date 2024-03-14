@@ -18,7 +18,7 @@ import hashlib
 from contextlib import contextmanager
 from enum import Enum, auto
 from pathlib import Path
-from typing import Callable, List, Optional, TypeVar, Union, cast
+from typing import Any, Callable, Iterator, List, Optional, TypeVar, Union, cast
 
 import psutil
 from elftools.elf.elffile import ELFError, ELFFile
@@ -58,7 +58,7 @@ ELFType = Union[ELFFile, Path, str]
 
 
 @contextmanager
-def open_elf(elf: ELFType) -> ELFFile:
+def open_elf(elf: ELFType) -> Iterator[ELFFile]:
     if isinstance(elf, ELFFile):
         yield elf
     else:
@@ -73,8 +73,8 @@ def get_elf_arch(elf: ELFType) -> str:
     """
     Gets the file architecture embedded in the ELF file section
     """
-    with open_elf(elf) as elf:
-        return elf.get_machine_arch()
+    with open_elf(elf) as elff:
+        return elff.get_machine_arch()
 
 
 def elf_arch_to_uname_arch(arch: str) -> str:
@@ -87,14 +87,14 @@ def elf_arch_to_uname_arch(arch: str) -> str:
     }[arch]
 
 
-def get_elf_buildid(elf: ELFType, section: str, note_check: Callable[[NoteSection], bool]) -> Optional[str]:
+def get_elf_buildid(elf: ELFType, section: str, note_check: Callable[[Any], bool]) -> Optional[str]:
     """
     Gets the build ID embedded in an ELF file note section as a string,
     or None if not present.
     Lambda argument is used to verify that note meets caller's requirements.
     """
-    with open_elf(elf) as elf:
-        note_section = elf.get_section_by_name(section)
+    with open_elf(elf) as elff:
+        note_section = elff.get_section_by_name(section)
         if note_section is None or not isinstance(note_section, NoteSection):
             return None
 
@@ -111,19 +111,19 @@ def get_elf_id(elf: ELFType) -> str:
     We prefer to use buildids. If a buildid does not exist for an ELF file,
     we instead grab its SHA1.
     """
-    with open_elf(elf) as elf:
-        buildid = get_elf_buildid(elf, ".note.gnu.build-id", lambda note: note.n_type == "NT_GNU_BUILD_ID")
+    with open_elf(elf) as elff:
+        buildid = get_elf_buildid(elff, ".note.gnu.build-id", lambda note: note.n_type == "NT_GNU_BUILD_ID")
         if buildid is not None:
             return f"buildid:{buildid}"
 
         # hash in one chunk
-        with open(elf.stream.name, "rb") as f:
+        with open(elff.stream.name, "rb") as f:
             return f"sha1:{hashlib.sha1(f.read()).hexdigest()}"
 
 
 def read_elf_va(elf: ELFType, va: int, size: int) -> Optional[bytes]:
-    with open_elf(elf) as elf:
-        for section in elf.iter_sections():
+    with open_elf(elf) as elff:
+        for section in elff.iter_sections():
             section_start = section.header.sh_addr
             section_end = section.header.sh_addr + section.header.sh_size
             if section_start <= va and section_end >= va + size:
@@ -133,24 +133,24 @@ def read_elf_va(elf: ELFType, va: int, size: int) -> Optional[bytes]:
 
 
 def read_elf_symbol(elf: ELFType, sym_name: str, size: int) -> Optional[bytes]:
-    with open_elf(elf) as elf:
-        addr = get_symbol_addr(elf, sym_name)
+    with open_elf(elf) as elff:
+        addr = get_symbol_addr(elff, sym_name)
         if addr is None:
             return None
-        return read_elf_va(elf, addr, size)
+        return read_elf_va(elff, addr, size)
 
 
 def is_statically_linked(elf: ELFType) -> bool:
-    with open_elf(elf) as elf:
-        for segment in elf.iter_segments():
+    with open_elf(elf) as elff:
+        for segment in elff.iter_segments():
             if segment.header.p_type == "PT_DYNAMIC":
                 return False
     return True
 
 
 def get_symbol_addr(elf: ELFType, sym_name: str) -> Optional[int]:
-    with open_elf(elf) as elf:
-        symtab = elf.get_section_by_name(".symtab")
+    with open_elf(elf) as elff:
+        symtab = elff.get_section_by_name(".symtab")
         if symtab is None:
             return None
         symbols = symtab.get_symbol_by_name(sym_name)
@@ -162,16 +162,16 @@ def get_symbol_addr(elf: ELFType, sym_name: str) -> Optional[int]:
 
 
 def get_dt_needed(elf: ELFType) -> Optional[List[str]]:
-    with open_elf(elf) as elf:
-        dynamic_section = elf.get_section_by_name(".dynamic")
+    with open_elf(elf) as elff:
+        dynamic_section = elff.get_section_by_name(".dynamic")
         if dynamic_section is None:
             return None
         return [tag.needed for tag in dynamic_section.iter_tags() if tag.entry.d_tag == "DT_NEEDED"]
 
 
 def get_libc_type(elf: ELFType) -> LibcType:
-    with open_elf(elf) as elf:
-        dt_needed = get_dt_needed(elf)
+    with open_elf(elf) as elff:
+        dt_needed = get_dt_needed(elff)
         if dt_needed is not None:
             found_glibc = False
             found_musl = False
@@ -185,22 +185,22 @@ def get_libc_type(elf: ELFType) -> LibcType:
                 if "ld-musl" in needed:
                     found_musl = True
             if found_glibc and found_musl:
-                raise Exception(f"Found both musl and glibc in the same binary: {elf.stream.name!r}")
+                raise Exception(f"Found both musl and glibc in the same binary: {elff.stream.name!r}")
             if found_musl:
                 return LibcType.DYNAMIC_MUSL
             if found_glibc:
                 return LibcType.DYNAMIC_GLIBC
-            raise Exception(f"Found a dynamic binary without a libc: {elf.stream.name!r}")
+            raise Exception(f"Found a dynamic binary without a libc: {elff.stream.name!r}")
 
         # This symbol exists in both musl and glibc, and is even used by musl to recognize a DSO as a libc.
         # They even comment that it works on both musl and glibc.
         # https://github.com/bminor/musl/blob/dc9285ad1dc19349c407072cc48ba70dab86de45/ldso/dynlink.c#L1143-L1152
-        if get_symbol_addr(elf, "__libc_start_main") is not None:
+        if get_symbol_addr(elff, "__libc_start_main") is not None:
             return LibcType.STATIC_LIBC
 
         return LibcType.STATIC_NO_LIBC
 
 
 def elf_is_stripped(elf: ELFType) -> bool:
-    with open_elf(elf) as elf:
-        return elf.get_section_by_name(".symtab") is None
+    with open_elf(elf) as elff:
+        return elff.get_section_by_name(".symtab") is None
