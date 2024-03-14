@@ -21,8 +21,8 @@ from pathlib import Path
 from typing import Callable, List, Optional, TypeVar, Union, cast
 
 import psutil
-from elftools.elf.elffile import ELFError, ELFFile  # type: ignore
-from elftools.elf.sections import NoteSection  # type: ignore
+from elftools.elf.elffile import ELFError, ELFFile
+from elftools.elf.sections import NoteSection
 from typing_extensions import ParamSpec
 
 __all__ = ["ELFError"]
@@ -43,8 +43,8 @@ def wrap_as_nosuchprocess(exc: FileNotFoundError) -> Union[FileNotFoundError, ps
             if pid <= pid_max:
                 # Check if pid is running
                 if not psutil.pid_exists(pid):
-                    raise psutil.NoSuchProcess(pid)
-    raise exc
+                    return psutil.NoSuchProcess(pid)
+    return exc
 
 
 class LibcType(Enum):
@@ -66,7 +66,7 @@ def open_elf(elf: ELFType) -> ELFFile:
             with open(elf, "rb") as f:
                 yield ELFFile(f)
         except FileNotFoundError as e:
-            raise wrap_as_nosuchprocess(e)
+            raise wrap_as_nosuchprocess(e) from e
 
 
 def get_elf_arch(elf: ELFType) -> str:
