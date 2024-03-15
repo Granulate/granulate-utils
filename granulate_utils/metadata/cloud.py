@@ -17,8 +17,9 @@
 import logging
 import os
 from dataclasses import dataclass
+from functools import partial
 from http.client import NOT_FOUND
-from typing import Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import requests
 from requests import Response
@@ -28,6 +29,7 @@ from granulate_utils.exceptions import BadResponseCode
 from granulate_utils.futures import call_in_parallel
 from granulate_utils.linux.ns import run_in_ns
 from granulate_utils.metadata import Metadata
+from granulate_utils.metadata.interfaces import ProcessedStringField, process_string
 
 METADATA_REQUEST_TIMEOUT = 5
 
@@ -43,16 +45,16 @@ class AwsInstanceMetadata(CloudMetadataBase):
     zone: str
     instance_type: str
     life_cycle: str
-    account_id: str
+    account_id: ProcessedStringField
     image_id: str
-    instance_id: str
+    instance_id: ProcessedStringField
 
 
 @dataclass
 class AwsContainerMetadata(CloudMetadataBase):
     execution_env: str
     region: str
-    container_arn: str
+    container_arn: ProcessedStringField
 
 
 @dataclass
@@ -62,9 +64,9 @@ class GcpInstanceMetadata(CloudMetadataBase):
     instance_type: str
     preempted: bool
     preemptible: bool
-    instance_id: str
+    instance_id: ProcessedStringField
     image_id: str
-    name: str
+    name: ProcessedStringField
 
 
 @dataclass
@@ -73,23 +75,27 @@ class AzureInstanceMetadata(CloudMetadataBase):
     instance_type: str
     zone: str
     region: str
-    subscription_id: str
-    resource_group_name: str
-    resource_id: str
-    instance_id: str
-    name: str
+    subscription_id: ProcessedStringField
+    resource_group_name: ProcessedStringField
+    resource_id: ProcessedStringField
+    instance_id: ProcessedStringField
+    name: ProcessedStringField
     image_info: Optional[Dict[str, str]]
 
 
-def get_aws_metadata() -> Optional[Union[AwsInstanceMetadata, AwsContainerMetadata]]:
+def get_aws_metadata(
+    processor: Callable[[str], ProcessedStringField] = process_string
+) -> Optional[Union[AwsInstanceMetadata, AwsContainerMetadata]]:
     aws_execution_env = get_aws_execution_env()
     if aws_execution_env == "AWS_ECS_FARGATE":
-        return get_aws_container_metadata()
+        return get_aws_container_metadata(processor=processor)
     else:
-        return get_aws_instance_metadata()
+        return get_aws_instance_metadata(processor=processor)
 
 
-def get_aws_instance_metadata() -> Optional[AwsInstanceMetadata]:
+def get_aws_instance_metadata(
+    processor: Callable[[str], ProcessedStringField] = process_string
+) -> Optional[AwsInstanceMetadata]:
     # Documentation:
     # on the format: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-categories.html
     # on the protocol: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html
@@ -115,13 +121,15 @@ def get_aws_instance_metadata() -> Optional[AwsInstanceMetadata]:
         zone=instance["availabilityZone"],
         instance_type=instance["instanceType"],
         life_cycle=life_cycle_response.text,
-        account_id=instance["accountId"],
+        account_id=processor(instance["accountId"]),
         image_id=instance["imageId"],
-        instance_id=instance["instanceId"],
+        instance_id=processor(instance["instanceId"]),
     )
 
 
-def get_aws_container_metadata() -> Optional[AwsContainerMetadata]:
+def get_aws_container_metadata(
+    processor: Callable[[str], ProcessedStringField] = process_string
+) -> Optional[AwsContainerMetadata]:
     ecs_container_metadata_uri_v4 = os.environ.get("ECS_CONTAINER_METADATA_URI_V4")
     if ecs_container_metadata_uri_v4 is None:
         return None
@@ -133,11 +141,13 @@ def get_aws_container_metadata() -> Optional[AwsContainerMetadata]:
         provider="aws",
         execution_env=os.environ["AWS_EXECUTION_ENV"],
         region=os.environ["AWS_REGION"],
-        container_arn=metadata["ContainerARN"],
+        container_arn=processor(metadata["ContainerARN"]),
     )
 
 
-def get_gcp_metadata() -> Optional[GcpInstanceMetadata]:
+def get_gcp_metadata(
+    processor: Callable[[str], ProcessedStringField] = process_string
+) -> Optional[GcpInstanceMetadata]:
     # Documentation: https://cloud.google.com/compute/docs/storing-retrieving-metadata
     # https://cloud.google.com/compute/docs/metadata/default-metadata-values
     response = send_request(
@@ -156,13 +166,15 @@ def get_gcp_metadata() -> Optional[GcpInstanceMetadata]:
         instance_type=instance["machineType"].rpartition("/")[2],
         preemptible=instance["scheduling"]["preemptible"] == "TRUE",
         preempted=instance["preempted"] == "TRUE",
-        instance_id=str(instance["id"]),
+        instance_id=processor(str(instance["id"])),
         image_id=instance["image"],
-        name=instance["name"],
+        name=processor(instance["name"]),
     )
 
 
-def get_azure_metadata() -> Optional[AzureInstanceMetadata]:
+def get_azure_metadata(
+    processor: Callable[[str], ProcessedStringField] = process_string
+) -> Optional[AzureInstanceMetadata]:
     # Documentation: https://docs.microsoft.com/en-us/azure/virtual-machines/linux/instance-metadata-service?tabs=linux
     response = send_request(
         "http://169.254.169.254/metadata/instance/compute/?api-version=2019-08-15", headers={"Metadata": "true"}
@@ -188,11 +200,11 @@ def get_azure_metadata() -> Optional[AzureInstanceMetadata]:
         instance_type=instance["vmSize"],
         zone=instance["zone"],
         region=instance["location"],
-        subscription_id=instance["subscriptionId"],
-        resource_group_name=instance["resourceGroupName"],
-        resource_id=instance["resourceId"],
-        instance_id=instance["vmId"],
-        name=instance["name"],
+        subscription_id=processor(instance["subscriptionId"]),
+        resource_group_name=processor(instance["resourceGroupName"]),
+        resource_id=processor(instance["resourceId"]),
+        instance_id=processor(instance["vmId"]),
+        name=processor(instance["name"]),
         image_info=image_info,
     )
 
@@ -207,12 +219,15 @@ def send_request(url: str, headers: Dict[str, str] = None, method: str = "get") 
     return response
 
 
-def get_static_cloud_metadata(logger: Union[logging.LoggerAdapter, logging.Logger]) -> Optional[Metadata]:
+def get_static_cloud_metadata(
+    logger: Union[logging.LoggerAdapter, logging.Logger],
+    processor: Callable[[str], ProcessedStringField] = process_string,
+) -> Optional[Metadata]:
     raised_exceptions: List[Exception] = []
-    cloud_metadata_fetchers = [
-        get_aws_metadata,
-        get_gcp_metadata,
-        get_azure_metadata,
+    cloud_metadata_fetchers: List[Callable[[], Any]] = [
+        partial(get_aws_metadata, processor=processor),
+        partial(get_gcp_metadata, processor=processor),
+        partial(get_azure_metadata, processor=processor),
     ]
 
     def _fetch() -> Optional[Metadata]:
