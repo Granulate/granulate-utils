@@ -1,6 +1,7 @@
 from unittest.mock import mock_open, patch
 
-from granulate_utils.metadata.bigdata import BigDataInfo, get_bigdata_info
+from granulate_utils.metadata.bigdata import BigDataInfo
+from granulate_utils.metadata.bigdata.bigdatainfo import get_bigdata_info
 
 
 def test_detect_emr() -> None:
