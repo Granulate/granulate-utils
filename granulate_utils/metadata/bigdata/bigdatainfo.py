@@ -1,6 +1,9 @@
 from typing import Optional
 
-from granulate_utils.metadata.bigdata import BigDataInfo, get_databricks_version, get_dataproc_version, get_emr_version
+from granulate_utils.metadata.bigdata.databricks import get_databricks_version
+from granulate_utils.metadata.bigdata.dataproc import get_dataproc_version
+from granulate_utils.metadata.bigdata.emr import get_emr_version
+from granulate_utils.metadata.bigdata.interfaces import BigDataInfo
 
 
 def get_bigdata_info() -> Optional[BigDataInfo]:
