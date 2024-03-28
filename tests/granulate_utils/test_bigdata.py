@@ -43,5 +43,19 @@ DATAPROC_IMAGE_BUILD=20230208-155100-RC01-2_0_deb10_20230127_081410-RC01
         mopen.assert_called_once_with("/etc/environment", "r")
 
 
+def test_detect_cloudera() -> None:
+    cm_agent_properties_file_content = """
+version=7.4.4
+git.hash=aa2740de2751a99075f3d170fd5e55fdfb4c6121
+cloudera.hash=aa2740de2751a99075f3d170fd5e55fdfb4c6121
+"""
+
+    with patch(
+        "granulate_utils.metadata.bigdata.cloudera.open", mock_open(read_data=cm_agent_properties_file_content)
+    ) as mopen:
+        assert get_bigdata_info() == BigDataInfo("cloudera", "7.4.4")
+        mopen.assert_called_once_with("/opt/cloudera/cm-agent/cm_version.properties", "r")
+
+
 def test_return_none() -> None:
     assert get_bigdata_info() is None
