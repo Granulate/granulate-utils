@@ -131,9 +131,9 @@ class DBXWebUIEnvWrapper:
                 return self._fetch_cluster_all_tags()
 
             except Exception as e:
-                self.logger.exception("Exception was raised while getting DBX environment metadata")
                 if self.raise_on_failure:
                     raise e
+                self.logger.exception("Exception was raised while getting DBX environment metadata")
 
             if not self.enable_retries:
                 break
