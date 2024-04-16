@@ -97,6 +97,8 @@ class DBXWebUIEnvWrapper:
             )
             resp.raise_for_status()
             return resp
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+            raise SparkNotReadyException("Failed to connect to SparkUI. Spark is probably still initializing") from e
         except requests.exceptions.RequestException as e:
             if e.response is not None:
                 raise SparkAPIException(
