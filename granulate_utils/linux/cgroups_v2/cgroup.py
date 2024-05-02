@@ -16,7 +16,6 @@
 
 from __future__ import annotations
 
-from contextlib import suppress
 from pathlib import Path
 from typing import List, Literal, Mapping, Optional, Union
 
@@ -182,24 +181,23 @@ class CgroupCore:
 
     def with_new_path(self, new_path: Path | str) -> Self:
         new_path = Path(new_path)
-        # Absolute paths can either be under cgroup_mount_path (e.g. /sys/fs/cgroup/...)
-        # or relative to the cgroup_mount_root ('/' if not in a container, '/docker/<guid>' if docker on V1)
-        # if read from /proc/pid/cgroup
-        if new_path.is_absolute():
-            try:
-                # If new_path is relative to the mount path, use it as it is
-                new_path.relative_to(self.cgroup_mount_path)
-            except ValueError:
-                # If not relative to cgroup_mount_path, check if it's relative to mount_root
-
-                # we suppress ValueError to maintain compatability with the old code:
-                # absolute paths remain unchanged if not starting with cgroup_mount_root
-                with suppress(ValueError):
-                    new_path = new_path.relative_to(self.cgroup_mount_root)
-
         if not new_path.is_absolute():
             new_path = self.cgroup_abs_path / new_path
         return type(self)(new_path, self.cgroup_mount_path, self.cgroup_mount_root)
+
+    def with_new_path_from_proc_pid_cgroup_file(self, new_path: Path | str) -> Self:
+        new_path = Path(new_path)
+        # /proc/pid/cgroup yields something the resembles an absolute path, but in reality it's relative
+        # to the mount path (/sys/fs/cgroup/...) in the HOST ns.
+        # We first strip the cgroup_mount_root ('/' if not in a container, '/docker/<guid>' if docker on V1)
+        # to create a relative path, then add it to the mount path
+        assert new_path.is_absolute()
+        try:
+            new_path = new_path.relative_to(self.cgroup_mount_root)
+        except ValueError:
+            raise ValueError(f"new path {new_path} is not relative to cgroup mount root {self.cgroup_mount_root}")
+
+        return self.with_new_path(new_path)
 
 
 class CgroupCoreV1(CgroupCore):
@@ -297,11 +295,11 @@ def _get_cgroup_for_process(controller: ControllerType, process: Optional[psutil
     if cgroup_mount.is_v1:
         controller_cgroup_relative_path = _get_controller_relative_path(controller, process)
         if controller_cgroup_relative_path is not None:
-            return cgroup_mount.with_new_path(controller_cgroup_relative_path)
+            return cgroup_mount.with_new_path_from_proc_pid_cgroup_file(controller_cgroup_relative_path)
     elif cgroup_mount.is_v2:
         unified_cgroup_relative_path = _get_unified_controller_relative_path(process)
         if unified_cgroup_relative_path is not None:
-            return cgroup_mount.with_new_path(unified_cgroup_relative_path)
+            return cgroup_mount.with_new_path_from_proc_pid_cgroup_file(unified_cgroup_relative_path)
 
     raise Exception(f"{controller!r} not found")
 
