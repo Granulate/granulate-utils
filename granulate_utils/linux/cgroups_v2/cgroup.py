@@ -281,7 +281,7 @@ def _get_controller_relative_path(
 def _get_unified_controller_relative_path(process: Optional[psutil.Process] = None) -> Optional[str]:
     for process_cgroup in get_process_cgroups(process):
         if process_cgroup.hier_id == "0":
-            return process_cgroup.relative_path.lstrip("/")
+            return process_cgroup.relative_path
 
     return None
 
