@@ -278,14 +278,6 @@ def _get_cgroup_mount_checked(controller: ControllerType) -> CgroupCore:
 
 def _get_cgroup_from_path(controller: ControllerType, cgroup_path_or_full_path: Path) -> CgroupCore:
     cgroup_mount = _get_cgroup_mount_checked(controller)
-
-    try:
-        # it's a real full path, has to be under cgroup_abs_path
-        cgroup_path_or_full_path = cgroup_path_or_full_path.relative_to(cgroup_mount.cgroup_abs_path)
-    except ValueError:
-        # it's a path relative to controller mount point
-        cgroup_path_or_full_path = Path(cgroup_path_or_full_path.as_posix().lstrip("/"))
-
     return cgroup_mount.with_new_path(cgroup_path_or_full_path)
 
 
