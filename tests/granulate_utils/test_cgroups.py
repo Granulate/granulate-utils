@@ -37,7 +37,7 @@ def test_get_cgroup_current_process():
 
     with patch(
         "granulate_utils.linux.cgroups_v2.cgroup._get_cgroup_mount",
-        return_value=CgroupCoreV1(root_path, Path("."), Path("/")),
+        return_value=CgroupCoreV1(root_path, root_path, Path("/")),
     ):
         with patch(
             "granulate_utils.linux.cgroups_v2.cgroup.read_proc_file",
