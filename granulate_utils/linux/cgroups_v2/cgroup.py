@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import List, Literal, Mapping, Optional, Union
 
@@ -186,6 +187,7 @@ class CgroupCore:
         return type(self)(new_path, self.cgroup_mount_path, self.cgroup_mount_root)
 
     def with_new_path_from_proc_pid_cgroup_file(self, new_path: Path | str) -> Self:
+        logger = logging.getLogger("granulate")
         new_path = Path(new_path)
         # /proc/pid/cgroup yields something the resembles an absolute path, but in reality it's relative
         # to the mount path (/sys/fs/cgroup/...) in the HOST ns.
@@ -193,11 +195,14 @@ class CgroupCore:
         # to create a relative path, then add it to the mount path
         assert new_path.is_absolute()
         try:
-            new_path = new_path.relative_to(self.cgroup_mount_root)
+            relative_path = new_path.relative_to(self.cgroup_mount_root)
+            logger.debug(f"/proc/pid/cgroup path: {new_path} normalized: {relative_path}")
         except ValueError:
             raise ValueError(f"new path {new_path} is not relative to cgroup mount root {self.cgroup_mount_root}")
 
-        return self.with_new_path(new_path)
+        new_cgroup = self.with_new_path(relative_path)
+        logger.debug(f"/proc/pid/cgroup full path is {new_cgroup.cgroup_abs_path}")
+        return new_cgroup
 
 
 class CgroupCoreV1(CgroupCore):
