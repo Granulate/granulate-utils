@@ -91,7 +91,7 @@ def _find_v1_hierarchies() -> Mapping[str, tuple[str, str]]:
         if controllers:
             hierarchy = mount.mount_point
             hierarchy = ns.resolve_host_root_links(hierarchy)
-            mount_root = ns.resolve_host_root_links(mount.root)
+            mount_root = mount.root
             for controller in controllers:
                 hierarchies[controller] = (hierarchy, mount_root)
     return hierarchies
@@ -110,7 +110,7 @@ def _find_v2_hierarchy() -> Optional[tuple[str, str]]:
         raise Exception("More than one cgroup2 mount found!")
     path = cgroup2_mounts[0].mount_point
     path = ns.resolve_host_root_links(path)
-    mount_root = ns.resolve_host_root_links(cgroup2_mounts[0].root)
+    mount_root = cgroup2_mounts[0].root
     return path, mount_root
 
 
