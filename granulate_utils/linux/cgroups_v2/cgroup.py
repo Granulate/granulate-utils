@@ -181,27 +181,39 @@ class CgroupCore:
         return cls(cgroup_abs_path, mount_point, cgroup_source_path)
 
     def with_new_path(self, new_path: Path | str) -> Self:
-        new_path = Path(new_path)
-        if not new_path.is_absolute():
-            new_path = self.cgroup_abs_path / new_path
-        return type(self)(new_path, self.cgroup_mount_path, self.cgroup_mount_root)
+        """Create a new CgroupCore with a new cgroup_abs_path under the same mount point
+        Handles three cases:
+        1. Relative path: concatenates to the current cgroup_abs_path
+        2. Absolute path relative to the mount point (/sys/fs/cgroup/...): use it
+        3. Weird path that comes from /proc/pid/cgroup that starts with a / but is actually
+           relative to the mount ROOT, which is / in most cases but /docker/guid in some containers.
+           In these cases, we strip the mount ROOT and treat as a relative path under the mount path"""
 
-    def with_new_path_from_proc_pid_cgroup_file(self, new_path: Path | str) -> Self:
         logger = logging.getLogger("granulate")
         new_path = Path(new_path)
-        # /proc/pid/cgroup yields something the resembles an absolute path, but in reality it's relative
-        # to the mount path (/sys/fs/cgroup/...) in the HOST ns.
-        # We first strip the cgroup_mount_root ('/' if not in a container, '/docker/<guid>' if docker on V1)
-        # to create a relative path, then add it to the mount path
-        assert new_path.is_absolute()
-        try:
-            relative_path = new_path.relative_to(self.cgroup_mount_root)
-            logger.debug(f"/proc/pid/cgroup path: {new_path} normalized: {relative_path}")
-        except ValueError:
-            raise ValueError(f"new path {new_path} is not relative to cgroup mount root {self.cgroup_mount_root}")
+        if not new_path.is_absolute():
+            normalized_path = self.cgroup_abs_path / new_path
+        else:
+            # Real absolute paths have to be under self.cgroup_mount_path.
+            try:
+                new_path.relative_to(self.cgroup_mount_path)  # no exception -> real absolute path
+                normalized_path = new_path
+                logger.debug(f"entering absolute cgroup path: {normalized_path}")
+            except ValueError:
+                # Some paths resemble absolute paths, but they are not:
+                # /proc/pid/cgroup yields something the resembles an absolute path, but in reality it's relative
+                # to the mount path (/sys/fs/cgroup/...) in the HOST ns.
+                # We first strip the cgroup_mount_root ('/' if not in a container, '/docker/<guid>' if docker on V1)
+                # to create a relative path, then add it to the mount path
+                try:
+                    normalized_path = self.cgroup_mount_path / new_path.relative_to(self.cgroup_mount_root)
+                    logger.debug(f"go /proc/pid/cgroup path: {new_path} normalized: {normalized_path}")
+                except ValueError:
+                    raise ValueError(f"new path {new_path} is not relative to cgroup mount root "
+                                     f"{self.cgroup_mount_root} or cgroup abs path {self.cgroup_abs_path}")
 
-        new_cgroup = self.with_new_path(relative_path)
-        logger.debug(f"/proc/pid/cgroup full path is {new_cgroup.cgroup_abs_path}")
+        new_cgroup = type(self)(normalized_path, self.cgroup_mount_path, self.cgroup_mount_root)
+        logger.debug(f"new cgroup full path is {new_cgroup.cgroup_abs_path}")
         return new_cgroup
 
 
@@ -270,6 +282,14 @@ def _get_cgroup_mount_checked(controller: ControllerType) -> CgroupCore:
 
 def _get_cgroup_from_path(controller: ControllerType, cgroup_path_or_full_path: Path) -> CgroupCore:
     cgroup_mount = _get_cgroup_mount_checked(controller)
+
+    try:
+        # it's a real full path, has to be under cgroup_abs_path
+        cgroup_path_or_full_path = cgroup_path_or_full_path.relative_to(cgroup_mount.cgroup_abs_path)
+    except ValueError:
+        # it's a path relative to controller mount point
+        cgroup_path_or_full_path = Path(cgroup_path_or_full_path.as_posix().lstrip("/"))
+
     return cgroup_mount.with_new_path(cgroup_path_or_full_path)
 
 
@@ -300,11 +320,11 @@ def _get_cgroup_for_process(controller: ControllerType, process: Optional[psutil
     if cgroup_mount.is_v1:
         controller_cgroup_relative_path = _get_controller_relative_path(controller, process)
         if controller_cgroup_relative_path is not None:
-            return cgroup_mount.with_new_path_from_proc_pid_cgroup_file(controller_cgroup_relative_path)
+            return cgroup_mount.with_new_path(controller_cgroup_relative_path)
     elif cgroup_mount.is_v2:
         unified_cgroup_relative_path = _get_unified_controller_relative_path(process)
         if unified_cgroup_relative_path is not None:
-            return cgroup_mount.with_new_path_from_proc_pid_cgroup_file(unified_cgroup_relative_path)
+            return cgroup_mount.with_new_path(unified_cgroup_relative_path)
 
     raise Exception(f"{controller!r} not found")
 
