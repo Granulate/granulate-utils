@@ -16,7 +16,6 @@
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import List, Literal, Mapping, Optional, Union
 
@@ -189,7 +188,6 @@ class CgroupCore:
            relative to the mount ROOT, which is / in most cases but /docker/guid in some containers.
            In these cases, we strip the mount ROOT and treat as a relative path under the mount path"""
 
-        logger = logging.getLogger("granulate")
         new_path = Path(new_path)
         if not new_path.is_absolute():
             normalized_path = self.cgroup_abs_path / new_path
@@ -198,7 +196,6 @@ class CgroupCore:
             try:
                 new_path.relative_to(self.cgroup_mount_path)  # no exception -> real absolute path
                 normalized_path = new_path
-                logger.debug(f"entering absolute cgroup path: {normalized_path}")
             except ValueError:
                 # Some paths resemble absolute paths, but they are not:
                 # /proc/pid/cgroup yields something the resembles an absolute path, but in reality it's relative
@@ -207,14 +204,13 @@ class CgroupCore:
                 # to create a relative path, then add it to the mount path
                 try:
                     normalized_path = self.cgroup_mount_path / new_path.relative_to(self.cgroup_mount_root)
-                    logger.debug(f"go /proc/pid/cgroup path: {new_path} normalized: {normalized_path}")
                 except ValueError:
-                    raise ValueError(f"new path {new_path} is not relative to cgroup mount root "
-                                     f"{self.cgroup_mount_root} or cgroup abs path {self.cgroup_abs_path}")
+                    raise ValueError(
+                        f"new path {new_path} is not relative to cgroup mount root "
+                        f"{self.cgroup_mount_root} or cgroup abs path {self.cgroup_abs_path}"
+                    )
 
-        new_cgroup = type(self)(normalized_path, self.cgroup_mount_path, self.cgroup_mount_root)
-        logger.debug(f"new cgroup full path is {new_cgroup.cgroup_abs_path}")
-        return new_cgroup
+        return type(self)(normalized_path, self.cgroup_mount_path, self.cgroup_mount_root)
 
 
 class CgroupCoreV1(CgroupCore):
