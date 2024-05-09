@@ -20,14 +20,13 @@ import uuid
 from json import JSONEncoder
 from typing import Callable, Dict, List, NamedTuple, Optional, Tuple, Union
 
+import requests
 from requests import Session
 from requests.auth import HTTPBasicAuth
 
 from glogger.messages_buffer import MessagesBuffer
 
 from .stdout_logger import get_stdout_logger
-
-SERVER_SEND_ERROR_MESSAGE = "Error posting logs to server"
 
 
 class SendBatch(NamedTuple):
@@ -157,8 +156,21 @@ class Sender:
         try:
             batch = self._send_once()
             self._drop_sent_batch(batch)
+        except requests.exceptions.ConnectionError:
+            self.stdout_logger.error("REMOTE_LOGGER: Failed establishing connection to logs server, check log server url")
+        except requests.exceptions.Timeout:
+            self.stdout_logger.error("REMOTE_LOGGER: Timeout occurred while sending logs to server")
+        except requests.exceptions.HTTPError as err:
+            if err.response.status_code == 401:
+                self.stdout_logger.error(
+                    "REMOTE_LOGGER: Authentication error while sending logs to server, check gprofiler token")
+            elif err.response.status_code == 500:
+                self.stdout_logger.error(
+                    f"REMOTE_LOGGER: Received 500 from server, gprofiler token is probably invalid / missing. error: {str(err)}")
+            else:
+                self.stdout_logger.exception("REMOTE_LOGGER: Unexpected HTTP error while posting logs to server")
         except Exception:
-            self.stdout_logger.exception(SERVER_SEND_ERROR_MESSAGE)
+            self.stdout_logger.exception("REMOTE_LOGGER: Unexpected error posting logs to server")
 
     def _drop_sent_batch(self, batch: SendBatch) -> None:
         assert self.messages_buffer is not None
