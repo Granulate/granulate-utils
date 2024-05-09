@@ -31,12 +31,7 @@ from requests.structures import CaseInsensitiveDict
 
 from glogger.extra_adapter import ExtraAdapter
 from glogger.handler import BatchRequestsHandler
-from glogger.sender import (
-    SENDER_UNAUTHORIZED_MESSAGE,
-    SENDER_UNKNOWN_HTTP_ERROR_MESSAGE,
-    AuthToken,
-    Sender,
-)
+from glogger.sender import SENDER_UNAUTHORIZED_MESSAGE, SENDER_UNKNOWN_HTTP_ERROR_MESSAGE, AuthToken, Sender
 
 
 class MockBatchRequestsHandler(BatchRequestsHandler):
