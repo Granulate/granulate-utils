@@ -28,7 +28,6 @@ from glogger.messages_buffer import MessagesBuffer
 
 from .stdout_logger import get_stdout_logger
 
-
 SENDER_CONNECTION_ERROR_MESSAGE = "REMOTE_LOGGER: Failed establishing connection to logs server, check log server url"
 SENDER_TIMEOUT_MESSAGE = "REMOTE_LOGGER: Timeout occurred while sending logs to server"
 SENDER_UNAUTHORIZED_MESSAGE = "REMOTE_LOGGER: Authentication error while sending logs to server, check gprofiler token"

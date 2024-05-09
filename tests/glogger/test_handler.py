@@ -19,12 +19,12 @@ import json
 import logging
 import random
 import time
-import pytest
 from contextlib import ExitStack
 from copy import deepcopy
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
 
+import pytest
 from requests.adapters import HTTPAdapter
 from requests.models import PreparedRequest, Response
 from requests.structures import CaseInsensitiveDict
@@ -32,13 +32,13 @@ from requests.structures import CaseInsensitiveDict
 from glogger.extra_adapter import ExtraAdapter
 from glogger.handler import BatchRequestsHandler
 from glogger.sender import (
-    AuthToken,
-    Sender,
     SENDER_CONNECTION_ERROR_MESSAGE,
     SENDER_TIMEOUT_MESSAGE,
     SENDER_UNAUTHORIZED_MESSAGE,
-    SENDER_UNKNOWN_HTTP_ERROR_MESSAGE,
     SENDER_UNKNOWN_ERROR_MESSAGE,
+    SENDER_UNKNOWN_HTTP_ERROR_MESSAGE,
+    AuthToken,
+    Sender,
 )
 
 
