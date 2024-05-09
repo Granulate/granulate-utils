@@ -29,6 +29,13 @@ from glogger.messages_buffer import MessagesBuffer
 from .stdout_logger import get_stdout_logger
 
 
+SENDER_CONNECTION_ERROR_MESSAGE = "REMOTE_LOGGER: Failed establishing connection to logs server, check log server url"
+SENDER_TIMEOUT_MESSAGE = "REMOTE_LOGGER: Timeout occurred while sending logs to server"
+SENDER_UNAUTHORIZED_MESSAGE = "REMOTE_LOGGER: Authentication error while sending logs to server, check gprofiler token"
+SENDER_UNKNOWN_HTTP_ERROR_MESSAGE = "REMOTE_LOGGER: Unexpected HTTP error while posting logs to server"
+SENDER_UNKNOWN_ERROR_MESSAGE = "REMOTE_LOGGER: Unexpected error posting logs to server"
+
+
 class SendBatch(NamedTuple):
     ident: str
     logs: List[str]
@@ -157,20 +164,20 @@ class Sender:
             batch = self._send_once()
             self._drop_sent_batch(batch)
         except requests.exceptions.ConnectionError:
-            self.stdout_logger.error("REMOTE_LOGGER: Failed establishing connection to logs server, check log server url")
+            self.stdout_logger.error(SENDER_CONNECTION_ERROR_MESSAGE)
         except requests.exceptions.Timeout:
-            self.stdout_logger.error("REMOTE_LOGGER: Timeout occurred while sending logs to server")
+            self.stdout_logger.error(SENDER_TIMEOUT_MESSAGE)
         except requests.exceptions.HTTPError as err:
             if err.response.status_code == 401:
-                self.stdout_logger.error(
-                    "REMOTE_LOGGER: Authentication error while sending logs to server, check gprofiler token")
+                self.stdout_logger.error(SENDER_UNAUTHORIZED_MESSAGE)
             elif err.response.status_code == 500:
                 self.stdout_logger.error(
-                    f"REMOTE_LOGGER: Received 500 from server, gprofiler token is probably invalid / missing. error: {str(err)}")
+                    f"REMOTE_LOGGER: Received 500 from server, gprofiler token is probably invalid / missing. error: {str(err)}"
+                )
             else:
-                self.stdout_logger.exception("REMOTE_LOGGER: Unexpected HTTP error while posting logs to server")
+                self.stdout_logger.exception(SENDER_UNKNOWN_HTTP_ERROR_MESSAGE)
         except Exception:
-            self.stdout_logger.exception("REMOTE_LOGGER: Unexpected error posting logs to server")
+            self.stdout_logger.exception(SENDER_UNKNOWN_ERROR_MESSAGE)
 
     def _drop_sent_batch(self, batch: SendBatch) -> None:
         assert self.messages_buffer is not None
