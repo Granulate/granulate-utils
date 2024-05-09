@@ -171,7 +171,8 @@ class Sender:
                 self.stdout_logger.error(SENDER_UNAUTHORIZED_MESSAGE)
             elif err.response.status_code == 500:
                 self.stdout_logger.error(
-                    f"REMOTE_LOGGER: Received 500 from server, gprofiler token is probably invalid / missing. error: {str(err)}"
+                    f"REMOTE_LOGGER: Received 500 from server, gprofiler token is probably invalid / missing. "
+                    f"error: {str(err)}"
                 )
             else:
                 self.stdout_logger.exception(SENDER_UNKNOWN_HTTP_ERROR_MESSAGE)

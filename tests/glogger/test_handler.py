@@ -32,10 +32,7 @@ from requests.structures import CaseInsensitiveDict
 from glogger.extra_adapter import ExtraAdapter
 from glogger.handler import BatchRequestsHandler
 from glogger.sender import (
-    SENDER_CONNECTION_ERROR_MESSAGE,
-    SENDER_TIMEOUT_MESSAGE,
     SENDER_UNAUTHORIZED_MESSAGE,
-    SENDER_UNKNOWN_ERROR_MESSAGE,
     SENDER_UNKNOWN_HTTP_ERROR_MESSAGE,
     AuthToken,
     Sender,
