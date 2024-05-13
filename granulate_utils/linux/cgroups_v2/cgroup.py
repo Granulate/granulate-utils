@@ -28,7 +28,7 @@ from granulate_utils.linux import ns
 from granulate_utils.linux.mountinfo import iter_mountinfo
 from granulate_utils.linux.process import read_proc_file
 
-ControllerType = Literal["memory", "cpu", "cpuacct"]
+ControllerType = Literal["memory", "cpu", "cpuacct", "name=systemd", ""]
 CONTROLLERS = {
     "blkio",
     "cpu",
@@ -43,6 +43,7 @@ CONTROLLERS = {
     "perf_event",
     "pids",
     "rdma",
+    "name=systemd",
 }
 
 CGROUP_V2_UNBOUNDED_VALUE = "max"
@@ -225,9 +226,15 @@ CGROUP_V2_DELEGATED_CONTROLLERS = "cgroup.subtree_control"
 
 class CgroupCoreV2(CgroupCore):
     def is_controller_supported(self, controller: ControllerType):
+        # Empty controller means we're interested just in the hierarchy
+        if controller == "":
+            return True
         return controller in self.read_from_interface_file(CGROUP_V2_SUPPORTED_CONTROLLERS).split()
 
     def is_controller_delegated(self, controller: ControllerType):
+        # Empty controller means we're interested just in the hierarchy
+        if controller == "":
+            return True
         return controller in self.read_from_interface_file(CGROUP_V2_DELEGATED_CONTROLLERS).split()
 
     @classmethod
