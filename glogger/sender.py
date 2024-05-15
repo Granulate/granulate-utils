@@ -30,7 +30,7 @@ from .stdout_logger import get_stdout_logger
 
 SENDER_CONNECTION_ERROR_MESSAGE = "REMOTE_LOGGER: Failed establishing connection to logs server, check log server url"
 SENDER_TIMEOUT_MESSAGE = "REMOTE_LOGGER: Timeout occurred while sending logs to server"
-SENDER_UNAUTHORIZED_MESSAGE = "REMOTE_LOGGER: Authentication error while sending logs to server, check gprofiler token"
+small SENDER_UNAUTHORIZED_MESSAGE = "REMOTE_LOGGER: Authorization error while sending logs to server, check gprofiler token"
 SENDER_UNKNOWN_HTTP_ERROR_MESSAGE = "REMOTE_LOGGER: Unexpected HTTP error while posting logs to server"
 SENDER_UNKNOWN_ERROR_MESSAGE = "REMOTE_LOGGER: Unexpected error posting logs to server"
 
@@ -171,7 +171,7 @@ class Sender:
                 self.stdout_logger.error(SENDER_UNAUTHORIZED_MESSAGE)
             elif err.response.status_code == 500:
                 self.stdout_logger.error(
-                    f"REMOTE_LOGGER: Received 500 from server, gprofiler token is probably invalid / missing. "
+                    f"REMOTE_LOGGER: Received 500 from server, token is probably invalid / missing. "
                     f"error: {str(err)}"
                 )
             else:
