@@ -24,13 +24,14 @@ from copy import deepcopy
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
 
+import pytest
 from requests.adapters import HTTPAdapter
 from requests.models import PreparedRequest, Response
 from requests.structures import CaseInsensitiveDict
 
 from glogger.extra_adapter import ExtraAdapter
 from glogger.handler import BatchRequestsHandler
-from glogger.sender import SERVER_SEND_ERROR_MESSAGE, AuthToken, Sender
+from glogger.sender import SENDER_UNAUTHORIZED_MESSAGE, SENDER_UNKNOWN_HTTP_ERROR_MESSAGE, AuthToken, Sender
 
 
 class MockBatchRequestsHandler(BatchRequestsHandler):
@@ -235,16 +236,37 @@ def test_json_fields():
         assert logs_server.processed > 0
 
 
-def test_error_sending(caplog):
+class ErrorRequestHandler403(GzipRequestHandler):
+    def do_POST(self):
+        self.send_error(403, "Forbidden")
+
+
+class ErrorRequestHandler401(GzipRequestHandler):
+    def do_POST(self):
+        self.send_error(401, "Unauthorized")
+
+
+class ErrorRequestHandler500(GzipRequestHandler):
+    def do_POST(self):
+        self.send_error(500, "Server error")
+
+
+@pytest.mark.parametrize(
+    "logs_server_class, expected_error_log",
+    [
+        (ErrorRequestHandler401, SENDER_UNAUTHORIZED_MESSAGE),
+        (
+            ErrorRequestHandler500,
+            "REMOTE_LOGGER: Received 500 from server, token is probably invalid / missing",
+        ),
+        (ErrorRequestHandler403, SENDER_UNKNOWN_HTTP_ERROR_MESSAGE),
+    ],
+)
+def test_error_sending(logs_server_class, expected_error_log, caplog):
     """Test handler logs a message when it get an error response from server."""
-
-    class ErrorRequestHandler(GzipRequestHandler):
-        def do_POST(self):
-            self.send_error(403, "Forbidden")
-
     caplog.set_level(logging.ERROR)
     with ExitStack() as exit_stack:
-        logs_server = LogsServer(("localhost", 0), ErrorRequestHandler)
+        logs_server = LogsServer(("localhost", 0), logs_server_class)
         exit_stack.callback(logs_server.server_close)
 
         handler = HttpBatchRequestsHandler(logs_server.authority, max_total_length=10000)
@@ -262,7 +284,7 @@ def test_error_sending(caplog):
         assert logs_server.processed > 0
         # wait for the flush thread to log the error:
         time.sleep(0.5)
-        assert caplog.records[-1].message == SERVER_SEND_ERROR_MESSAGE
+        assert caplog.records[0].message.startswith(expected_error_log)
 
 
 def test_truncate_long_message():
