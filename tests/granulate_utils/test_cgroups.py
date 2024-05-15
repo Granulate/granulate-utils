@@ -36,7 +36,8 @@ def test_get_cgroup_current_process():
     full_path = Path("/root_path/dummy")
 
     with patch(
-        "granulate_utils.linux.cgroups_v2.cgroup._get_cgroup_mount", return_value=CgroupCoreV1(root_path, Path("."))
+        "granulate_utils.linux.cgroups_v2.cgroup._get_cgroup_mount",
+        return_value=CgroupCoreV1(root_path, root_path, Path("/")),
     ):
         with patch(
             "granulate_utils.linux.cgroups_v2.cgroup.read_proc_file",
@@ -46,7 +47,8 @@ def test_get_cgroup_current_process():
             assert cgroup.cgroup_abs_path == full_path
 
     with patch(
-        "granulate_utils.linux.cgroups_v2.cgroup._get_cgroup_mount", return_value=CgroupCoreV2(root_path, root_path)
+        "granulate_utils.linux.cgroups_v2.cgroup._get_cgroup_mount",
+        return_value=CgroupCoreV2(root_path, root_path, Path("/")),
     ):
         with patch(
             "granulate_utils.linux.cgroups_v2.cgroup.read_proc_file",
@@ -57,7 +59,8 @@ def test_get_cgroup_current_process():
 
     with pytest.raises(Exception) as exception:
         with patch(
-            "granulate_utils.linux.cgroups_v2.cgroup._get_cgroup_mount", return_value=CgroupCoreV2(root_path, root_path)
+            "granulate_utils.linux.cgroups_v2.cgroup._get_cgroup_mount",
+            return_value=CgroupCoreV2(root_path, root_path, Path("/")),
         ):
             with patch(
                 "granulate_utils.linux.cgroups_v2.cgroup.read_proc_file",
@@ -79,7 +82,7 @@ def test_cpu_controller_v1(tmp_path_factory: TempPathFactory):
     cpu_quota.write_text("50")
     cpu_stat.write_text("stat_value 1")
 
-    cgroup_v1 = CgroupCoreV1(cpu_controller_dir, tmp_dir)
+    cgroup_v1 = CgroupCoreV1(cpu_controller_dir, tmp_dir, Path("/"))
     cpu_controller = CpuControllerFactory.get_cpu_controller(cgroup_v1)
     assert cpu_controller.get_cpu_limit_cores() == 0.5
     stat_data = cpu_controller.get_stat()
@@ -104,7 +107,7 @@ def test_cpu_controller_v2(tmp_path_factory: TempPathFactory):
     cpu_max.write_text("50 100")
     cpu_stat.write_text("stat_value 1")
 
-    cgroup_v2 = CgroupCoreV2(cpu_controller_dir, cpu_controller_dir)
+    cgroup_v2 = CgroupCoreV2(cpu_controller_dir, cpu_controller_dir, Path("/"))
     cpu_controller = CpuControllerFactory.get_cpu_controller(cgroup_v2)
     assert cpu_controller.get_cpu_limit_cores() == 0.5
     stat_data = cpu_controller.get_stat()
@@ -135,7 +138,7 @@ def test_memory_controller_v1(tmp_path_factory: TempPathFactory):
     max_bytes_usage.write_text("400")
     usage_in_bytes.write_text("500")
 
-    cgroup_v1 = CgroupCoreV1(memory_controller_dir, tmp_dir)
+    cgroup_v1 = CgroupCoreV1(memory_controller_dir, tmp_dir, Path("/"))
     memory_controller = MemoryControllerFactory.get_memory_controller(cgroup_v1)
     assert memory_controller.get_memory_limit() == 128
     assert memory_controller.get_max_usage_in_bytes() == 400
@@ -164,7 +167,7 @@ def test_memory_controller_v2(tmp_path_factory: TempPathFactory):
     swap_bytes_limit.write_text("100")
     usage_in_bytes.write_text("500")
 
-    cgroup_v2 = CgroupCoreV2(memory_controller_dir, memory_controller_dir)
+    cgroup_v2 = CgroupCoreV2(memory_controller_dir, memory_controller_dir, Path("/"))
     memory_controller = MemoryControllerFactory.get_memory_controller(cgroup_v2)
     assert memory_controller.get_memory_limit() == 128
     assert memory_controller.get_usage_in_bytes() == 500
@@ -192,6 +195,6 @@ def test_cpuacct_controller(tmp_path_factory: TempPathFactory):
     cpuacct_usage = cpuacct_controller_dir / "cpuacct.usage"
     cpuacct_usage.write_text("128")
 
-    cgroup_v1 = CgroupCoreV1(cpuacct_controller_dir, tmp_dir)
+    cgroup_v1 = CgroupCoreV1(cpuacct_controller_dir, tmp_dir, Path("/"))
     cpuacct_controller = CpuAcctController(cgroup_v1)
     assert cpuacct_controller.get_cpu_time_ns() == 128
