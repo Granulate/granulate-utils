@@ -30,7 +30,7 @@ from .stdout_logger import get_stdout_logger
 
 SENDER_CONNECTION_ERROR_MESSAGE = "REMOTE_LOGGER: Failed establishing connection to logs server, check log server url"
 SENDER_TIMEOUT_MESSAGE = "REMOTE_LOGGER: Timeout occurred while sending logs to server"
-small SENDER_UNAUTHORIZED_MESSAGE = "REMOTE_LOGGER: Authorization error while sending logs to server, check gprofiler token"
+SENDER_UNAUTHORIZED_MESSAGE = "REMOTE_LOGGER: Authorization error while sending logs to server, check gprofiler token"
 SENDER_UNKNOWN_HTTP_ERROR_MESSAGE = "REMOTE_LOGGER: Unexpected HTTP error while posting logs to server"
 SENDER_UNKNOWN_ERROR_MESSAGE = "REMOTE_LOGGER: Unexpected error posting logs to server"
 
