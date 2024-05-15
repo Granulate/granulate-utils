@@ -257,7 +257,7 @@ class ErrorRequestHandler500(GzipRequestHandler):
         (ErrorRequestHandler401, SENDER_UNAUTHORIZED_MESSAGE),
         (
             ErrorRequestHandler500,
-            "REMOTE_LOGGER: Received 500 from server, gprofiler token is probably invalid / missing",
+            "REMOTE_LOGGER: Received 500 from server, token is probably invalid / missing",
         ),
         (ErrorRequestHandler403, SENDER_UNKNOWN_HTTP_ERROR_MESSAGE),
     ],
