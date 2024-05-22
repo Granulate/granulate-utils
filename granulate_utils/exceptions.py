@@ -62,31 +62,6 @@ class AlreadyInCgroup(Exception):
         super().__init__(f"{subsystem!r} subsystem is already in a predefined cgroup: {cgroup!r}")
 
 
-class DatabricksMetadataFetchException(Exception):
-    pass
-
-
-class SparkAPIException(DatabricksMetadataFetchException):
-    pass
-
-
-class SparkNotReadyException(SparkAPIException):
-    pass
-
-
-class SparkAppsURLDiscoveryException(DatabricksMetadataFetchException):
-    pass
-
-
-class DatabricksTagsExtractionException(DatabricksMetadataFetchException):
-    pass
-
-
-class DatabricksJobNameDiscoverException(DatabricksMetadataFetchException):
-    def __init__(self, msg: str) -> None:
-        super().__init__(msg)
-
-
 class CgroupInterfaceNotSupported(Exception):
     def __init__(self, interface_name: str, cgroup_version: str):
         super(CgroupInterfaceNotSupported, self).__init__(
