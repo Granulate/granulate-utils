@@ -102,7 +102,7 @@ class DBXWebUIEnvWrapper:
         except requests.exceptions.RequestException as e:
             if e.response is not None:
                 raise SparkAPIException(
-                    f"Failed to perform REST HTTP GET on {url=} response_text={e.response.text},"
+                    f"Failed to perform REST HTTP GET on {sensitive_string(url)=} response_text={e.response.text},"
                     f"code={e.response.status_code}"
                 ) from e
             else:
@@ -120,9 +120,9 @@ class DBXWebUIEnvWrapper:
             if e.args[0] == HOST_KEY_NAME:
                 # Might happen while provisioning the cluster, retry.
                 return None
-            raise DatabricksJobNameDiscoverException(f"Failed to get Databricks webui address {properties=}") from e
+            raise DatabricksJobNameDiscoverException(f"Failed to get Databricks webui address {sensitive_string(properties)=}") from e
         except Exception as e:
-            raise DatabricksJobNameDiscoverException(f"Failed to get Databricks webui address {properties=}") from e
+            raise DatabricksJobNameDiscoverException(f"Failed to get Databricks webui address {sensitive_string(properties)=}") from e
         return f"{host}:{DEFAULT_WEBUI_PORT}"
 
     def extract_relevant_metadata(self) -> Optional[Dict[str, str]]:
@@ -161,7 +161,7 @@ class DBXWebUIEnvWrapper:
             if (web_ui_address := self.get_webui_address()) is None:
                 return False
             self._apps_url = SPARKUI_APPS_URL_FORMAT.format(web_ui_address)
-            self.logger.debug("Databricks SparkUI address", apps_url=self._apps_url)
+            self.logger.debug("Databricks SparkUI address", apps_url=sensitive_string(self._apps_url))
             return True
 
     def _fetch_spark_apps(self) -> list:
@@ -213,13 +213,13 @@ class DBXWebUIEnvWrapper:
         full_spark_app_env = self._fetch_spark_app_environment(apps[0]["id"])
         spark_properties = full_spark_app_env.get("sparkProperties")
         if spark_properties is None:
-            raise DatabricksMetadataFetchException(f"sparkProperties was not found in {full_spark_app_env=}")
+            raise DatabricksMetadataFetchException(f"sparkProperties was not found in {sensitive_string(full_spark_app_env)=}")
 
         # Convert from [[key, val], [key, val]] to {key: val, key: val}
         try:
             spark_properties = dict(spark_properties)
         except Exception as e:
-            raise DatabricksMetadataFetchException(f"Failed to parse as dict {full_spark_app_env=}") from e
+            raise DatabricksMetadataFetchException(f"Failed to parse as dict {sensitive_string(full_spark_app_env)=}") from e
 
         # First, trying to extract `CLUSTER_USAGE_ALL_TAGS_PROP` property, in case not redacted.
         result: Dict[str, str] = {}
@@ -229,7 +229,7 @@ class DBXWebUIEnvWrapper:
             try:
                 cluster_all_tags_value_json = json.loads(cluster_all_tags_value)
             except Exception as e:
-                raise DatabricksTagsExtractionException(f"Failed to parse {cluster_all_tags_value}") from e
+                raise DatabricksTagsExtractionException(f"Failed to parse {sensitive_string(cluster_all_tags_value)}") from e
 
             result.update(
                 {cluster_all_tag["key"]: cluster_all_tag["value"] for cluster_all_tag in cluster_all_tags_value_json}
@@ -245,7 +245,7 @@ class DBXWebUIEnvWrapper:
             # We expect at least one of the properties to be present.
             raise DatabricksTagsExtractionException(
                 f"Failed to extract {CLUSTER_USAGE_ALL_TAGS_PROP} or "
-                f"{CLUSTER_USAGE_CLUSTER_NAME_PROP} from {spark_properties=}"
+                f"{CLUSTER_USAGE_CLUSTER_NAME_PROP} from {sensitive_string(spark_properties)=}"
             )
 
         # Now add additional interesting data to the metadata
