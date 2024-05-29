@@ -46,14 +46,15 @@ class ContainersClient(ContainersClientInterface):
         if self._docker_client is None and self._cri_client is None:
             raise NoContainerRuntimesError()
 
-    def list_containers(self, all_info: bool = False) -> List[Container]:
+    def list_containers(self, all_info: bool = False, running_filter: bool = False) -> List[Container]:
         """
         Lists all containers running on this machine via DockerClient and CriClient.
         :param all_info: Collect more verbose information. Currently, this ensures that the pid field of each
                          Container object is filled in.
+        :param running_filter: If True, only running containers are returned.
         """
-        docker_containers = self._docker_client.list_containers(all_info) if self._docker_client is not None else []
-        cri_containers = self._cri_client.list_containers(all_info) if self._cri_client is not None else []
+        docker_containers = self._docker_client.list_containers(all_info, running_filter=running_filter) if self._docker_client is not None else []
+        cri_containers = self._cri_client.list_containers(all_info, running_filter=running_filter) if self._cri_client is not None else []
 
         # start with all Docker containers
         containers = docker_containers.copy()

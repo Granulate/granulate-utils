@@ -63,10 +63,17 @@ class _Client:
         restart_count = container.annotations["io.kubernetes.container.restartCount"]
         return "_".join(["k8s", container_name, sandbox_name, namespace, sandbox_uid, restart_count])
 
-    def list_containers(self, all_info: bool) -> List[Container]:
+    def list_containers(self, all_info: bool, running_filter: bool = True) -> List[Container]:
+        if running_filter:
+            container_filter = self.api.api_pb2.ContainerFilter(
+                state=self.api.api_pb2.ContainerStateValue(state=self.api.api_pb2.CONTAINER_RUNNING)
+            )
+        else:
+            container_filter = None
+
         containers = []
         with self.stub() as stub:
-            for runtime_container in stub.ListContainers(self.api.api_pb2.ListContainersRequest()).containers:
+            for runtime_container in stub.ListContainers(container_filter).containers:
                 if all_info:
                     container = self._get_container(stub, runtime_container.id, verbose=True)
                     if container is not None:
@@ -158,10 +165,10 @@ class CriClient(ContainersClientInterface):
         if not self._clients:
             raise CriNotAvailableError(f"CRI is not available at any of {RUNTIMES}")
 
-    def list_containers(self, all_info: bool) -> List[Container]:
+    def list_containers(self, all_info: bool, running_filter: bool = True) -> List[Container]:
         containers: List[Container] = []
         for client in self._clients:
-            containers += client.list_containers(all_info)
+            containers += client.list_containers(all_info, running_filter=running_filter)
         return containers
 
     def get_container(self, container_id: str, all_info: bool) -> Container:
