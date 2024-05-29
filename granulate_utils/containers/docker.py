@@ -39,8 +39,11 @@ class DockerClient(ContainersClientInterface):
         container_filter = None
         if running_filter:
             container_filter = {"status": "running"}
-        
-        containers = self._docker.containers.list(ignore_removed=True, filter=container_filter)  # ignore_removed to avoid races, see my commit
+
+        containers = self._docker.containers.list(
+            ignore_removed=True,
+            filter=container_filter,
+        )  # ignore_removed to avoid races, see my commit
         return list(map(self._create_container, containers))
 
     def get_container(self, container_id: str, all_info: bool) -> Container:

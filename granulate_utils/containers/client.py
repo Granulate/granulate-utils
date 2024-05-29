@@ -53,8 +53,22 @@ class ContainersClient(ContainersClientInterface):
                          Container object is filled in.
         :param running_filter: If True, only running containers are returned.
         """
-        docker_containers = self._docker_client.list_containers(all_info, running_filter=running_filter) if self._docker_client is not None else []
-        cri_containers = self._cri_client.list_containers(all_info, running_filter=running_filter) if self._cri_client is not None else []
+        docker_containers = (
+            self._docker_client.list_containers(
+                all_info,
+                running_filter=running_filter,
+            )
+            if self._docker_client is not None
+            else []
+        )
+        cri_containers = (
+            self._cri_client.list_containers(
+                all_info,
+                running_filter=running_filter,
+            )
+            if self._cri_client is not None
+            else []
+        )
 
         # start with all Docker containers
         containers = docker_containers.copy()
