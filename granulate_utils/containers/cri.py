@@ -73,7 +73,7 @@ class _Client:
 
         containers = []
         with self.stub() as stub:
-            for runtime_container in stub.ListContainers(container_filter).containers:
+            for runtime_container in stub.ListContainers(filter=container_filter).containers:
                 if all_info:
                     container = self._get_container(stub, runtime_container.id, verbose=True)
                     if container is not None:
