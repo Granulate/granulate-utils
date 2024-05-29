@@ -36,7 +36,7 @@ class DockerClient(ContainersClientInterface):
         self._docker = docker.DockerClient(base_url="unix://" + ns.resolve_host_root_links(DOCKER_SOCK))
 
     def list_containers(self, all_info: bool, running_filter: bool = True) -> List[Container]:
-        container_filter = {}
+        container_filter = None
         if running_filter:
             container_filter = {"status": "running"}
         
