@@ -35,9 +35,9 @@ class DockerClient(ContainersClientInterface):
     def __init__(self) -> None:
         self._docker = docker.DockerClient(base_url="unix://" + ns.resolve_host_root_links(DOCKER_SOCK))
 
-    def list_containers(self, all_info: bool, running: bool = True) -> List[Container]:
+    def list_containers(self, all_info: bool, only_running: bool = True) -> List[Container]:
         container_filter = None
-        if running:
+        if only_running:
             container_filter = {"status": "running"}
 
         containers = self._docker.containers.list(
