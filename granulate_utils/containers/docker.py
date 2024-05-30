@@ -36,13 +36,13 @@ class DockerClient(ContainersClientInterface):
         self._docker = docker.DockerClient(base_url="unix://" + ns.resolve_host_root_links(DOCKER_SOCK))
 
     def list_containers(self, all_info: bool, only_running: bool = True) -> List[Container]:
-        container_filter = None
+        container_filters = None
         if only_running:
-            container_filter = {"status": "running"}
+            container_filters = {"status": "running"}
 
         containers = self._docker.containers.list(
             ignore_removed=True,
-            filter=container_filter,
+            filters=container_filters,
         )  # ignore_removed to avoid races, see my commit
         return list(map(self._create_container, containers))
 
