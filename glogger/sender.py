@@ -1,6 +1,17 @@
 #
-# Copyright (c) Granulate. All rights reserved.
-# Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
+# Copyright (C) 2023 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 import gzip
 import threading
@@ -9,6 +20,7 @@ import uuid
 from json import JSONEncoder
 from typing import Callable, Dict, List, NamedTuple, Optional, Tuple, Union
 
+import requests
 from requests import Session
 from requests.auth import HTTPBasicAuth
 
@@ -16,7 +28,11 @@ from glogger.messages_buffer import MessagesBuffer
 
 from .stdout_logger import get_stdout_logger
 
-SERVER_SEND_ERROR_MESSAGE = "Error posting logs to server"
+SENDER_CONNECTION_ERROR_MESSAGE = "REMOTE_LOGGER: Failed establishing connection to logs server, check log server url"
+SENDER_TIMEOUT_MESSAGE = "REMOTE_LOGGER: Timeout occurred while sending logs to server"
+SENDER_UNAUTHORIZED_MESSAGE = "REMOTE_LOGGER: Authorization error while sending logs to server, check gprofiler token"
+SENDER_UNKNOWN_HTTP_ERROR_MESSAGE = "REMOTE_LOGGER: Unexpected HTTP error while posting logs to server"
+SENDER_UNKNOWN_ERROR_MESSAGE = "REMOTE_LOGGER: Unexpected error posting logs to server"
 
 
 class SendBatch(NamedTuple):
@@ -146,8 +162,22 @@ class Sender:
         try:
             batch = self._send_once()
             self._drop_sent_batch(batch)
+        except requests.exceptions.ConnectionError:
+            self.stdout_logger.error(SENDER_CONNECTION_ERROR_MESSAGE)
+        except requests.exceptions.Timeout:
+            self.stdout_logger.error(SENDER_TIMEOUT_MESSAGE)
+        except requests.exceptions.HTTPError as err:
+            if err.response.status_code == 401:
+                self.stdout_logger.error(SENDER_UNAUTHORIZED_MESSAGE)
+            elif err.response.status_code == 500:
+                self.stdout_logger.error(
+                    f"REMOTE_LOGGER: Received 500 from server, token is probably invalid / missing. "
+                    f"error: {str(err)}"
+                )
+            else:
+                self.stdout_logger.exception(SENDER_UNKNOWN_HTTP_ERROR_MESSAGE)
         except Exception:
-            self.stdout_logger.exception(SERVER_SEND_ERROR_MESSAGE)
+            self.stdout_logger.exception(SENDER_UNKNOWN_ERROR_MESSAGE)
 
     def _drop_sent_batch(self, batch: SendBatch) -> None:
         assert self.messages_buffer is not None

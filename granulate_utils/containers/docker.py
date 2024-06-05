@@ -1,6 +1,17 @@
 #
-# Copyright (c) Granulate. All rights reserved.
-# Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
+# Copyright (C) 2023 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 
 from contextlib import suppress
@@ -24,8 +35,15 @@ class DockerClient(ContainersClientInterface):
     def __init__(self) -> None:
         self._docker = docker.DockerClient(base_url="unix://" + ns.resolve_host_root_links(DOCKER_SOCK))
 
-    def list_containers(self, all_info: bool) -> List[Container]:
-        containers = self._docker.containers.list(ignore_removed=True)  # ignore_removed to avoid races, see my commit
+    def list_containers(self, all_info: bool, only_running: bool = True) -> List[Container]:
+        container_filters = None
+        if only_running:
+            container_filters = {"status": "running"}
+
+        containers = self._docker.containers.list(
+            ignore_removed=True,
+            filters=container_filters,
+        )  # ignore_removed to avoid races, see my commit
         return list(map(self._create_container, containers))
 
     def get_container(self, container_id: str, all_info: bool) -> Container:

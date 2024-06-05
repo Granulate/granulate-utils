@@ -1,6 +1,17 @@
 #
-# Copyright (c) Granulate. All rights reserved.
-# Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
+# Copyright (C) 2023 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 
 import contextlib
@@ -35,14 +46,29 @@ class ContainersClient(ContainersClientInterface):
         if self._docker_client is None and self._cri_client is None:
             raise NoContainerRuntimesError()
 
-    def list_containers(self, all_info: bool = False) -> List[Container]:
+    def list_containers(self, all_info: bool = False, only_running: bool = False) -> List[Container]:
         """
         Lists all containers running on this machine via DockerClient and CriClient.
         :param all_info: Collect more verbose information. Currently, this ensures that the pid field of each
                          Container object is filled in.
+        :param running: If True, only running containers are returned.
         """
-        docker_containers = self._docker_client.list_containers(all_info) if self._docker_client is not None else []
-        cri_containers = self._cri_client.list_containers(all_info) if self._cri_client is not None else []
+        docker_containers = (
+            self._docker_client.list_containers(
+                all_info,
+                only_running=only_running,
+            )
+            if self._docker_client is not None
+            else []
+        )
+        cri_containers = (
+            self._cri_client.list_containers(
+                all_info,
+                only_running=only_running,
+            )
+            if self._cri_client is not None
+            else []
+        )
 
         # start with all Docker containers
         containers = docker_containers.copy()

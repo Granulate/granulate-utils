@@ -1,6 +1,17 @@
 #
-# Copyright (c) Granulate. All rights reserved.
-# Licensed under the AGPL3 License. See LICENSE.md in the project root for license information.
+# Copyright (C) 2023 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #
 from __future__ import annotations
 
@@ -52,10 +63,19 @@ class _Client:
         restart_count = container.annotations["io.kubernetes.container.restartCount"]
         return "_".join(["k8s", container_name, sandbox_name, namespace, sandbox_uid, restart_count])
 
-    def list_containers(self, all_info: bool) -> List[Container]:
+    def list_containers(self, all_info: bool, only_running: bool = True) -> List[Container]:
+        if only_running:
+            container_filter = self.api.api_pb2.ContainerFilter(
+                state=self.api.api_pb2.ContainerStateValue(state=self.api.api_pb2.CONTAINER_RUNNING)
+            )
+        else:
+            container_filter = None
+
         containers = []
         with self.stub() as stub:
-            for runtime_container in stub.ListContainers(self.api.api_pb2.ListContainersRequest()).containers:
+            for runtime_container in stub.ListContainers(
+                self.api.api_pb2.ListContainersRequest(filter=container_filter)
+            ).containers:
                 if all_info:
                     container = self._get_container(stub, runtime_container.id, verbose=True)
                     if container is not None:
@@ -147,10 +167,10 @@ class CriClient(ContainersClientInterface):
         if not self._clients:
             raise CriNotAvailableError(f"CRI is not available at any of {RUNTIMES}")
 
-    def list_containers(self, all_info: bool) -> List[Container]:
+    def list_containers(self, all_info: bool, only_running: bool = True) -> List[Container]:
         containers: List[Container] = []
         for client in self._clients:
-            containers += client.list_containers(all_info)
+            containers += client.list_containers(all_info, only_running=only_running)
         return containers
 
     def get_container(self, container_id: str, all_info: bool) -> Container:
