@@ -102,9 +102,7 @@ def _find_v2_hierarchy() -> Optional[tuple[str, str]]:
     """
     Finds the mounted unified hierarchy for cgroup v2 controllers.
     """
-    cgroup2_mounts = [
-        mount for mount in iter_mountinfo(1) if mount.filesystem_type == "cgroup2"
-    ]
+    cgroup2_mounts = [mount for mount in iter_mountinfo(1) if mount.filesystem_type == "cgroup2"]
     if not cgroup2_mounts:
         return None
     path = cgroup2_mounts[0].mount_point
