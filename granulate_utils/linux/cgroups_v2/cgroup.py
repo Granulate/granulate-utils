@@ -102,13 +102,9 @@ def _find_v2_hierarchy() -> Optional[tuple[str, str]]:
     """
     Finds the mounted unified hierarchy for cgroup v2 controllers.
     """
-    cgroup2_mounts = [
-        mount for mount in iter_mountinfo(1) if mount.filesystem_type == "cgroup2" and mount.mount_source == "cgroup2"
-    ]
+    cgroup2_mounts = [mount for mount in iter_mountinfo(1) if mount.filesystem_type == "cgroup2"]
     if not cgroup2_mounts:
         return None
-    if len(cgroup2_mounts) > 1:
-        raise Exception("More than one cgroup2 mount found!")
     path = cgroup2_mounts[0].mount_point
     path = ns.resolve_host_root_links(path)
     mount_root = cgroup2_mounts[0].root
