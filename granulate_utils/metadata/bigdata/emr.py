@@ -23,4 +23,3 @@ def get_emr_version() -> Optional[str]:
         if isinstance(release, str):
             return release
     return None
-

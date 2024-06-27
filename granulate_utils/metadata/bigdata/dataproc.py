@@ -18,5 +18,5 @@ def _get_environment_info() -> Optional[List[str]]:
 
 def get_dataproc_version() -> Optional[str]:
     if line := next((x for x in _get_environment_info() or [] if x.startswith(VERSION_KEY)), None):
-        return line[len(VERSION_KEY):].strip()
+        return line[len(VERSION_KEY) :].strip()
     return None
