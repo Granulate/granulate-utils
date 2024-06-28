@@ -35,17 +35,12 @@ PATH_MAX = 4096
 
 def process_exe(process: psutil.Process) -> str:
     """
-    psutil.Process(pid).exe() returns "" for zombie processes, incorrectly. It should raise ZombieProcess, and return ""
-    only for kernel threads.
-
-    See https://github.com/giampaolo/psutil/pull/2062
+    psutil.Process(pid).exe() caches the result. This function returns the up-to-date exe in case the process exec-ed.
     """
-    # Clear the "exe" cache on the process object. It can change after being cached if the process execed.
+    # Clear the "exe" cache on the process object
     process._exe = None  # type: ignore
     exe = process.exe()
     if exe == "":
-        if is_process_zombie(process):
-            raise psutil.ZombieProcess(process.pid)
         raise MissingExePath(process)
     return exe
 
