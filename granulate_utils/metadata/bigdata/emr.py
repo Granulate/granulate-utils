@@ -1,11 +1,9 @@
 import json
-import logging
-from typing import TYPE_CHECKING, Dict, Optional, Union
+from typing import Dict, Optional
 
-if TYPE_CHECKING:
-    _LoggerAdapter = logging.LoggerAdapter[logging.Logger]
-else:
-    _LoggerAdapter = logging.LoggerAdapter
+from granulate_utils.metadata.bigdata.shared import get_hadoop_version
+
+__all__ = ["get_emr_version", "get_hadoop_version"]
 
 
 def _get_instance_data() -> Optional[Dict[str, str]]:
@@ -24,21 +22,4 @@ def get_emr_version() -> Optional[str]:
         release = data.get("releaseLabel")
         if isinstance(release, str):
             return release
-    return None
-
-
-def get_hadoop_version(logger: Optional[Union[logging.Logger, _LoggerAdapter]]) -> Optional[str]:
-    """
-    Get the running hadoop version.
-
-    Sample value from extraInstanceData.json: "Hadoop_3_2_1"
-    """
-    if (data := _get_instance_data()) is not None:
-        hadoop_version = data.get("hadoopVersion")
-        if isinstance(hadoop_version, str):
-            try:
-                return hadoop_version.split("_", 1)[1].replace("_", ".")
-            except IndexError:
-                if logger:
-                    logger.error("Failed to get hadoop version", exc_info=True)
     return None
