@@ -79,7 +79,7 @@ def get_process_cgroups(process: Optional[psutil.Process] = None) -> List[ProcCg
     return [ProcCgroupLine(line) for line in text.splitlines()]
 
 
-def _find_v1_hierarchies() -> Mapping[str, tuple[str, str]]:
+def find_v1_hierarchies() -> Mapping[str, tuple[str, str]]:
     """
     Finds all the mounted hierarchies for all currently enabled cgroup v1 controllers.
     :return: A mapping from cgroup controller names to their respective hierarchies.
@@ -98,7 +98,7 @@ def _find_v1_hierarchies() -> Mapping[str, tuple[str, str]]:
     return hierarchies
 
 
-def _find_v2_hierarchy() -> Optional[tuple[str, str]]:
+def find_v2_hierarchy() -> Optional[tuple[str, str]]:
     """
     Finds the mounted unified hierarchy for cgroup v2 controllers.
     """
@@ -260,8 +260,8 @@ def _get_cgroup_mount(controller: ControllerType) -> Optional[CgroupCore]:
     If no v1 mount was found for the requested controller and there is a v2 mount (either unified or hybrid),
     a CgroupCoreV2 is returned (as all controllers share the same hierarchy in v2)
     """
-    v1_paths = _find_v1_hierarchies()
-    v2_path = _find_v2_hierarchy()
+    v1_paths = find_v1_hierarchies()
+    v2_path = find_v2_hierarchy()
     if controller in v1_paths:
         # Either v1 or hybrid with the requested controller bound to a v1 hierarchy
         mount_point, mount_root = v1_paths[controller]
