@@ -14,7 +14,15 @@
 # limitations under the License.
 #
 
+import warnings
+
 from granulate_utils.exceptions import AlreadyInCgroup  # noqa: F401
 from granulate_utils.linux.cgroups.cgroup import get_cgroup_mount, get_cgroups, is_known_controller  # noqa: F401
 from granulate_utils.linux.cgroups.cpu_cgroup import CpuCgroup  # noqa: F401
 from granulate_utils.linux.cgroups.memory_cgroup import MemoryCgroup  # noqa: F401
+
+warnings.warn(
+    "granulate_utils.linux.cgroups is deprecated, use granulate_utils.linux.cgroups_v2 instead",
+    DeprecationWarning,
+    stacklevel=2,
+)
