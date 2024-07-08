@@ -22,7 +22,7 @@ from granulate_utils.linux.cgroups.cpu_cgroup import CpuCgroup  # noqa: F401
 from granulate_utils.linux.cgroups.memory_cgroup import MemoryCgroup  # noqa: F401
 
 warnings.warn(
-    "granulate_utils.linux.cgroups is deprecated, use granulate_utils.linux.cgroups.cgroup instead",
+    "granulate_utils.linux.cgroups is deprecated, use granulate_utils.linux.cgroups_v2 instead",
     DeprecationWarning,
     stacklevel=2,
 )
