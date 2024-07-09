@@ -18,7 +18,7 @@ def _get_environment_info() -> Optional[List[str]]:
     try:
         with open(resolve_host_root_links("/etc/environment"), "r") as f:
             return f.readlines()
-    except FileNotFoundError:
+    except (FileNotFoundError, PermissionError):
         pass
     return None
 

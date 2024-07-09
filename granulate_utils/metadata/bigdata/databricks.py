@@ -13,7 +13,7 @@ def get_databricks_version() -> Optional[str]:
     try:
         with open(resolve_host_root_links("/databricks/DBR_VERSION"), "r") as f:
             return f.read().strip()
-    except FileNotFoundError:
+    except (FileNotFoundError, PermissionError):
         return None
 
 
@@ -21,7 +21,7 @@ def get_hadoop_version(logger: Optional[Union[logging.Logger, _LoggerAdapter]]) 
     try:
         with open(resolve_host_root_links("/databricks/spark/HADOOP_VERSION"), "r") as f:
             return f.read().strip()
-    except FileNotFoundError:
+    except (FileNotFoundError, PermissionError):
         if logger:
             logger.error("Failed to get hadoop version", exc_info=True)
     return None

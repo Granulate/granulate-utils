@@ -16,7 +16,7 @@ def _get_instance_data() -> Optional[Dict[str, str]]:
             obj = json.loads(f.read())
             if isinstance(obj, dict):
                 return obj
-    except FileNotFoundError:
+    except (FileNotFoundError, PermissionError):
         pass
     return None
 
