@@ -1,6 +1,8 @@
 import logging
 from typing import TYPE_CHECKING, Optional, Union
 
+from ...linux.ns import resolve_host_root_links
+
 if TYPE_CHECKING:
     _LoggerAdapter = logging.LoggerAdapter[logging.Logger]
 else:
@@ -9,7 +11,7 @@ else:
 
 def get_databricks_version() -> Optional[str]:
     try:
-        with open("/databricks/DBR_VERSION", "r") as f:
+        with open(resolve_host_root_links("/databricks/DBR_VERSION"), "r") as f:
             return f.read().strip()
     except FileNotFoundError:
         return None
@@ -17,7 +19,7 @@ def get_databricks_version() -> Optional[str]:
 
 def get_hadoop_version(logger: Optional[Union[logging.Logger, _LoggerAdapter]]) -> Optional[str]:
     try:
-        with open("/databricks/spark/HADOOP_VERSION", "r") as f:
+        with open(resolve_host_root_links("/databricks/spark/HADOOP_VERSION"), "r") as f:
             return f.read().strip()
     except FileNotFoundError:
         if logger:

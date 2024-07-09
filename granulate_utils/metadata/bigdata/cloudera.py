@@ -1,6 +1,8 @@
 import logging
 from typing import TYPE_CHECKING, List, Optional
 
+from ...linux.ns import resolve_host_root_links
+
 VERSION_KEY = "version="
 
 if TYPE_CHECKING:
@@ -11,7 +13,7 @@ else:
 
 def _get_agent_properties() -> Optional[List[str]]:
     try:
-        with open("/opt/cloudera/cm-agent/cm_version.properties", "r") as f:
+        with open(resolve_host_root_links("/opt/cloudera/cm-agent/cm_version.properties"), "r") as f:
             return f.readlines()
     except FileNotFoundError:
         pass

@@ -1,6 +1,9 @@
 import logging
 import subprocess
-from typing import TYPE_CHECKING, List, Optional, Union
+from functools import partial
+from typing import TYPE_CHECKING, List, Optional, Union, cast
+
+from ...linux.ns import resolve_host_root_links, run_in_ns
 
 VERSION_KEY = "DATAPROC_IMAGE_VERSION="
 HADOOP_VERSION_CMD = "hadoop version"
@@ -13,7 +16,7 @@ else:
 
 def _get_environment_info() -> Optional[List[str]]:
     try:
-        with open("/etc/environment", "r") as f:
+        with open(resolve_host_root_links("/etc/environment"), "r") as f:
             return f.readlines()
     except FileNotFoundError:
         pass
@@ -35,11 +38,8 @@ def get_hadoop_version(logger: Optional[Union[logging.Logger, _LoggerAdapter]]) 
     Extract the version from the first line.
     """
     try:
-        version_output = (
-            subprocess.check_output([HADOOP_VERSION_CMD], shell=True, stderr=subprocess.STDOUT)
-            .splitlines()[0]
-            .decode("utf-8")
-        )
+        to_run = partial(subprocess.check_output, [HADOOP_VERSION_CMD], shell=True, stderr=subprocess.STDOUT)
+        version_output = cast(bytes, run_in_ns(["mnt"], to_run)).splitlines()[0].decode("utf-8")
         return version_output.split(" ")[1]
     except (subprocess.CalledProcessError, IndexError):
         if logger:

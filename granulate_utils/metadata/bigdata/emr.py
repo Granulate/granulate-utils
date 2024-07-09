@@ -2,6 +2,8 @@ import json
 import logging
 from typing import TYPE_CHECKING, Dict, Optional, Union
 
+from ...linux.ns import resolve_host_root_links
+
 if TYPE_CHECKING:
     _LoggerAdapter = logging.LoggerAdapter[logging.Logger]
 else:
@@ -10,7 +12,7 @@ else:
 
 def _get_instance_data() -> Optional[Dict[str, str]]:
     try:
-        with open("/mnt/var/lib/info/extraInstanceData.json", "r") as f:
+        with open(resolve_host_root_links("/proc/1/root/mnt/var/lib/info/extraInstanceData.json"), "r") as f:
             obj = json.loads(f.read())
             if isinstance(obj, dict):
                 return obj
