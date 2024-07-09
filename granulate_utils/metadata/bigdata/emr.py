@@ -12,7 +12,7 @@ else:
 
 def _get_instance_data() -> Optional[Dict[str, str]]:
     try:
-        with open(resolve_host_root_links("/proc/1/root/mnt/var/lib/info/extraInstanceData.json"), "r") as f:
+        with open(resolve_host_root_links("/mnt/var/lib/info/extraInstanceData.json"), "r") as f:
             obj = json.loads(f.read())
             if isinstance(obj, dict):
                 return obj
