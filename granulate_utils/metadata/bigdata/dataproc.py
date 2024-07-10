@@ -3,7 +3,7 @@ import subprocess
 from functools import partial
 from typing import TYPE_CHECKING, List, Optional, Union, cast
 
-from ...linux.ns import resolve_host_root_links, run_in_ns
+from granulate_utils.linux.ns import resolve_host_root_links, run_in_ns
 
 VERSION_KEY = "DATAPROC_IMAGE_VERSION="
 HADOOP_VERSION_CMD = "hadoop version"

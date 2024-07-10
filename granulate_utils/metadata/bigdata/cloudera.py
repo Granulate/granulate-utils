@@ -1,7 +1,7 @@
 import logging
 from typing import TYPE_CHECKING, List, Optional
 
-from ...linux.ns import resolve_host_root_links
+from granulate_utils.linux.ns import resolve_host_root_links
 
 VERSION_KEY = "version="
 

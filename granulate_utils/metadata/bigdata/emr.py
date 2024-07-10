@@ -2,7 +2,7 @@ import json
 import logging
 from typing import TYPE_CHECKING, Dict, Optional, Union
 
-from ...linux.ns import resolve_host_root_links
+from granulate_utils.linux.ns import resolve_host_root_links
 
 if TYPE_CHECKING:
     _LoggerAdapter = logging.LoggerAdapter[logging.Logger]
