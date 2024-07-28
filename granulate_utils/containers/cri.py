@@ -20,8 +20,10 @@ from contextlib import contextmanager, suppress
 from datetime import datetime, timezone
 from typing import Any, List, Optional, Type, TypeVar
 
-import grpc  # type: ignore # no types-grpc sadly
 import psutil
+from grpclib.client import Channel
+from grpclib.const import Status
+from grpclib.exceptions import GRPCError
 
 from granulate_utils.containers.container import Container, ContainersClientInterface, TimeInfo
 from granulate_utils.exceptions import ContainerNotFound, CriNotAvailableError
@@ -46,8 +48,8 @@ class _Client:
 
     @contextmanager
     def stub(self):
-        with grpc.insecure_channel(self.path) as channel:
-            yield self.api.api_pb2_grpc.RuntimeServiceStub(channel)
+        with Channel(path=self.path) as channel:
+            yield self.api.api_grpc.RuntimeServiceStub(channel)
 
     @staticmethod
     def _reconstruct_name(container) -> str:
@@ -89,8 +91,8 @@ class _Client:
             status_response = stub.ContainerStatus(
                 self.api.api_pb2.ContainerStatusRequest(container_id=container_id, verbose=verbose)
             )
-        except grpc._channel._InactiveRpcError as e:
-            if e.code() == grpc.StatusCode.NOT_FOUND:
+        except GRPCError as e:
+            if e.status == Status.NOT_FOUND:
                 return None
             raise
         else:
@@ -147,7 +149,7 @@ T = TypeVar("T", bound=_Client)
 def _try_cri_client(path: str, client: Type[T]) -> Optional[T]:
     try:
         return client(path)
-    except grpc.RpcError:
+    except GRPCError:
         return None
 
 
