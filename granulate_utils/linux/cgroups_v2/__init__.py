@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+import warnings
+
 from granulate_utils.linux.cgroups_v2.base_controller import BaseController  # noqa: F401
 from granulate_utils.linux.cgroups_v2.cgroup import get_process_cgroups  # noqa: F401
 from granulate_utils.linux.cgroups_v2.cpu_controller import CpuController, CpuControllerFactory  # noqa: F401
@@ -22,4 +24,10 @@ from granulate_utils.linux.cgroups_v2.memory_controller import MemoryController,
 from granulate_utils.linux.cgroups_v2.systemd_controller import (  # noqa: F401
     SystemdLegacyController,
     SystemdUnifiedController,
+)
+
+warnings.warn(
+    "granulate_utils.linux.cgroups is deprecated, use granulate_utils.linux.cgroups_v2 instead",
+    DeprecationWarning,
+    stacklevel=2,
 )
