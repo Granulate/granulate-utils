@@ -25,3 +25,11 @@ def get_kernel_release() -> Tuple[int, int]:
 
 # TASK_COMM_LEN is 16, and it is always null-terminated, so 15.
 COMM_PATTERN = r".{0,15}"
+
+import warnings
+
+warnings.warn(
+    "granulate_utils.linux.cgroups is deprecated, use granulate_utils.linux.cgroups_v2 instead",
+    DeprecationWarning,
+    stacklevel=2,
+)
