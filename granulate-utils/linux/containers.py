@@ -19,7 +19,7 @@ from typing import Optional
 
 from psutil import Process
 
-from granulate_utils.linux import process
+from granulate_utils.linux.process import get_process_cgroups
 
 # ECS uses /ecs/uuid/container-id
 # standard Docker uses /docker/container-id
@@ -34,7 +34,7 @@ def get_process_container_id(process: Process) -> Optional[str]:
     Gets the container ID of a running process, or None if not in a container.
     :raises NoSuchProcess: If the process doesn't or no longer exists
     """
-    for proc_cgroup_line in process.get_process_cgroups(process):
+    for proc_cgroup_line in get_process_cgroups(process):
         found = CONTAINER_ID_PATTERN.findall(proc_cgroup_line.relative_path)
         if found:
             return found[-1]
