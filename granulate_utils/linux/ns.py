@@ -358,7 +358,6 @@ def enter_process_ns(
     """
     Swaps to a set of the namespaces of a target process.
     """
-
     for ns in nstypes:
         assert_ns_str(ns)
     # make sure "mnt" is last, once we change it our /proc is gone
