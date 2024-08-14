@@ -171,3 +171,33 @@ def search_for_process(filter: Callable[[psutil.Process], bool]) -> Iterator[psu
         with contextlib.suppress(NoSuchProcess, AccessDenied):
             if is_process_running(proc) and filter(proc):
                 yield proc
+
+
+class ProcCgroupLine:
+    """
+    The format of the line:  hierarchy-ID:controller-list:relative-path
+    Example line: 1:cpu:/custom_cgroup
+
+    relative-path - the path of the cgroup the process belongs to, relative to the hierarchy mount point
+    e.g. /sys/fs/cgroup/memory on v1 or just the cgroups v2 mount on v2 e.g /sys/fs/cgroup.
+    """
+
+    hier_id: str
+    controllers: List[str]
+    relative_path: str
+
+    def __init__(self, procfs_line: str):
+        hier_id, controller_list, relative_path = procfs_line.split(":", maxsplit=2)
+        self.hier_id = hier_id
+        self.controllers = controller_list.split(",")
+        self.relative_path = relative_path
+
+
+def get_process_cgroups(process: Optional[psutil.Process] = None) -> List[ProcCgroupLine]:
+    """
+    Get the cgroups of a process in [(hier id., controllers, path)] parsed form.
+    If process is None, gets the cgroups of the current process.
+    """
+    process = process or psutil.Process()
+    text = read_proc_file(process, "cgroup").decode()
+    return [ProcCgroupLine(line) for line in text.splitlines()]
