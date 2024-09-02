@@ -17,8 +17,9 @@ from __future__ import annotations
 
 import json
 from contextlib import contextmanager, suppress
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, List, Optional, Type, TypeVar
+from typing import Any, Dict, List, Optional, Type, TypeVar
 
 import grpc  # type: ignore # no types-grpc sadly
 import psutil
@@ -122,7 +123,7 @@ class _Client:
             with suppress(psutil.NoSuchProcess):
                 process = psutil.Process(pid)
 
-        return Container(
+        return K8sContainer(
             runtime=self.runtime_name,
             name=self._reconstruct_name(container),
             id=container.id,
@@ -130,6 +131,7 @@ class _Client:
             running=container.state == self.api.api_pb2.CONTAINER_RUNNING,
             process=process,
             time_info=time_info,
+            annotations=container.annotations,
         )
 
 
@@ -182,3 +184,8 @@ class CriClient(ContainersClientInterface):
 
     def get_runtimes(self) -> List[str]:
         return [client.runtime_name for client in self._clients]
+
+
+@dataclass
+class K8sContainer(Container):
+    annotations: Dict[str, str] = field(default_factory=dict)
