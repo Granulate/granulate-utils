@@ -15,6 +15,7 @@
 #
 
 import errno
+import logging
 import os
 import shutil
 from pathlib import Path
@@ -35,7 +36,9 @@ def safe_copy(src: str, dst: str) -> None:
     os.rename(dst_tmp, dst)
 
 
-def is_rw_exec_dir(path: Path) -> bool:
+def is_rw_exec_dir(
+    path: Path, logger: Union[logging.LoggerAdapter, logging.Logger]
+) -> bool:
     """
     Is 'path' rw and exec?
     """
@@ -47,7 +50,9 @@ def is_rw_exec_dir(path: Path) -> bool:
     # try creating & writing
     try:
         test_script.write_text("#!/bin/sh\nexit 0")
-        test_script.chmod(0o755)  # make sure it's executable. file is already writable only by root due to umask.
+        test_script.chmod(
+            0o755
+        )  # make sure it's executable. file is already writable only by root due to umask.
     except OSError as e:
         if e.errno == errno.EROFS:
             # ro
@@ -57,7 +62,7 @@ def is_rw_exec_dir(path: Path) -> bool:
 
     # try executing
     try:
-        run_process([str(test_script)], suppress_log=True)
+        run_process([str(test_script)], logger, suppress_log=True)
     except PermissionError:
         # noexec
         return False

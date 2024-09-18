@@ -19,7 +19,6 @@ import glob
 import logging
 import os
 import random
-import re
 import shutil
 import signal
 import socket
@@ -35,20 +34,14 @@ from tempfile import TemporaryDirectory
 from threading import Event
 from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Union, cast
 
-import importlib_resources
 import psutil
 from granulate_utils.exceptions import CouldNotAcquireMutex
 from granulate_utils.linux.mutex import try_acquire_mutex
 from granulate_utils.linux.ns import run_in_ns
-from granulate_utils.linux.process import is_kernel_thread, process_exe
 from psutil import Process
 
 from granulate_utils.gprofiler.consts import CPU_PROFILING_MODE
 from granulate_utils.gprofiler.platform import is_linux, is_windows
-
-if is_windows():
-    import pythoncom
-    import wmi
 
 from granulate_utils.gprofiler.exceptions import (
     CalledProcessError,
@@ -57,29 +50,16 @@ from granulate_utils.gprofiler.exceptions import (
     ProgramMissingException,
     StopEventSetException,
 )
-from gprofiler.log import get_logger_adapter
-
-logger = get_logger_adapter(__name__)
 
 GPROFILER_DIRECTORY_NAME = "gprofiler_tmp"
 TEMPORARY_STORAGE_PATH = (
     f"/tmp/{GPROFILER_DIRECTORY_NAME}"
     if is_linux()
-    else os.getenv("USERPROFILE", default=os.getcwd()) + f"\\AppData\\Local\\Temp\\{GPROFILER_DIRECTORY_NAME}"
+    else os.getenv("USERPROFILE", default=os.getcwd())
+    + f"\\AppData\\Local\\Temp\\{GPROFILER_DIRECTORY_NAME}"
 )
 
 gprofiler_mutex: Optional[socket.socket] = None
-
-
-@lru_cache(maxsize=None)
-def resource_path(relative_path: str = "") -> str:
-    *relative_directory, basename = relative_path.split("/")
-    package = ".".join(["gprofiler", "resources"] + relative_directory)
-    try:
-        with importlib_resources.path(package, basename) as path:
-            return str(path)
-    except ImportError as e:
-        raise Exception(f"Resource {relative_path!r} not found!") from e
 
 
 @lru_cache(maxsize=None)
@@ -103,7 +83,9 @@ def prctl(*argv: Any) -> int:
 PR_SET_PDEATHSIG = 1
 
 
-def set_child_termination_on_parent_death() -> int:
+def set_child_termination_on_parent_death(
+    logger: Union[logging.LoggerAdapter, logging.Logger]
+) -> int:
     ret = prctl(PR_SET_PDEATHSIG, signal.SIGTERM)
     if ret != 0:
         errno = ctypes.get_errno()
@@ -127,7 +109,11 @@ def wrap_callbacks(callbacks: List[Callable]) -> Callable:
 
 
 def start_process(
-    cmd: Union[str, List[str]], via_staticx: bool = False, term_on_parent_death: bool = True, **kwargs: Any
+    cmd: Union[str, List[str]],
+    logger: Union[logging.LoggerAdapter, logging.Logger],
+    via_staticx: bool = False,
+    term_on_parent_death: bool = True,
+    **kwargs: Any,
 ) -> Popen:
     if isinstance(cmd, str):
         cmd = [cmd]
@@ -144,21 +130,24 @@ def start_process(
             # staticx_dir (from STATICX_BUNDLE_DIR) is where staticx has extracted all of the
             # libraries it had collected earlier.
             # see https://github.com/JonathonReinhart/staticx#run-time-information
-            cmd = [f"{staticx_dir}/.staticx.interp", "--library-path", staticx_dir] + cmd
+            cmd = [
+                f"{staticx_dir}/.staticx.interp",
+                "--library-path",
+                staticx_dir,
+            ] + cmd
         else:
-            env = env if env is not None else os.environ.copy()
-            # ensure `TMPDIR` env is propagated to the child processes (used by staticx)
-            if "TMPDIR" not in env and "TMPDIR" in os.environ:
-                env["TMPDIR"] = os.environ["TMPDIR"]
             # explicitly remove our directory from LD_LIBRARY_PATH
-            env["LD_LIBRARY_PATH"] = ""
+            env = env if env is not None else os.environ.copy()
+            env.update({"LD_LIBRARY_PATH": ""})
 
     if is_windows():
         cur_preexec_fn = None  # preexec_fn is not supported on Windows platforms. subprocess.py reports this.
     else:
         cur_preexec_fn = kwargs.pop("preexec_fn", os.setpgrp)
         if term_on_parent_death:
-            cur_preexec_fn = wrap_callbacks([set_child_termination_on_parent_death, cur_preexec_fn])
+            cur_preexec_fn = wrap_callbacks(
+                [lambda: set_child_termination_on_parent_death(logger), cur_preexec_fn]
+            )
 
     popen = Popen(
         cmd,
@@ -172,7 +161,12 @@ def start_process(
     return popen
 
 
-def wait_event(timeout: float, stop_event: Event, condition: Callable[[], bool], interval: float = 0.1) -> None:
+def wait_event(
+    timeout: float,
+    stop_event: Event,
+    condition: Callable[[], bool],
+    interval: float = 0.1,
+) -> None:
     end_time = time.monotonic() + timeout
     while True:
         if condition():
@@ -198,7 +192,12 @@ def remove_files_by_prefix(prefix: str) -> None:
         os.unlink(f)
 
 
-def wait_for_file_by_prefix(prefix: str, timeout: float, stop_event: Event) -> Path:
+def wait_for_file_by_prefix(
+    prefix: str,
+    timeout: float,
+    stop_event: Event,
+    logger: Union[logging.LoggerAdapter, logging.Logger],
+) -> Path:
     glob_pattern = f"{prefix}*"
     wait_event(timeout, stop_event, lambda: len(glob.glob(glob_pattern)) > 0)
 
@@ -237,7 +236,11 @@ def reap_process(process: Popen) -> Tuple[int, bytes, bytes]:
     return returncode, stdout, stderr
 
 
-def _kill_and_reap_process(process: Popen, kill_signal: signal.Signals) -> Tuple[int, bytes, bytes]:
+def _kill_and_reap_process(
+    process: Popen,
+    kill_signal: signal.Signals,
+    logger: Union[logging.LoggerAdapter, logging.Logger],
+) -> Tuple[int, bytes, bytes]:
     process.send_signal(kill_signal)
     logger.debug(
         f"({process.args!r}) was killed by us with signal {kill_signal} due to timeout or stop request, reaping it"
@@ -247,6 +250,7 @@ def _kill_and_reap_process(process: Popen, kill_signal: signal.Signals) -> Tuple
 
 def run_process(
     cmd: Union[str, List[str]],
+    logger: Union[logging.LoggerAdapter, logging.Logger],
     *,
     stop_event: Event = None,
     suppress_log: bool = False,
@@ -261,9 +265,10 @@ def run_process(
     stderr: bytes
 
     reraise_exc: Optional[BaseException] = None
-    with start_process(cmd, via_staticx, **kwargs) as process:
+    with start_process(cmd, logger, via_staticx, **kwargs) as process:
         assert isinstance(process.args, str) or (
-            isinstance(process.args, list) and all(isinstance(s, str) for s in process.args)
+            isinstance(process.args, list)
+            and all(isinstance(s, str) for s in process.args)
         ), process.args  # mypy
 
         try:
@@ -287,18 +292,28 @@ def run_process(
                             assert timeout is not None
                             raise
         except TimeoutExpired:
-            returncode, stdout, stderr = _kill_and_reap_process(process, kill_signal)
+            returncode, stdout, stderr = _kill_and_reap_process(
+                process, kill_signal, logger
+            )
             assert timeout is not None
             reraise_exc = CalledProcessTimeoutError(
-                timeout, returncode, cmd, stdout.decode("latin-1"), stderr.decode("latin-1")
+                timeout,
+                returncode,
+                cmd,
+                stdout.decode("latin-1"),
+                stderr.decode("latin-1"),
             )
         except BaseException as e:  # noqa
-            returncode, stdout, stderr = _kill_and_reap_process(process, kill_signal)
+            returncode, stdout, stderr = _kill_and_reap_process(
+                process, kill_signal, logger
+            )
             reraise_exc = e
         retcode = process.poll()
         assert retcode is not None  # only None if child has not terminated
 
-    result: CompletedProcess[bytes] = CompletedProcess(process.args, retcode, stdout, stderr)
+    result: CompletedProcess[bytes] = CompletedProcess(
+        process.args, retcode, stdout, stderr
+    )
 
     # decoding stdout/stderr as latin-1 which should never raise UnicodeDecodeError.
     extra: Dict[str, Any] = {"exit_code": result.returncode}
@@ -312,42 +327,22 @@ def run_process(
         raise reraise_exc
     elif check and retcode != 0:
         raise CalledProcessError(
-            retcode, process.args, output=stdout.decode("latin-1"), stderr=stderr.decode("latin-1")
+            retcode,
+            process.args,
+            output=stdout.decode("latin-1"),
+            stderr=stderr.decode("latin-1"),
         )
     return result
 
 
-if is_windows():
-
-    def pgrep_exe(match: str) -> List[Process]:
-        """psutil doesn't return all running python processes on Windows"""
-        pythoncom.CoInitialize()
-        w = wmi.WMI()
-        return [
-            Process(pid=p.ProcessId)
-            for p in w.Win32_Process()
-            if match in p.Name.lower() and p.ProcessId != os.getpid()
-        ]
-
-else:
-
-    def pgrep_exe(match: str) -> List[Process]:
-        pattern = re.compile(match)
-        procs = []
-        for process in psutil.process_iter():
-            try:
-                if not is_kernel_thread(process) and pattern.match(process_exe(process)):
-                    procs.append(process)
-            except psutil.NoSuchProcess:  # process might have died meanwhile
-                continue
-        return procs
-
-
-def pgrep_maps(match: str) -> List[Process]:
+def pgrep_maps(
+    match: str, logger: Union[logging.LoggerAdapter, logging.Logger]
+) -> List[Process]:
     # this is much faster than iterating over processes' maps with psutil.
     # We use flag -E in grep to support systems where grep is not PCRE
     result = run_process(
         f"grep -lE '{match}' /proc/*/maps",
+        logger,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         shell=True,
@@ -368,15 +363,22 @@ def pgrep_maps(match: str) -> List[Process]:
     for line in result.stderr.splitlines():
         if not (
             line.startswith(b"grep: /proc/")
-            and (line.endswith(b"/maps: No such file or directory") or line.endswith(b"/maps: No such process"))
+            and (
+                line.endswith(b"/maps: No such file or directory")
+                or line.endswith(b"/maps: No such process")
+            )
         ):
             error_lines.append(line)
     if error_lines:
-        logger.error(f"Unexpected 'grep' error output (first 10 lines): {error_lines[:10]}")
+        logger.error(
+            f"Unexpected 'grep' error output (first 10 lines): {error_lines[:10]}"
+        )
 
     processes: List[Process] = []
     for line in result.stdout.splitlines():
-        assert line.startswith(b"/proc/") and line.endswith(b"/maps"), f"unexpected 'grep' line: {line!r}"
+        assert line.startswith(b"/proc/") and line.endswith(
+            b"/maps"
+        ), f"unexpected 'grep' line: {line!r}"
         pid = int(line[len(b"/proc/") : -len(b"/maps")])
         try:
             processes.append(Process(pid))
@@ -532,14 +534,21 @@ def get_staticx_dir() -> Optional[str]:
     return os.getenv("STATICX_BUNDLE_DIR")
 
 
-def add_permission_dir(path: str, permission_for_file: int, permission_for_dir: int) -> None:
+def add_permission_dir(
+    path: str, permission_for_file: int, permission_for_dir: int
+) -> None:
     os.chmod(path, os.stat(path).st_mode | permission_for_dir)
     for subpath in os.listdir(path):
         absolute_subpath = os.path.join(path, subpath)
         if os.path.isdir(absolute_subpath):
-            add_permission_dir(absolute_subpath, permission_for_file, permission_for_dir)
+            add_permission_dir(
+                absolute_subpath, permission_for_file, permission_for_dir
+            )
         else:
-            os.chmod(absolute_subpath, os.stat(absolute_subpath).st_mode | permission_for_file)
+            os.chmod(
+                absolute_subpath,
+                os.stat(absolute_subpath).st_mode | permission_for_file,
+            )
 
 
 def merge_dicts(source: Dict[str, Any], dest: Dict[str, Any]) -> Dict[str, Any]:
