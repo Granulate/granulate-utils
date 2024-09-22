@@ -35,14 +35,10 @@ from threading import Event
 from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Union, cast
 
 import psutil
-from granulate_utils.exceptions import CouldNotAcquireMutex
-from granulate_utils.linux.mutex import try_acquire_mutex
-from granulate_utils.linux.ns import run_in_ns
 from psutil import Process
 
+from granulate_utils.exceptions import CouldNotAcquireMutex
 from granulate_utils.gprofiler.consts import CPU_PROFILING_MODE
-from granulate_utils.gprofiler.platform import is_linux, is_windows
-
 from granulate_utils.gprofiler.exceptions import (
     CalledProcessError,
     CalledProcessTimeoutError,
@@ -50,6 +46,9 @@ from granulate_utils.gprofiler.exceptions import (
     ProgramMissingException,
     StopEventSetException,
 )
+from granulate_utils.gprofiler.platform import is_linux, is_windows
+from granulate_utils.linux.mutex import try_acquire_mutex
+from granulate_utils.linux.ns import run_in_ns
 
 GPROFILER_DIRECTORY_NAME = "gprofiler_tmp"
 TEMPORARY_STORAGE_PATH = (

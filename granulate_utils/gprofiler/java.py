@@ -28,14 +28,9 @@ from types import TracebackType
 from typing import Any, Dict, Iterable, List, Optional, Type, TypeVar, Union, cast
 
 import psutil
-from granulate_utils.java import (
-    DETECTED_JAVA_PROCESSES_REGEX,
-    JvmFlag,
-    locate_hotspot_error_file,
-    parse_jvm_flags,
-)
 
 from granulate_utils.gprofiler.platform import is_linux
+from granulate_utils.java import DETECTED_JAVA_PROCESSES_REGEX, JvmFlag, locate_hotspot_error_file, parse_jvm_flags
 
 if is_linux():
     from granulate_utils.linux import proc_events
@@ -72,12 +67,7 @@ from granulate_utils.gprofiler.utils import (
     run_process,
     touch_path,
 )
-from granulate_utils.gprofiler.utils.fs import (
-    is_owned_by_root,
-    is_rw_exec_dir,
-    mkdir_owned_root,
-    safe_copy,
-)
+from granulate_utils.gprofiler.utils.fs import is_owned_by_root, is_rw_exec_dir, mkdir_owned_root, safe_copy
 
 libap_copy_lock = Lock()
 
