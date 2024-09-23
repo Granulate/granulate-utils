@@ -15,6 +15,7 @@
 #
 
 import errno
+import logging
 import os
 import shutil
 from pathlib import Path
@@ -35,7 +36,7 @@ def safe_copy(src: str, dst: str) -> None:
     os.rename(dst_tmp, dst)
 
 
-def is_rw_exec_dir(path: Path) -> bool:
+def is_rw_exec_dir(path: Path, logger: Union[logging.LoggerAdapter, logging.Logger]) -> bool:
     """
     Is 'path' rw and exec?
     """
@@ -57,7 +58,7 @@ def is_rw_exec_dir(path: Path) -> bool:
 
     # try executing
     try:
-        run_process([str(test_script)], suppress_log=True)
+        run_process([str(test_script)], logger, suppress_log=True)
     except PermissionError:
         # noexec
         return False
