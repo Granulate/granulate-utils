@@ -352,7 +352,7 @@ def get_java_version_logged(
     logger: Union[logging.LoggerAdapter, logging.Logger],
 ) -> Optional[str]:
     java_version = get_java_version(process, stop_event, logger)
-    logger.debug("java -version output", java_version_output=java_version, pid=process.pid)
+    logger.debug("java -version output", extra={"java_version_output": java_version, "pid": process.pid})
     return java_version
 
 
@@ -678,7 +678,7 @@ class AsyncProfiledProcess:
         else:
             ap_log = self._read_ap_log()
             ap_log_stripped = MEM_INFO_LOG_RE.sub("", ap_log)  # strip out mem info log only when for gProfiler log
-            self.logger.debug("async-profiler log", jattach_cmd=cmd, ap_log=ap_log_stripped)
+            self.logger.debug("async-profiler log", extra={"jattach_cmd": cmd, "ap_log": ap_log_stripped})
             return ap_log
 
     def _run_fdtransfer(self) -> None:

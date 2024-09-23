@@ -114,7 +114,7 @@ def start_process(
     if isinstance(cmd, str):
         cmd = [cmd]
 
-    logger.debug("Running command", command=cmd)
+    logger.debug("Running command", extra={"command": cmd})
 
     env = kwargs.pop("env", None)
     staticx_dir = get_staticx_dir()
@@ -303,13 +303,13 @@ def run_process(
     result: CompletedProcess[bytes] = CompletedProcess(process.args, retcode, stdout, stderr)
 
     # decoding stdout/stderr as latin-1 which should never raise UnicodeDecodeError.
-    extra: Dict[str, Any] = {"exit_code": result.returncode}
+    extra: Dict[str, Any] = {"exit_code": result.returncode, "command": process.args}
     if not suppress_log:
         if result.stdout:
             extra["stdout"] = result.stdout.decode("latin-1")
         if result.stderr:
             extra["stderr"] = result.stderr.decode("latin-1")
-    logger.debug("Command exited", command=process.args, **extra)
+    logger.debug("Command exited", extra=extra)
     if reraise_exc is not None:
         raise reraise_exc
     elif check and retcode != 0:
