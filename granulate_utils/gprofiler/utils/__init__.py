@@ -54,8 +54,7 @@ GPROFILER_DIRECTORY_NAME = "gprofiler_tmp"
 TEMPORARY_STORAGE_PATH = (
     f"/tmp/{GPROFILER_DIRECTORY_NAME}"
     if is_linux()
-    else os.getenv("USERPROFILE", default=os.getcwd())
-    + f"\\AppData\\Local\\Temp\\{GPROFILER_DIRECTORY_NAME}"
+    else os.getenv("USERPROFILE", default=os.getcwd()) + f"\\AppData\\Local\\Temp\\{GPROFILER_DIRECTORY_NAME}"
 )
 
 gprofiler_mutex: Optional[socket.socket] = None
@@ -82,9 +81,7 @@ def prctl(*argv: Any) -> int:
 PR_SET_PDEATHSIG = 1
 
 
-def set_child_termination_on_parent_death(
-    logger: Union[logging.LoggerAdapter, logging.Logger]
-) -> int:
+def set_child_termination_on_parent_death(logger: Union[logging.LoggerAdapter, logging.Logger]) -> int:
     ret = prctl(PR_SET_PDEATHSIG, signal.SIGTERM)
     if ret != 0:
         errno = ctypes.get_errno()
@@ -144,9 +141,7 @@ def start_process(
     else:
         cur_preexec_fn = kwargs.pop("preexec_fn", os.setpgrp)
         if term_on_parent_death:
-            cur_preexec_fn = wrap_callbacks(
-                [lambda: set_child_termination_on_parent_death(logger), cur_preexec_fn]
-            )
+            cur_preexec_fn = wrap_callbacks([lambda: set_child_termination_on_parent_death(logger), cur_preexec_fn])
 
     popen = Popen(
         cmd,
@@ -266,8 +261,7 @@ def run_process(
     reraise_exc: Optional[BaseException] = None
     with start_process(cmd, logger, via_staticx, **kwargs) as process:
         assert isinstance(process.args, str) or (
-            isinstance(process.args, list)
-            and all(isinstance(s, str) for s in process.args)
+            isinstance(process.args, list) and all(isinstance(s, str) for s in process.args)
         ), process.args  # mypy
 
         try:
@@ -291,9 +285,7 @@ def run_process(
                             assert timeout is not None
                             raise
         except TimeoutExpired:
-            returncode, stdout, stderr = _kill_and_reap_process(
-                process, kill_signal, logger
-            )
+            returncode, stdout, stderr = _kill_and_reap_process(process, kill_signal, logger)
             assert timeout is not None
             reraise_exc = CalledProcessTimeoutError(
                 timeout,
@@ -303,16 +295,12 @@ def run_process(
                 stderr.decode("latin-1"),
             )
         except BaseException as e:  # noqa
-            returncode, stdout, stderr = _kill_and_reap_process(
-                process, kill_signal, logger
-            )
+            returncode, stdout, stderr = _kill_and_reap_process(process, kill_signal, logger)
             reraise_exc = e
         retcode = process.poll()
         assert retcode is not None  # only None if child has not terminated
 
-    result: CompletedProcess[bytes] = CompletedProcess(
-        process.args, retcode, stdout, stderr
-    )
+    result: CompletedProcess[bytes] = CompletedProcess(process.args, retcode, stdout, stderr)
 
     # decoding stdout/stderr as latin-1 which should never raise UnicodeDecodeError.
     extra: Dict[str, Any] = {"exit_code": result.returncode}
@@ -334,9 +322,7 @@ def run_process(
     return result
 
 
-def pgrep_maps(
-    match: str, logger: Union[logging.LoggerAdapter, logging.Logger]
-) -> List[Process]:
+def pgrep_maps(match: str, logger: Union[logging.LoggerAdapter, logging.Logger]) -> List[Process]:
     # this is much faster than iterating over processes' maps with psutil.
     # We use flag -E in grep to support systems where grep is not PCRE
     result = run_process(
@@ -362,22 +348,15 @@ def pgrep_maps(
     for line in result.stderr.splitlines():
         if not (
             line.startswith(b"grep: /proc/")
-            and (
-                line.endswith(b"/maps: No such file or directory")
-                or line.endswith(b"/maps: No such process")
-            )
+            and (line.endswith(b"/maps: No such file or directory") or line.endswith(b"/maps: No such process"))
         ):
             error_lines.append(line)
     if error_lines:
-        logger.error(
-            f"Unexpected 'grep' error output (first 10 lines): {error_lines[:10]}"
-        )
+        logger.error(f"Unexpected 'grep' error output (first 10 lines): {error_lines[:10]}")
 
     processes: List[Process] = []
     for line in result.stdout.splitlines():
-        assert line.startswith(b"/proc/") and line.endswith(
-            b"/maps"
-        ), f"unexpected 'grep' line: {line!r}"
+        assert line.startswith(b"/proc/") and line.endswith(b"/maps"), f"unexpected 'grep' line: {line!r}"
         pid = int(line[len(b"/proc/") : -len(b"/maps")])
         try:
             processes.append(Process(pid))
@@ -533,16 +512,12 @@ def get_staticx_dir() -> Optional[str]:
     return os.getenv("STATICX_BUNDLE_DIR")
 
 
-def add_permission_dir(
-    path: str, permission_for_file: int, permission_for_dir: int
-) -> None:
+def add_permission_dir(path: str, permission_for_file: int, permission_for_dir: int) -> None:
     os.chmod(path, os.stat(path).st_mode | permission_for_dir)
     for subpath in os.listdir(path):
         absolute_subpath = os.path.join(path, subpath)
         if os.path.isdir(absolute_subpath):
-            add_permission_dir(
-                absolute_subpath, permission_for_file, permission_for_dir
-            )
+            add_permission_dir(absolute_subpath, permission_for_file, permission_for_dir)
         else:
             os.chmod(
                 absolute_subpath,

@@ -161,9 +161,7 @@ DEFAULT_AP_FEATURES = [
 # we don't want any of them disabled by default.
 JAVA_ASYNC_PROFILER_DEFAULT_SAFEMODE = 0
 
-PROBLEMATIC_FRAME_REGEX = re.compile(
-    r"^# Problematic frame:\n# (.*?)\n#\n", re.MULTILINE | re.DOTALL
-)
+PROBLEMATIC_FRAME_REGEX = re.compile(r"^# Problematic frame:\n# (.*?)\n#\n", re.MULTILINE | re.DOTALL)
 """
 See VMError::report.
 Example:
@@ -199,10 +197,7 @@ class JattachExceptionBase(CalledProcessError):
         if not ap_log:
             ap_log = "(empty)"
         loaded_msg = f"async-profiler DSO loaded: {self._ap_loaded}"
-        return (
-            super().__str__()
-            + f"\nJava PID: {self._target_pid}\n{loaded_msg}\nasync-profiler log:\n{ap_log}"
-        )
+        return super().__str__() + f"\nJava PID: {self._target_pid}\n{loaded_msg}\nasync-profiler log:\n{ap_log}"
 
     def get_ap_log(self) -> str:
         return self._ap_log
@@ -322,9 +317,7 @@ def _get_process_ns_java_path(process: Process) -> Optional[str]:
         ]
         for java_path in java_candidate_paths:
             # don't need resolve_proc_root_links here - paths in /proc/pid/maps are normalized.
-            proc_relative_path = Path(
-                f"/proc/{process.pid}/root", java_path.relative_to("/")
-            )
+            proc_relative_path = Path(f"/proc/{process.pid}/root", java_path.relative_to("/"))
             if proc_relative_path.exists():
                 if os.access(proc_relative_path, os.X_OK):
                     return str(java_path)
@@ -356,11 +349,7 @@ def get_java_version(
 
     # doesn't work without changing PID NS as well (I'm getting ENOENT for libjli.so)
     # Version is printed to stderr
-    return (
-        run_in_ns(["pid", "mnt"], _run_java_version, process.pid)
-        .stderr.decode()
-        .strip()
-    )
+    return run_in_ns(["pid", "mnt"], _run_java_version, process.pid).stderr.decode().strip()
 
 
 def get_java_version_logged(
@@ -369,9 +358,7 @@ def get_java_version_logged(
     logger: Union[logging.LoggerAdapter, logging.Logger],
 ) -> Optional[str]:
     java_version = get_java_version(process, stop_event, logger)
-    logger.debug(
-        "java -version output", java_version_output=java_version, pid=process.pid
-    )
+    logger.debug("java -version output", java_version_output=java_version, pid=process.pid)
     return java_version
 
 
@@ -445,33 +432,21 @@ class AsyncProfiledProcess:
         # we embed the async-profiler version in the path, so future gprofiler versions which use another version
         # of AP case use it (will be loaded as a different DSO)
         self._ap_dir_base = self._find_rw_exec_dir()
-        self._ap_dir_versioned = os.path.join(
-            self._ap_dir_base, f"async-profiler-{ap_version}"
-        )
+        self._ap_dir_versioned = os.path.join(self._ap_dir_base, f"async-profiler-{ap_version}")
         self._ap_dir_host = os.path.join(
             self._ap_dir_versioned,
             "musl" if self._needs_musl_ap() else "glibc",
         )
 
         self._libap_path_host = os.path.join(self._ap_dir_host, "libasyncProfiler.so")
-        self._libap_path_process = remove_prefix(
-            self._libap_path_host, self._process_root
-        )
+        self._libap_path_process = remove_prefix(self._libap_path_host, self._process_root)
 
         # for other purposes - we can use storage_dir.
-        self._storage_dir_host = resolve_proc_root_links(
-            self._process_root, storage_dir
-        )
+        self._storage_dir_host = resolve_proc_root_links(self._process_root, storage_dir)
 
-        self._output_path_host = os.path.join(
-            self._storage_dir_host, f"async-profiler-{self.process.pid}.output"
-        )
-        self._output_path_process = remove_prefix(
-            self._output_path_host, self._process_root
-        )
-        self._log_path_host = os.path.join(
-            self._storage_dir_host, f"async-profiler-{self.process.pid}.log"
-        )
+        self._output_path_host = os.path.join(self._storage_dir_host, f"async-profiler-{self.process.pid}.output")
+        self._output_path_process = remove_prefix(self._output_path_host, self._process_root)
+        self._log_path_host = os.path.join(self._storage_dir_host, f"async-profiler-{self.process.pid}.log")
         self._log_path_process = remove_prefix(self._log_path_host, self._process_root)
 
         self._stop_event = stop_event
@@ -482,23 +457,15 @@ class AsyncProfiledProcess:
 
         # assert mode in ("cpu", "itimer", "alloc"), f"unexpected mode: {mode}"
         self._mode = mode
-        self._fdtransfer_path = (
-            f"@async-profiler-{process.pid}-{secrets.token_hex(10)}"
-            if mode == "cpu"
-            else None
-        )
+        self._fdtransfer_path = f"@async-profiler-{process.pid}-{secrets.token_hex(10)}" if mode == "cpu" else None
         self._ap_safemode = ap_safemode
         self._ap_features = ap_features
         self._ap_args = ap_args
         self._jattach_timeout = jattach_timeout
         self._mcache = mcache
         self._collect_meminfo = collect_meminfo
-        self._include_method_modifiers = (
-            ",includemm" if include_method_modifiers else ""
-        )
-        self._include_line_numbers = (
-            ",includeln" if java_line_numbers == "line-of-function" else ""
-        )
+        self._include_method_modifiers = ",includemm" if include_method_modifiers else ""
+        self._include_line_numbers = ",includeln" if java_line_numbers == "line-of-function" else ""
 
     def _find_rw_exec_dir(self) -> str:
         """
@@ -601,11 +568,7 @@ class AsyncProfiledProcess:
         with libap_copy_lock:
             if not os.path.exists(self._libap_path_host):
                 # atomically copy it
-                libap_resource = (
-                    self._libap_path_musl
-                    if self._needs_musl_ap()
-                    else self._libap_path_glibc
-                )
+                libap_resource = self._libap_path_musl if self._needs_musl_ap() else self._libap_path_glibc
                 os.chmod(
                     libap_resource, 0o755
                 )  # make it accessible for all; needed with PyInstaller, which extracts files as 0700
@@ -697,10 +660,7 @@ class AsyncProfiledProcess:
             ap_log = self._read_ap_log()
             try:
                 ap_loaded = (
-                    "yes"
-                    if f" {self._libap_path_process}\n"
-                    in read_proc_file(self.process, "maps").decode()
-                    else "no"
+                    "yes" if f" {self._libap_path_process}\n" in read_proc_file(self.process, "maps").decode() else "no"
                 )
             except NoSuchProcess:
                 ap_loaded = "not sure, process exited"
@@ -716,31 +676,22 @@ class AsyncProfiledProcess:
             )
             if isinstance(e, CalledProcessTimeoutError):
                 raise JattachTimeout(*args, timeout=self._jattach_timeout) from None
-            elif (
-                e.stderr
-                == "Could not start attach mechanism: No such file or directory\n"
-            ):
+            elif e.stderr == "Could not start attach mechanism: No such file or directory\n":
                 # this is true for jattach_hotspot
                 raise JattachSocketMissingException(*args) from None
             else:
                 raise JattachException(*args) from None
         else:
             ap_log = self._read_ap_log()
-            ap_log_stripped = MEM_INFO_LOG_RE.sub(
-                "", ap_log
-            )  # strip out mem info log only when for gProfiler log
-            self.logger.debug(
-                "async-profiler log", jattach_cmd=cmd, ap_log=ap_log_stripped
-            )
+            ap_log_stripped = MEM_INFO_LOG_RE.sub("", ap_log)  # strip out mem info log only when for gProfiler log
+            self.logger.debug("async-profiler log", jattach_cmd=cmd, ap_log=ap_log_stripped)
             return ap_log
 
     def _run_fdtransfer(self) -> None:
         """
         Start fdtransfer; it will fork & exit once ready, so we can continue with jattach.
         """
-        assert (
-            self._fdtransfer_path is not None
-        )  # should be set if fdntransfer is invoked
+        assert self._fdtransfer_path is not None  # should be set if fdntransfer is invoked
         run_process(
             # run fdtransfer with accept timeout that's slightly greater than the jattach timeout - to make
             # sure that fdtransfer is still around for the full duration of jattach, in case the application
@@ -759,9 +710,7 @@ class AsyncProfiledProcess:
             timeout=self._FDTRANSFER_TIMEOUT,
         )
 
-    def start_async_profiler(
-        self, interval: int, second_try: bool = False, ap_timeout: int = 0
-    ) -> bool:
+    def start_async_profiler(self, interval: int, second_try: bool = False, ap_timeout: int = 0) -> bool:
         """
         Returns True if profiling was started; False if it was already started.
         ap_timeout defaults to 0, which means "no timeout" for AP (see call to startTimer() in profiler.cpp)
