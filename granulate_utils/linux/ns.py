@@ -18,10 +18,11 @@ import ctypes
 import enum
 import os
 import re
+import sys
 from collections import deque
 from pathlib import Path
 from threading import Thread
-from typing import Callable, Collection, List, Optional, TypeVar, Union
+from typing import Callable, Collection, List, Optional, TypeVar, Union, cast
 
 from psutil import NoSuchProcess, Process, process_iter
 
@@ -180,7 +181,7 @@ def _get_process_nspid_by_sched_files(process: Process) -> int:
         return None
 
     # We're searching `/proc`, so we only need to set our mount namespace
-    inner_pid = run_in_ns(["mnt"], _find_inner_pid, process.pid)
+    inner_pid = run_in_ns_wrapper(["mnt"], _find_inner_pid, process.pid)
     if inner_pid is not None:
         if not process.is_running():  # Make sure the pid wasn't reused for another process
             raise NoSuchProcess(process.pid)
@@ -264,6 +265,37 @@ def run_in_ns(
     t = Thread(target=_switch_and_run)
     t.start()
     t.join()
+
+    if isinstance(ret, _Sentinel):
+        assert exc is not None
+        raise exc
+    else:
+        assert exc is None
+        return ret
+
+
+def is_this_root() -> bool:
+    if sys.platform == "win32":
+        return cast(int, ctypes.windll.shell32.IsUserAnAdmin()) == 1  # type: ignore
+    else:
+        return os.geteuid() == 0
+
+
+def run_in_ns_wrapper(
+    nstypes: List[str],
+    callback: Callable[[], T],
+    target_pid: int = 1,
+) -> T:
+    if is_this_root():
+        return run_in_ns(nstypes, callback, target_pid)
+
+    ret: Union[T, _Sentinel] = _SENTINEL
+    exc: Optional[BaseException] = None
+
+    try:
+        ret = callback()
+    except BaseException as e:
+        exc = e
 
     if isinstance(ret, _Sentinel):
         assert exc is not None
